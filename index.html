@@ -1,0 +1,2625 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Costing & RAB Detailed Project - PT Nusantara Inti Solusindo</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Supabase JS Client CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Export Libraries CDN (Excel & PDF) -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .gradient-header {
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #3b82f6 100%);
+        }
+        .tab-btn.active {
+            border-bottom: 3px solid #2563eb;
+            color: #2563eb;
+            font-weight: 600;
+            background-color: #eff6ff;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 flex flex-col">
+
+    <!-- HEADER / NAVIGATION -->
+    <header class="gradient-header text-white shadow-xl sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-white/10 p-2.5 rounded-xl backdrop-blur-md border border-white/20">
+                    <svg class="w-7 h-7 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m-6 4h6m-6 4h6M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight text-white">PT Nusantara Inti Solusindo</h1>
+                    <p class="text-xs text-blue-200">Detailed Costing Analisa Komponen RAB (Manpower, Mesin, Chemical & Consumables)</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3 text-sm">
+                <span id="dbStatusBadge" class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/20 text-blue-200 border border-blue-400/30 backdrop-blur-sm">
+                    ● Database: Checking Connection...
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        
+        <!-- SUPABASE CONFIGURATION MODAL / CARD -->
+        <div id="configCard" class="bg-amber-50 border border-amber-200 p-4 rounded-xl shadow-sm">
+            <div class="flex justify-between items-center cursor-pointer" onclick="toggleConfig()">
+                <div class="flex items-center space-x-2">
+                    <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    <span class="font-semibold text-amber-900 text-sm">Pengaturan Connection Database Supabase</span>
+                </div>
+                <span class="text-xs text-amber-700 font-medium underline" id="configToggleText">Pengaturan Database</span>
+            </div>
+            
+            <div id="configBody" class="hidden mt-4 space-y-3 pt-3 border-t border-amber-200">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-amber-900 mb-1">SUPABASE_URL</label>
+                        <input type="text" id="supabaseUrl" placeholder="https://xyzcompany.supabase.co" class="w-full text-xs px-3 py-2 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-amber-900 mb-1">SUPABASE_ANON_KEY</label>
+                        <input type="password" id="supabaseKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..." class="w-full text-xs px-3 py-2 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none">
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-2">
+                    <button onclick="saveConfig()" class="bg-amber-600 hover:bg-amber-700 text-white text-xs px-4 py-2 rounded-lg font-medium transition">Simpan & Hubungkan</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- STATS OVERVIEW CARDS -->
+        <section class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">I. Manpower Cost</p>
+                <h3 class="text-lg font-bold text-slate-800 mt-1" id="statCostMp">Rp 0</h3>
+                <span class="text-[10px] text-slate-400">Salary & Benefits</span>
+            </div>
+            
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">II. Machinery Cost</p>
+                <h3 class="text-lg font-bold text-slate-800 mt-1" id="statCostMachinery">Rp 0</h3>
+                <span class="text-[10px] text-slate-400">Peralatan / Bulanan</span>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">III. Chemical Cost</p>
+                <h3 class="text-lg font-bold text-slate-800 mt-1" id="statCostChemical">Rp 0</h3>
+                <span class="text-[10px] text-slate-400">Bahan Kimia / Bulanan</span>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">IV. Consumable Cost</p>
+                <h3 class="text-lg font-bold text-slate-800 mt-1" id="statCostConsumable">Rp 0</h3>
+                <span class="text-[10px] text-slate-400">Perlengkapan / Bulanan</span>
+            </div>
+
+            <div class="bg-blue-900 text-white p-4 rounded-xl shadow-md border border-blue-800">
+                <p class="text-[11px] font-semibold text-blue-200 uppercase tracking-wider">Total Cost Project</p>
+                <h3 class="text-xl font-black text-amber-400 mt-1" id="statTotalCost">Rp 0</h3>
+                <span class="text-[10px] text-blue-300">Penjumlahan I + II + III + IV</span>
+            </div>
+        </section>
+
+        <!-- MAIN CALCULATION & ITEMIZATION FORM -->
+        <section id="formSection" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="border-b border-slate-100 px-6 py-4 bg-slate-50/80 flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <div class="w-3 h-3 bg-blue-600 rounded-full"></div>
+                    <h2 class="text-base font-bold text-slate-800" id="formTitle">Form Analytical Costing & Detail Input Component</h2>
+                    <span class="text-xs text-slate-500 font-medium ml-2" id="editingBadge">Input Baru</span>
+                </div>
+            </div>
+
+            <form id="rabForm" class="p-6 space-y-6" onsubmit="handleFormSubmit(event)">
+                <input type="hidden" id="editingProjectId" value="">
+                
+                <!-- GENERAL PROJECT INFORMATION -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 p-5 rounded-xl bg-slate-50 border border-slate-200">
+                    <div class="flex flex-col justify-end">
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5 truncate" title="Nama Client / Perusahaan">
+                            Nama Client / Perusahaan *
+                        </label>
+                        <input type="text" id="clientName" required placeholder="Contoh: PT. ADM Animal Nutrition" class="w-full h-9 px-3 py-1.5 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 outline-none transition bg-white">
+                    </div>
+
+                    <div class="flex flex-col justify-end">
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5 truncate" title="Lokasi / Kota">
+                            Lokasi / Kota *
+                        </label>
+                        <input type="text" id="clientLocation" required placeholder="Contoh: Jakarta Selatan" class="w-full h-9 px-3 py-1.5 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 outline-none transition bg-white">
+                    </div>
+
+                    <div class="flex flex-col justify-end">
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5 truncate" title="Area">
+                            Area *
+                        </label>
+                        <input type="text" id="projectArea" required placeholder="Contoh: Head Office / Factory" class="w-full h-9 px-3 py-1.5 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 outline-none transition bg-white">
+                    </div>
+
+                    <div class="flex flex-col justify-end">
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5 truncate" title="Service">
+                            Service *
+                        </label>
+                        <input type="text" id="projectTitle" required placeholder="Contoh: Commercial Cleaning Service" class="w-full h-9 px-3 py-1.5 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 outline-none transition bg-white">
+                    </div>
+
+                    <div class="flex flex-col justify-end">
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5 truncate" title="Terms of Payment (TOP)">
+                            TOP (Hari) *
+                        </label>
+                        <select id="topDays" required class="w-full h-9 px-3 py-1.5 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 outline-none transition bg-white">
+                            <option value="15">15 Hari</option>
+                            <option value="30" selected>30 Hari</option>
+                            <option value="45">45 Hari</option>
+                            <option value="60">60 Hari</option>
+                            <option value="90">90 Hari</option>
+                            <option value="120">120 Hari</option>
+                        </select>
+                    </div>
+
+                    <div class="flex flex-col justify-end">
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5 truncate" title="Management Fee (%)">
+                            Mgmt Fee (%) *
+                        </label>
+                        <input type="number" id="managementFeePercent" required step="0.1" min="0" value="7.5" placeholder="7.5" oninput="calculateOverallTotals()" class="w-full h-9 px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-bold text-blue-900 focus:ring-2 focus:ring-blue-500 outline-none transition bg-white">
+                    </div>
+                </div>
+
+                <!-- ITEMIZED TABS NAVIGATION -->
+                <div>
+                    <div class="flex border-b border-slate-200 bg-slate-50/50 rounded-t-xl overflow-x-auto">
+                        <button type="button" onclick="switchTab('tab-manpower')" id="btn-tab-manpower" class="tab-btn px-5 py-3 text-xs font-semibold text-slate-600 transition flex items-center space-x-2 active">
+                            <span>I. Analisa Manpower (Upah)</span>
+                            <span id="badge-count-mp" class="bg-blue-100 text-blue-800 text-[10px] px-2 py-0.5 rounded-full font-bold">1</span>
+                        </button>
+                        <button type="button" onclick="switchTab('tab-machinery')" id="btn-tab-machinery" class="tab-btn px-5 py-3 text-xs font-semibold text-slate-600 transition flex items-center space-x-2">
+                            <span>II. Peralatan Pekerjaan (Mesin)</span>
+                            <span id="badge-count-mac" class="bg-slate-200 text-slate-700 text-[10px] px-2 py-0.5 rounded-full font-bold">4</span>
+                        </button>
+                        <button type="button" onclick="switchTab('tab-chemicals')" id="btn-tab-chemicals" class="tab-btn px-5 py-3 text-xs font-semibold text-slate-600 transition flex items-center space-x-2">
+                            <span>III. Analisa Chemicals</span>
+                            <span id="badge-count-chem" class="bg-slate-200 text-slate-700 text-[10px] px-2 py-0.5 rounded-full font-bold">4</span>
+                        </button>
+                        <button type="button" onclick="switchTab('tab-consumables')" id="btn-tab-consumables" class="tab-btn px-5 py-3 text-xs font-semibold text-slate-600 transition flex items-center space-x-2">
+                            <span>IV. Accessories & Consumables</span>
+                            <span id="badge-count-cons" class="bg-slate-200 text-slate-700 text-[10px] px-2 py-0.5 rounded-full font-bold">5</span>
+                        </button>
+                    </div>
+
+                    <!-- TAB 1: MANPOWER -->
+                    <div id="tab-manpower" class="tab-content p-4 border border-t-0 border-slate-200 rounded-b-xl space-y-4">
+
+                        <div class="flex justify-between items-center gap-3">
+                            <div>
+                                <h3 class="text-sm font-bold text-slate-800 uppercase">I. ANALISA MANPOWER (UPAH)</h3>
+                                <p class="text-[10px] text-slate-400 mt-0.5">Tambahkan beberapa jabatan/role sesuai kebutuhan project.</p>
+                            </div>
+                            <button type="button" onclick="addManpower()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg text-xs shadow-sm transition">
+                                + Tambah Manpower
+                            </button>
+                        </div>
+
+                        <!-- Dynamic manpower components -->
+                        <div id="manpowerList" class="space-y-4"></div>
+
+                        <!-- Compatibility fields: kept for V4 data compatibility -->
+                        <div id="legacyManpowerFields" class="hidden" aria-hidden="true">
+                            <input id="mpRole" value="HOUSEKEEPING">
+                            <input id="mpBasicSalary" type="number" value="5938885">
+                            <input id="mpQty" type="number" value="2">
+                            <input id="mpTunjangan" type="number" value="0">
+                            <input id="mpUangMakan" type="number" value="330000">
+                            <input id="mpUniform" type="number" value="175000">
+                        </div>
+
+                    </div>
+
+                    <!-- TAB 2: MACHINERY -->
+                    <div id="tab-machinery" class="tab-content hidden p-4 border border-t-0 border-slate-200 rounded-b-xl space-y-4">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-xs font-bold text-slate-700 uppercase">II. Analisa Peralatan Pekerjaan / Mesin</h3>
+                            <button type="button" onclick="addRow('machineryTable')" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold transition">+ Tambah Mesin</button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs border-collapse" id="machineryTable">
+                                <thead>
+                                    <tr class="bg-slate-800 text-white text-[11px] uppercase font-semibold">
+                                        <th class="p-2.5">Nama Peralatan / Machinery</th>
+                                        <th class="p-2.5 w-20 text-center">Volume</th>
+                                        <th class="p-2.5 w-24 text-center">Unit</th>
+                                        <th class="p-2.5 w-28 text-center">Status</th>
+                                        <th class="p-2.5 w-32 text-center">Depresiasi (Bulan)</th>
+                                        <th class="p-2.5 w-36 text-right">Harga Per Unit (Rp)</th>
+                                        <th class="p-2.5 w-36 text-right">Total / Month (Rp)</th>
+                                        <th class="p-2.5 w-12 text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-200 bg-white">
+                                    <tr class="item-row">
+                                        <td class="p-2"><input type="text" value="Low Speed Floor Polisher" class="w-full px-2 py-1 border rounded item-name"></td>
+                                        <td class="p-2"><input type="number" value="1" min="1" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-center item-vol"></td>
+                                        <td class="p-2"><input type="text" value="Unit" class="w-full px-2 py-1 border rounded text-center item-unit"></td>
+                                        <td class="p-2"><select class="w-full px-2 py-1 border rounded text-center item-status"><option value="Rental">Rental</option><option value="Beli">Beli</option></select></td>
+                                        <td class="p-2"><input type="number" value="36" min="1" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-center item-depr"></td>
+                                        <td class="p-2"><input type="number" value="6950000" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-right item-price"></td>
+                                        <td class="p-2 text-right font-bold text-slate-800 item-total-cell">Rp 193.056</td>
+                                        <td class="p-2 text-center"><button type="button" onclick="removeRow(this)" class="text-rose-500 font-bold hover:text-rose-700">×</button></td>
+                                    </tr>
+                                    <tr class="item-row">
+                                        <td class="p-2"><input type="text" value="High Pressure Cleaner KARCHER K 3 HR" class="w-full px-2 py-1 border rounded item-name"></td>
+                                        <td class="p-2"><input type="number" value="1" min="1" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-center item-vol"></td>
+                                        <td class="p-2"><input type="text" value="Unit" class="w-full px-2 py-1 border rounded text-center item-unit"></td>
+                                        <td class="p-2"><select class="w-full px-2 py-1 border rounded text-center item-status"><option value="Rental">Rental</option><option value="Beli">Beli</option></select></td>
+                                        <td class="p-2"><input type="number" value="36" min="1" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-center item-depr"></td>
+                                        <td class="p-2"><input type="number" value="4000000" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-right item-price"></td>
+                                        <td class="p-2 text-right font-bold text-slate-800 item-total-cell">Rp 111.111</td>
+                                        <td class="p-2 text-center"><button type="button" onclick="removeRow(this)" class="text-rose-500 font-bold hover:text-rose-700">×</button></td>
+                                    </tr>
+                                    <tr class="item-row">
+                                        <td class="p-2"><input type="text" value="Mesin Potong Rumput" class="w-full px-2 py-1 border rounded item-name"></td>
+                                        <td class="p-2"><input type="number" value="1" min="1" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-center item-vol"></td>
+                                        <td class="p-2"><input type="text" value="Unit" class="w-full px-2 py-1 border rounded text-center item-unit"></td>
+                                        <td class="p-2"><select class="w-full px-2 py-1 border rounded text-center item-status"><option value="Rental">Rental</option><option value="Beli">Beli</option></select></td>
+                                        <td class="p-2"><input type="number" value="24" min="1" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-center item-depr"></td>
+                                        <td class="p-2"><input type="number" value="3200000" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-right item-price"></td>
+                                        <td class="p-2 text-right font-bold text-slate-800 item-total-cell">Rp 133.333</td>
+                                        <td class="p-2 text-center"><button type="button" onclick="removeRow(this)" class="text-rose-500 font-bold hover:text-rose-700">×</button></td>
+                                    </tr>
+                                    <tr class="item-row">
+                                        <td class="p-2"><input type="text" value="Vacuum Cleaner 30 Ltr - Wet & Dry" class="w-full px-2 py-1 border rounded item-name"></td>
+                                        <td class="p-2"><input type="number" value="1" min="1" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-center item-vol"></td>
+                                        <td class="p-2"><input type="text" value="Unit" class="w-full px-2 py-1 border rounded text-center item-unit"></td>
+                                        <td class="p-2"><select class="w-full px-2 py-1 border rounded text-center item-status"><option value="Rental">Rental</option><option value="Beli">Beli</option></select></td>
+                                        <td class="p-2"><input type="number" value="36" min="1" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-center item-depr"></td>
+                                        <td class="p-2"><input type="number" value="2250000" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-right item-price"></td>
+                                        <td class="p-2 text-right font-bold text-slate-800 item-total-cell">Rp 62.500</td>
+                                        <td class="p-2 text-center"><button type="button" onclick="removeRow(this)" class="text-rose-500 font-bold hover:text-rose-700">×</button></td>
+                                    </tr>
+                                </tbody>
+                                <tfoot>
+                                    <tr class="bg-amber-400 text-slate-900 font-bold text-xs">
+                                        <td colspan="6" class="p-2.5 uppercase">SUB TOTAL MACHINERY COST / MONTH</td>
+                                        <td class="p-2.5 text-right text-sm" id="subtotalMachinery">Rp 500.000</td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- TAB 3: CHEMICALS -->
+                    <div id="tab-chemicals" class="tab-content hidden p-4 border border-t-0 border-slate-200 rounded-b-xl space-y-4">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-xs font-bold text-slate-700 uppercase">III. Analisa Chemicals Pekerjaan</h3>
+                            <button type="button" onclick="addRow('chemicalsTable')" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold transition">+ Tambah Chemical</button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs border-collapse" id="chemicalsTable">
+                                <thead>
+                                    <tr class="bg-slate-800 text-white text-[11px] uppercase font-semibold">
+                                        <th class="p-2.5">Nama Chemical</th>
+                                        <th class="p-2.5 w-20 text-center">Volume</th>
+                                        <th class="p-2.5 w-24 text-center">Unit</th>
+                                        <th class="p-2.5 w-32 text-center">Depresiasi (Bulan)</th>
+                                        <th class="p-2.5 w-36 text-right">Harga Per Unit (Rp)</th>
+                                        <th class="p-2.5 w-36 text-right">Total / Month (Rp)</th>
+                                        <th class="p-2.5 w-12 text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-200 bg-white">
+                                    <tr class="item-row">
+                                        <td class="p-2"><input type="text" value="Disinfectan" class="w-full px-2 py-1 border rounded item-name"></td>
+                                        <td class="p-2"><input type="number" value="1" min="1" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-center item-vol"></td>
+                                        <td class="p-2"><input type="text" value="Galon" class="w-full px-2 py-1 border rounded text-center item-unit"></td>
+                                        <td class="p-2"><input type="number" value="1" min="1" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-center item-depr"></td>
+                                        <td class="p-2"><input type="number" value="180000" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-right item-price"></td>
+                                        <td class="p-2 text-right font-bold text-slate-800 item-total-cell">Rp 180.000</td>
+                                        <td class="p-2 text-center"><button type="button" onclick="removeRow(this)" class="text-rose-500 font-bold hover:text-rose-700">×</button></td>
+                                    </tr>
+                                    <tr class="item-row">
+                                        <td class="p-2"><input type="text" value="Glass Cleaner" class="w-full px-2 py-1 border rounded item-name"></td>
+                                        <td class="p-2"><input type="number" value="3" min="1" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-center item-vol"></td>
+                                        <td class="p-2"><input type="text" value="Galon" class="w-full px-2 py-1 border rounded text-center item-unit"></td>
+                                        <td class="p-2"><input type="number" value="1" min="1" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-center item-depr"></td>
+                                        <td class="p-2"><input type="number" value="52500" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-right item-price"></td>
+                                        <td class="p-2 text-right font-bold text-slate-800 item-total-cell">Rp 157.500</td>
+                                        <td class="p-2 text-center"><button type="button" onclick="removeRow(this)" class="text-rose-500 font-bold hover:text-rose-700">×</button></td>
+                                    </tr>
+                                    <tr class="item-row">
+                                        <td class="p-2"><input type="text" value="Floor Cleaner" class="w-full px-2 py-1 border rounded item-name"></td>
+                                        <td class="p-2"><input type="number" value="5" min="1" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-center item-vol"></td>
+                                        <td class="p-2"><input type="text" value="Galon" class="w-full px-2 py-1 border rounded text-center item-unit"></td>
+                                        <td class="p-2"><input type="number" value="1" min="1" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-center item-depr"></td>
+                                        <td class="p-2"><input type="number" value="32000" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-right item-price"></td>
+                                        <td class="p-2 text-right font-bold text-slate-800 item-total-cell">Rp 160.000</td>
+                                        <td class="p-2 text-center"><button type="button" onclick="removeRow(this)" class="text-rose-500 font-bold hover:text-rose-700">×</button></td>
+                                    </tr>
+                                    <tr class="item-row">
+                                        <td class="p-2"><input type="text" value="Handsoap Strawberry" class="w-full px-2 py-1 border rounded item-name"></td>
+                                        <td class="p-2"><input type="number" value="8" min="1" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-center item-vol"></td>
+                                        <td class="p-2"><input type="text" value="Galon" class="w-full px-2 py-1 border rounded text-center item-unit"></td>
+                                        <td class="p-2"><input type="number" value="1" min="1" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-center item-depr"></td>
+                                        <td class="p-2"><input type="number" value="40000" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-right item-price"></td>
+                                        <td class="p-2 text-right font-bold text-slate-800 item-total-cell">Rp 320.000</td>
+                                        <td class="p-2 text-center"><button type="button" onclick="removeRow(this)" class="text-rose-500 font-bold hover:text-rose-700">×</button></td>
+                                    </tr>
+                                </tbody>
+                                <tfoot>
+                                    <tr class="bg-amber-400 text-slate-900 font-bold text-xs">
+                                        <td colspan="5" class="p-2.5 uppercase">SUB TOTAL CHEMICAL COST / MONTH</td>
+                                        <td class="p-2.5 text-right text-sm" id="subtotalChemicals">Rp 817.500</td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- TAB 4: CONSUMABLES -->
+                    <div id="tab-consumables" class="tab-content hidden p-4 border border-t-0 border-slate-200 rounded-b-xl space-y-4">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-xs font-bold text-slate-700 uppercase">IV. Analisa Accessories & Consumables</h3>
+                            <button type="button" onclick="addRow('consumablesTable')" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold transition">+ Tambah Consumable</button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs border-collapse" id="consumablesTable">
+                                <thead>
+                                    <tr class="bg-slate-800 text-white text-[11px] uppercase font-semibold">
+                                        <th class="p-2.5">Nama Consumable / Aksesoris</th>
+                                        <th class="p-2.5 w-20 text-center">Volume</th>
+                                        <th class="p-2.5 w-24 text-center">Unit</th>
+                                        <th class="p-2.5 w-32 text-center">Depresiasi (Bulan)</th>
+                                        <th class="p-2.5 w-36 text-right">Harga Per Unit (Rp)</th>
+                                        <th class="p-2.5 w-36 text-right">Total / Month (Rp)</th>
+                                        <th class="p-2.5 w-12 text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-200 bg-white">
+                                    <tr class="item-row">
+                                        <td class="p-2"><input type="text" value="Buffing Pad Merah 17&quot;" class="w-full px-2 py-1 border rounded item-name"></td>
+                                        <td class="p-2"><input type="number" value="2" min="1" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-center item-vol"></td>
+                                        <td class="p-2"><input type="text" value="pc" class="w-full px-2 py-1 border rounded text-center item-unit"></td>
+                                        <td class="p-2"><input type="number" value="1" min="1" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-center item-depr"></td>
+                                        <td class="p-2"><input type="number" value="94500" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-right item-price"></td>
+                                        <td class="p-2 text-right font-bold text-slate-800 item-total-cell">Rp 189.000</td>
+                                        <td class="p-2 text-center"><button type="button" onclick="removeRow(this)" class="text-rose-500 font-bold hover:text-rose-700">×</button></td>
+                                    </tr>
+                                    <tr class="item-row">
+                                        <td class="p-2"><input type="text" value="Tangga 3 Meter" class="w-full px-2 py-1 border rounded item-name"></td>
+                                        <td class="p-2"><input type="number" value="1" min="1" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-center item-vol"></td>
+                                        <td class="p-2"><input type="text" value="pc" class="w-full px-2 py-1 border rounded text-center item-unit"></td>
+                                        <td class="p-2"><input type="number" value="12" min="1" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-center item-depr"></td>
+                                        <td class="p-2"><input type="number" value="775000" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-right item-price"></td>
+                                        <td class="p-2 text-right font-bold text-slate-800 item-total-cell">Rp 64.583</td>
+                                        <td class="p-2 text-center"><button type="button" onclick="removeRow(this)" class="text-rose-500 font-bold hover:text-rose-700">×</button></td>
+                                    </tr>
+                                    <tr class="item-row">
+                                        <td class="p-2"><input type="text" value="Cleaning cloth merah" class="w-full px-2 py-1 border rounded item-name"></td>
+                                        <td class="p-2"><input type="number" value="12" min="1" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-center item-vol"></td>
+                                        <td class="p-2"><input type="text" value="pc" class="w-full px-2 py-1 border rounded text-center item-unit"></td>
+                                        <td class="p-2"><input type="number" value="1" min="1" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-center item-depr"></td>
+                                        <td class="p-2"><input type="number" value="12000" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-right item-price"></td>
+                                        <td class="p-2 text-right font-bold text-slate-800 item-total-cell">Rp 144.000</td>
+                                        <td class="p-2 text-center"><button type="button" onclick="removeRow(this)" class="text-rose-500 font-bold hover:text-rose-700">×</button></td>
+                                    </tr>
+                                    <tr class="item-row">
+                                        <td class="p-2"><input type="text" value="Plastik sampah hitam 90x120" class="w-full px-2 py-1 border rounded item-name"></td>
+                                        <td class="p-2"><input type="number" value="3" min="1" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-center item-vol"></td>
+                                        <td class="p-2"><input type="text" value="kg" class="w-full px-2 py-1 border rounded text-center item-unit"></td>
+                                        <td class="p-2"><input type="number" value="1" min="1" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-center item-depr"></td>
+                                        <td class="p-2"><input type="number" value="35100" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-right item-price"></td>
+                                        <td class="p-2 text-right font-bold text-slate-800 item-total-cell">Rp 105.300</td>
+                                        <td class="p-2 text-center"><button type="button" onclick="removeRow(this)" class="text-rose-500 font-bold hover:text-rose-700">×</button></td>
+                                    </tr>
+                                    <tr class="item-row">
+                                        <td class="p-2"><input type="text" value="Mop set" class="w-full px-2 py-1 border rounded item-name"></td>
+                                        <td class="p-2"><input type="number" value="6" min="1" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-center item-vol"></td>
+                                        <td class="p-2"><input type="text" value="pc" class="w-full px-2 py-1 border rounded text-center item-unit"></td>
+                                        <td class="p-2"><input type="number" value="12" min="1" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-center item-depr"></td>
+                                        <td class="p-2"><input type="number" value="190000" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-right item-price"></td>
+                                        <td class="p-2 text-right font-bold text-slate-800 item-total-cell">Rp 95.000</td>
+                                        <td class="p-2 text-center"><button type="button" onclick="removeRow(this)" class="text-rose-500 font-bold hover:text-rose-700">×</button></td>
+                                    </tr>
+                                </tbody>
+                                <tfoot>
+                                    <tr class="bg-amber-400 text-slate-900 font-bold text-xs">
+                                        <td colspan="5" class="p-2.5 uppercase">SUB TOTAL CONSUMABLE COST / MONTH</td>
+                                        <td class="p-2.5 text-right text-sm" id="subtotalConsumables">Rp 497.883</td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LIVE CALCULATED RAB SUMMARY DISPLAY -->
+                <div class="p-4 rounded-xl bg-slate-900 text-white space-y-3">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pb-3 border-b border-slate-800">
+                        <div>
+                            <span class="text-[11px] text-slate-400 block uppercase font-medium">Management Fee (Rp)</span>
+                            <span class="text-base font-bold text-amber-400" id="calcMgmtFeeVal">Rp 0</span>
+                        </div>
+                        <div>
+                            <span class="text-[11px] text-slate-400 block uppercase font-medium">Total Before Tax</span>
+                            <span class="text-base font-bold text-slate-200" id="calcTotalBeforeTax">Rp 0</span>
+                        </div>
+                        <div>
+                            <span class="text-[11px] text-slate-400 block uppercase font-medium">Rounded (Per Bulan)</span>
+                            <span class="text-base font-bold text-emerald-400" id="calcRounded">Rp 0</span>
+                        </div>
+                        <div>
+                            <span class="text-[11px] text-slate-400 block uppercase font-medium">PPN 11%</span>
+                            <span class="text-base font-bold text-blue-300" id="calcPpn">Rp 0</span>
+                        </div>
+                    </div>
+                    <div class="flex flex-col md:flex-row justify-between items-center gap-4 pt-1">
+                        <div>
+                            <span class="text-xs text-slate-400 block uppercase font-medium">Total Revenue Penawaran / Month (Inc. PPN)</span>
+                            <span class="text-xl font-black text-amber-300" id="calcTotalAfterTax">Rp 0</span>
+                        </div>
+                        <div id="guardrailBadge" class="px-4 py-2 rounded-lg text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                            <span>Status: RAB Management Fee Terkalkulasi</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUBMIT ACTIONS -->
+                <div class="flex flex-wrap justify-end gap-3 pt-2">
+                    <button type="button" onclick="resetForm()" class="px-5 py-2.5 border border-slate-300 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition">Reset Default</button>
+                    <button type="submit" id="btnSaveSubmit" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-lg hover:shadow-xl transition flex items-center space-x-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                        <span id="btnSaveText">Simpan Hasil Analisa Ke Supabase</span>
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- TABLE PROJECT LIST FROM SUPABASE -->
+        <section class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="border-b border-slate-100 px-6 py-4 bg-slate-50/80 flex flex-wrap justify-between items-center gap-2">
+                <h2 class="text-base font-bold text-slate-800">Daftar Project RAB Analisa (Database Supabase)</h2>
+                <div class="flex items-center space-x-3">
+                    <button onclick="exportAllProjectsExcel()" class="text-xs text-emerald-700 hover:text-emerald-900 font-semibold flex items-center space-x-1 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        <span>Ekspor Semua Ke Excel</span>
+                    </button>
+                    <button onclick="fetchProjects()" class="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center space-x-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        <span>Refresh Database</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100/80 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                            <th class="py-3 px-4">ID Project</th>
+                            <th class="py-3 px-4">Client & Project Details</th>
+                            <th class="py-3 px-4 text-center">TOP</th>
+                            <th class="py-3 px-4 text-right">Cost Manpower</th>
+                            <th class="py-3 px-4 text-right">Cost Mesin</th>
+                            <th class="py-3 px-4 text-right">Cost Consumable</th>
+                            <th class="py-3 px-4 text-right">Cost Chemicals</th>
+                            <th class="py-3 px-4 text-center">Mgmt Fee (%)</th>
+                            <th class="py-3 px-4 text-right">Mgmt Fee (Rp)</th>
+                            <th class="py-3 px-4 text-right">Rounded (Ex. PPN)</th>
+                            <th class="py-3 px-4 text-right">Total (Inc. PPN)</th>
+                            <th class="py-3 px-4 text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="projectTableBody" class="divide-y divide-slate-100 text-xs font-medium">
+                        <tr>
+                            <td colspan="12" class="py-8 text-center text-slate-400">
+                                Memuat data dari database Supabase...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL POPUP VIEW DETAIL COMPONENT -->
+    <div id="detailModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex justify-center items-center p-4">
+        <div class="bg-white w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
+                <div>
+                    <h3 class="font-bold text-base" id="modalProjectTitle">Rincian Detail RAB</h3>
+                    <p class="text-xs text-slate-400" id="modalProjectSub">ID Project: -</p>
+                </div>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white font-bold text-xl">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-6 text-xs text-slate-700" id="modalContent">
+                <!-- Content Inserted Dynamically -->
+            </div>
+            <div class="bg-slate-100 px-6 py-3 flex justify-between items-center">
+                <div class="flex space-x-2">
+                    <button id="btnExportModalExcel" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        <span>Download Excel</span>
+                    </button>
+                    <button id="btnExportModalPDF" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                        <span>Download PDF</span>
+                    </button>
+                </div>
+                <button onclick="closeModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg font-semibold text-xs transition">Tutup Detail</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="bg-white border-t border-slate-200 py-4 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
+            &copy; 2026 PT Nusantara Inti Solusindo — Portal Costing Analisa RAB Multi-Komponen System
+        </div>
+    </footer>
+
+    <!-- LOGIC JAVASCRIPT & SUPABASE INTEGRATION -->
+    <script>
+        let supabaseClient = null;
+        let projectsData = [];
+        // V5: manpower can contain multiple roles/components.
+        // Existing V4 projects with manpower as an object remain supported.
+        let manpowerComponents = [{
+            role: 'HOUSEKEEPING',
+            qty: 2,
+            basic_salary: 5938885,
+            tunjangan: 0,
+            uang_makan: 330000,
+            uniform: 175000
+        }];
+
+        // INITIALIZE SUPABASE CLIENT
+        function initSupabase() {
+            const url = localStorage.getItem('SB_URL') || '';
+            const key = localStorage.getItem('SB_KEY') || '';
+
+            if (url) document.getElementById('supabaseUrl').value = url;
+            if (key) document.getElementById('supabaseKey').value = key;
+
+            if (url && key) {
+                try {
+                    supabaseClient = window.supabase.createClient(url, key);
+                    document.getElementById('dbStatusBadge').innerText = '● Database: Supabase Connected';
+                    document.getElementById('dbStatusBadge').className = 'inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-200 border border-emerald-400/30';
+                    fetchProjects();
+                } catch (err) {
+                    console.error('Error init Supabase:', err);
+                    setDemoMode();
+                }
+            } else {
+                setDemoMode();
+            }
+        }
+
+        function setDemoMode() {
+            document.getElementById('dbStatusBadge').innerText = '● Mode Lokal / Demo Data';
+            document.getElementById('dbStatusBadge').className = 'inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-200 border border-amber-400/30';
+            renderDemoData();
+        }
+
+        function toggleConfig() {
+            document.getElementById('configBody').classList.toggle('hidden');
+        }
+
+        function saveConfig() {
+            const url = document.getElementById('supabaseUrl').value.trim();
+            const key = document.getElementById('supabaseKey').value.trim();
+
+            if (!url || !key) {
+                alert('Mohon masukkan SUPABASE_URL dan SUPABASE_ANON_KEY!');
+                return;
+            }
+
+            localStorage.setItem('SB_URL', url);
+            localStorage.setItem('SB_KEY', key);
+
+            initSupabase();
+            alert('Kredensial Supabase berhasil disimpan!');
+            toggleConfig();
+        }
+
+        // TAB SWITCHING LOGIC
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+            document.getElementById(tabId).classList.remove('hidden');
+            document.getElementById('btn-' + tabId).classList.add('active');
+        }
+
+        // MANPOWER CALCULATIONS
+        function normalizeManpowerItem(item = {}) {
+            return {
+                role: item.role || 'STAFF',
+                qty: Math.max(1, parseInt(item.qty) || 1),
+                basic_salary: Math.max(0, parseFloat(item.basic_salary) || 0),
+                tunjangan: Math.max(0, parseFloat(item.tunjangan) || 0),
+                uang_makan: Math.max(0, parseFloat(item.uang_makan) || 0),
+                uniform: Math.max(0, parseFloat(item.uniform) || 0),
+                custom_components: Array.isArray(item.custom_components)
+                    ? item.custom_components.map(c => ({
+                        name: String(c?.name || '').trim(),
+                        amount: Math.max(0, parseFloat(c?.amount) || 0)
+                    })).filter(c => c.name)
+                    : []
+            };
+        }
+
+        function manpowerCalc(item) {
+            const mp = normalizeManpowerItem(item);
+            const basicSalary = mp.basic_salary;
+            const thr = basicSalary / 12;
+            const bpjsKes = basicSalary * 0.04;
+            const bpjsJht = basicSalary * 0.037;
+            const bpjsJkm = basicSalary * 0.003;
+            const bpjsJkk = basicSalary * 0.0024;
+            const bpjsJp = basicSalary * 0.02;
+            const pkwt = basicSalary / 12;
+
+            const customTotalPerPerson = mp.custom_components.reduce(
+                (sum, c) => sum + c.amount, 0
+            );
+
+            const subtotalPerPerson =
+                basicSalary +
+                mp.tunjangan +
+                mp.uang_makan +
+                thr +
+                bpjsKes +
+                bpjsJht +
+                bpjsJkm +
+                bpjsJkk +
+                bpjsJp +
+                pkwt +
+                mp.uniform +
+                customTotalPerPerson;
+
+            return {
+                ...mp,
+                customTotalPerPerson,
+                thr,
+                bpjsKes,
+                bpjsJht,
+                bpjsJkm,
+                bpjsJkk,
+                bpjsJp,
+                pkwt,
+                subtotalPerPerson,
+                subtotalTotal: subtotalPerPerson * mp.qty
+            };
+        }
+
+        function getManpowerComponentsFromUI() {
+            const cards = [...document.querySelectorAll('#manpowerList .manpower-card')];
+
+            if (!cards.length) {
+                return manpowerComponents.map(normalizeManpowerItem);
+            }
+
+            return cards.map(card => normalizeManpowerItem({
+                role: card.querySelector('.mp-role')?.value,
+                qty: card.querySelector('.mp-qty')?.value,
+                basic_salary: card.querySelector('.mp-basic')?.value,
+                tunjangan: card.querySelector('.mp-tunjangan')?.value,
+                uang_makan: card.querySelector('.mp-uang-makan')?.value,
+                uniform: card.querySelector('.mp-uniform')?.value,
+                custom_components: [...card.querySelectorAll('.mp-custom-row')].map(row => ({
+                    name: row.querySelector('.mp-custom-name')?.value,
+                    amount: row.querySelector('.mp-custom-amount')?.value
+                }))
+            }));
+        }
+
+        function syncLegacyManpowerFields() {
+            const first = manpowerComponents[0] || normalizeManpowerItem({});
+            document.getElementById('mpRole').value = first.role;
+            document.getElementById('mpBasicSalary').value = first.basic_salary;
+            document.getElementById('mpQty').value = first.qty;
+            document.getElementById('mpTunjangan').value = first.tunjangan;
+            document.getElementById('mpUangMakan').value = first.uang_makan;
+            document.getElementById('mpUniform').value = first.uniform;
+        }
+
+        function updateManpowerCard(card) {
+            const item = normalizeManpowerItem({
+                role: card.querySelector('.mp-role')?.value,
+                qty: card.querySelector('.mp-qty')?.value,
+                basic_salary: card.querySelector('.mp-basic')?.value,
+                tunjangan: card.querySelector('.mp-tunjangan')?.value,
+                uang_makan: card.querySelector('.mp-uang-makan')?.value,
+                uniform: card.querySelector('.mp-uniform')?.value
+            });
+
+            const c = manpowerCalc(item);
+            const set = (cls, value) => {
+                const el = card.querySelector('.' + cls);
+                if (el) el.innerText = formatRupiah(value);
+            };
+
+            const setText = (cls, value) => {
+                const el = card.querySelector('.' + cls);
+                if (el) el.innerText = value;
+            };
+
+            setText('mp-qty-label', item.qty);
+            set('mp-basic-unit', item.basic_salary);
+            set('mp-basic-total', item.basic_salary * item.qty);
+            set('mp-tunjangan-total', item.tunjangan * item.qty);
+            set('mp-uang-makan-total', item.uang_makan * item.qty);
+            set('mp-thr-unit', c.thr);
+            set('mp-thr-total', c.thr * item.qty);
+            set('mp-bpjs-kes-unit', c.bpjsKes);
+            set('mp-bpjs-kes-total', c.bpjsKes * item.qty);
+            set('mp-jht-unit', c.bpjsJht);
+            set('mp-jht-total', c.bpjsJht * item.qty);
+            set('mp-jkm-unit', c.bpjsJkm);
+            set('mp-jkm-total', c.bpjsJkm * item.qty);
+            set('mp-jkk-unit', c.bpjsJkk);
+            set('mp-jkk-total', c.bpjsJkk * item.qty);
+            set('mp-jp-unit', c.bpjsJp);
+            set('mp-jp-total', c.bpjsJp * item.qty);
+            set('mp-pkwt-unit', c.pkwt);
+            set('mp-pkwt-total', c.pkwt * item.qty);
+            set('mp-uniform-total', item.uniform * item.qty);
+
+            card.querySelectorAll('.mp-custom-row').forEach(row => {
+                const amount = Math.max(0, parseFloat(row.querySelector('.mp-custom-amount')?.value) || 0);
+                const totalEl = row.querySelector('.mp-custom-total');
+                if (totalEl) totalEl.innerText = formatRupiah(amount * item.qty);
+            });
+
+            const customTotalEl = card.querySelector('.mp-custom-total-per-person');
+            if (customTotalEl) customTotalEl.innerText = formatRupiah(c.customTotalPerPerson);
+
+            set('mp-subtotal-unit', c.subtotalPerPerson);
+            set('mp-subtotal-total', c.subtotalTotal);
+        }
+
+        function createManpowerCard(item = {}) {
+            const mp = normalizeManpowerItem(item);
+            const card = document.createElement('div');
+            card.className = 'manpower-card bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden';
+
+            const customRows = mp.custom_components.map((c, idx) => `
+                <tr class="mp-custom-row">
+                    <td class="p-2.5">
+                        <input type="text" value="${escapeHtml(c.name)}"
+                            class="mp-custom-name w-full px-2 py-1.5 border rounded text-xs"
+                            placeholder="Nama komponen"
+                            oninput="calculateManpower()">
+                    </td>
+                    <td class="p-2.5 text-center text-slate-500">Per Person</td>
+                    <td class="p-2.5 text-right">
+                        <input type="number" value="${c.amount}" min="0"
+                            class="mp-custom-amount w-28 text-right px-2 py-1.5 border rounded text-xs"
+                            oninput="calculateManpower()">
+                    </td>
+                    <td class="p-2.5 text-right font-bold">
+                        <span class="mp-custom-total">${formatRupiah(c.amount * mp.qty)}</span>
+                        <button type="button" onclick="removeCustomManpowerComponent(this)"
+                            class="ml-2 text-rose-500 hover:text-rose-700 font-bold" title="Hapus komponen">×</button>
+                    </td>
+                </tr>
+            `).join('');
+
+            card.innerHTML = `
+                <div class="p-3 bg-blue-50/70 border-b border-blue-200 flex flex-col md:flex-row justify-between gap-3">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 flex-1">
+                        <div>
+                            <label class="block text-[10px] font-semibold text-blue-900 mb-1">Jabatan / Role:</label>
+                            <input type="text" value="${escapeHtml(mp.role)}"
+                                class="mp-role w-full px-2.5 py-2 text-xs border border-blue-300 rounded font-semibold text-blue-900"
+                                oninput="calculateManpower()">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-semibold text-blue-900 mb-1">UMK / Basic Salary (Rp):</label>
+                            <input type="number" value="${mp.basic_salary}" min="0"
+                                class="mp-basic w-full px-2.5 py-2 text-xs border border-blue-300 rounded font-bold text-blue-900"
+                                oninput="calculateManpower()">
+                        </div>
+                    </div>
+                    <div class="flex items-end gap-2">
+                        <div>
+                            <label class="block text-[10px] font-semibold text-blue-900 mb-1">Jumlah Personel (QTY):</label>
+                            <input type="number" value="${mp.qty}" min="1"
+                                class="mp-qty w-24 px-2.5 py-2 text-xs border border-blue-300 rounded font-bold text-blue-900 text-center"
+                                oninput="calculateManpower()">
+                        </div>
+                        <button type="button" onclick="removeManpower(this)"
+                            class="h-9 px-3 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 font-bold text-xs hover:bg-rose-100">
+                            Hapus
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr class="bg-slate-800 text-white text-[10px] uppercase font-semibold">
+                                <th class="p-2.5">Komponen Salary & Benefit</th>
+                                <th class="p-2.5 text-center">Acuan / QTY</th>
+                                <th class="p-2.5 text-right">Amount / Konsultan (Rp)</th>
+                                <th class="p-2.5 text-right">Total Per Month (Rp)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200 font-medium text-slate-700">
+                            <tr><td class="p-2.5 font-bold">BASIC SALARY</td><td class="p-2.5 text-center"><span class="mp-qty-label">${mp.qty}</span> person</td><td class="p-2.5 text-right mp-basic-unit"></td><td class="p-2.5 text-right font-bold mp-basic-total"></td></tr>
+                            <tr><td class="p-2.5">TUNJANGAN KEHADIRAN</td><td class="p-2.5 text-center">-</td><td class="p-2.5 text-right"><input type="number" value="${mp.tunjangan}" min="0" class="mp-tunjangan w-28 text-right px-2 py-1 border rounded" oninput="calculateManpower()"></td><td class="p-2.5 text-right font-bold mp-tunjangan-total"></td></tr>
+                            <tr><td class="p-2.5">UANG MAKAN</td><td class="p-2.5 text-center">-</td><td class="p-2.5 text-right"><input type="number" value="${mp.uang_makan}" min="0" class="mp-uang-makan w-28 text-right px-2 py-1 border rounded" oninput="calculateManpower()"></td><td class="p-2.5 text-right font-bold mp-uang-makan-total"></td></tr>
+                            <tr><td class="p-2.5">THR (1/12 Basic)</td><td class="p-2.5 text-center">12 month</td><td class="p-2.5 text-right mp-thr-unit"></td><td class="p-2.5 text-right font-bold mp-thr-total"></td></tr>
+                            <tr><td class="p-2.5">BPJS KESEHATAN (4.00%)</td><td class="p-2.5 text-center">4.00%</td><td class="p-2.5 text-right mp-bpjs-kes-unit"></td><td class="p-2.5 text-right font-bold mp-bpjs-kes-total"></td></tr>
+                            <tr><td class="p-2.5">BPJS HARI TUA (3.70%)</td><td class="p-2.5 text-center">3.70%</td><td class="p-2.5 text-right mp-jht-unit"></td><td class="p-2.5 text-right font-bold mp-jht-total"></td></tr>
+                            <tr><td class="p-2.5">BPJS KEMATIAN (0.30%)</td><td class="p-2.5 text-center">0.30%</td><td class="p-2.5 text-right mp-jkm-unit"></td><td class="p-2.5 text-right font-bold mp-jkm-total"></td></tr>
+                            <tr><td class="p-2.5">BPJS JAMINAN KECELAKAAN (0.24%)</td><td class="p-2.5 text-center">0.24%</td><td class="p-2.5 text-right mp-jkk-unit"></td><td class="p-2.5 text-right font-bold mp-jkk-total"></td></tr>
+                            <tr><td class="p-2.5">BPJS PENSIUN (2.00%)</td><td class="p-2.5 text-center">2.00%</td><td class="p-2.5 text-right mp-jp-unit"></td><td class="p-2.5 text-right font-bold mp-jp-total"></td></tr>
+                            <tr><td class="p-2.5">KOMPENSASI PKWT PP35</td><td class="p-2.5 text-center">1/12 Basic</td><td class="p-2.5 text-right mp-pkwt-unit"></td><td class="p-2.5 text-right font-bold mp-pkwt-total"></td></tr>
+                            <tr><td class="p-2.5">UNIFORM & SHOES</td><td class="p-2.5 text-center">-</td><td class="p-2.5 text-right"><input type="number" value="${mp.uniform}" min="0" class="mp-uniform w-28 text-right px-2 py-1 border rounded" oninput="calculateManpower()"></td><td class="p-2.5 text-right font-bold mp-uniform-total"></td></tr>
+                            ${customRows}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="px-3 py-2 border-t border-slate-200 bg-slate-50 flex justify-between items-center">
+                    <button type="button" onclick="addManpowerBenefit(this)"
+                        class="bg-white hover:bg-blue-50 text-blue-700 border border-blue-300 font-bold px-3 py-2 rounded-lg text-xs">
+                        + Tambah Komponen Salary & Benefit
+                    </button>
+                    <span class="text-[10px] text-slate-500">
+                        Komponen custom dihitung <b>per person</b> × QTY.
+                    </span>
+                </div>
+
+                <div class="p-3 bg-amber-400 flex justify-between items-center text-slate-900 font-bold text-xs uppercase">
+                    <span>SUB TOTAL MANPOWER COST — <span class="mp-qty-label">${mp.qty}</span> PERSON</span>
+                    <div class="text-right">
+                        <span class="text-[10px] block font-normal">Per Person: <span class="mp-subtotal-unit"></span></span>
+                        <span class="mp-subtotal-total text-base"></span>
+                    </div>
+                </div>
+            `;
+
+            return card;
+        }
+
+        function addManpowerBenefit(button) {
+            const card = button.closest('.manpower-card');
+            if (!card) return;
+
+            const tbody = card.querySelector('tbody');
+            const row = document.createElement('tr');
+            row.className = 'mp-custom-row border-t border-slate-200';
+            row.innerHTML = `
+                <td class="p-2.5">
+                    <input type="text" class="mp-custom-name w-full px-2 py-1.5 border rounded text-xs"
+                        placeholder="Contoh: Transport Allowance" oninput="calculateManpower()">
+                </td>
+                <td class="p-2.5 text-center text-slate-500">Per Person</td>
+                <td class="p-2.5 text-right">
+                    <input type="number" value="0" min="0"
+                        class="mp-custom-amount w-28 text-right px-2 py-1.5 border rounded text-xs"
+                        oninput="calculateManpower()">
+                </td>
+                <td class="p-2.5 text-right font-bold">
+                    <span class="mp-custom-total">Rp 0</span>
+                    <button type="button" onclick="removeCustomManpowerComponent(this)"
+                        class="ml-2 text-rose-500 hover:text-rose-700 font-bold" title="Hapus komponen">×</button>
+                </td>
+            `;
+            tbody.appendChild(row);
+
+            row.querySelector('.mp-custom-name')?.focus();
+            calculateManpower();
+        }
+
+        function removeCustomManpowerComponent(button) {
+            const row = button.closest('.mp-custom-row');
+            if (row) row.remove();
+            calculateManpower();
+        }
+
+        function renderManpowerComponents(items = manpowerComponents) {
+            manpowerComponents = (items && items.length ? items : [normalizeManpowerItem({})]).map(normalizeManpowerItem);
+
+            const list = document.getElementById('manpowerList');
+            if (!list) return;
+
+            list.innerHTML = '';
+            manpowerComponents.forEach(item => list.appendChild(createManpowerCard(item)));
+
+            calculateManpower();
+        }
+
+        function addManpower() {
+            const newItem = normalizeManpowerItem({
+                role: 'STAFF',
+                qty: 1,
+                basic_salary: manpowerComponents.length
+                    ? manpowerComponents[manpowerComponents.length - 1].basic_salary
+                    : 0,
+                tunjangan: 0,
+                uang_makan: manpowerComponents.length
+                    ? manpowerComponents[manpowerComponents.length - 1].uang_makan
+                    : 0,
+                uniform: manpowerComponents.length
+                    ? manpowerComponents[manpowerComponents.length - 1].uniform
+                    : 0,
+                custom_components: []
+            });
+
+            manpowerComponents = getManpowerComponentsFromUI();
+            manpowerComponents.push(newItem);
+            renderManpowerComponents(manpowerComponents);
+
+            const cards = document.querySelectorAll('#manpowerList .manpower-card');
+            const lastCard = cards[cards.length - 1];
+            lastCard?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            lastCard?.querySelector('.mp-role')?.focus();
+        }
+
+        function removeManpower(button) {
+            const cards = [...document.querySelectorAll('#manpowerList .manpower-card')];
+
+            if (cards.length <= 1) {
+                alert('Minimal harus ada 1 manpower component.');
+                return;
+            }
+
+            const card = button.closest('.manpower-card');
+            card?.remove();
+
+            manpowerComponents = getManpowerComponentsFromUI();
+            calculateManpower();
+        }
+
+        function calculateManpower() {
+            manpowerComponents = getManpowerComponentsFromUI();
+
+            const list = document.getElementById('manpowerList');
+            if (list) {
+                [...list.querySelectorAll('.manpower-card')].forEach(updateManpowerCard);
+            }
+
+            syncLegacyManpowerFields();
+
+            const total = manpowerComponents.reduce(
+                (sum, item) => sum + manpowerCalc(item).subtotalTotal,
+                0
+            );
+
+            const totalQty = manpowerComponents.reduce(
+                (sum, item) => sum + normalizeManpowerItem(item).qty,
+                0
+            );
+
+            const badge = document.getElementById('badge-count-mp');
+            if (badge) badge.innerText = manpowerComponents.length;
+
+            // Keep legacy elements available for V4-compatible scripts/data.
+            const first = manpowerCalc(manpowerComponents[0] || {});
+            const legacySet = (id, value) => {
+                const el = document.getElementById(id);
+                if (el) el.innerText = formatRupiah(value);
+            };
+
+            const legacyText = (id, value) => {
+                const el = document.getElementById(id);
+                if (el) el.innerText = value;
+            };
+
+            legacyText('lblMpQty1', first.qty);
+            legacyText('lblMpQtyTotal', totalQty);
+            legacySet('valMpBasicUnit', first.basic_salary);
+            legacySet('valMpBasicTotal', first.basic_salary * first.qty);
+            legacySet('valMpTunjanganTotal', first.tunjangan * first.qty);
+            legacySet('valMpUangMakanTotal', first.uang_makan * first.qty);
+            legacySet('valMpThrUnit', first.thr);
+            legacySet('valMpThrTotal', first.thr * first.qty);
+            legacySet('valMpBpjsKesUnit', first.bpjsKes);
+            legacySet('valMpBpjsKesTotal', first.bpjsKes * first.qty);
+            legacySet('valMpJhtUnit', first.bpjsJht);
+            legacySet('valMpJhtTotal', first.bpjsJht * first.qty);
+            legacySet('valMpJkmUnit', first.bpjsJkm);
+            legacySet('valMpJkmTotal', first.bpjsJkm * first.qty);
+            legacySet('valMpJkkUnit', first.bpjsJkk);
+            legacySet('valMpJkkTotal', first.bpjsJkk * first.qty);
+            legacySet('valMpJpUnit', first.bpjsJp);
+            legacySet('valMpJpTotal', first.bpjsJp * first.qty);
+            legacySet('valMpPkwtUnit', first.pkwt);
+            legacySet('valMpPkwtTotal', first.pkwt * first.qty);
+            legacySet('valMpUniformTotal', first.uniform * first.qty);
+            legacySet('valMpSubtotalPerPerson', first.subtotalPerPerson);
+            legacySet('valMpSubtotalTotal', total);
+
+            calculateOverallTotals();
+        }
+
+        // ADD DYNAMIC ROW TO TABLE
+        function addRow(tableId, data = null) {
+            const tbody = document.querySelector('#' + tableId + ' tbody');
+            const isMachinery = tableId === 'machineryTable';
+            
+            const tr = document.createElement('tr');
+            tr.className = 'item-row';
+            
+            const nameVal = data ? data.name : '';
+            const volVal = data ? data.vol : 1;
+            const unitVal = data ? data.unit : (isMachinery ? 'Unit' : 'pc');
+            const statusVal = data ? data.status : 'Rental';
+            const deprVal = data ? data.depreciation_months : 1;
+            const priceVal = data ? data.price : 0;
+
+            let statusHtml = isMachinery ? `<td class="p-2"><select class="w-full px-2 py-1 border rounded text-center item-status"><option value="Rental" ${statusVal==='Rental'?'selected':''}>Rental</option><option value="Beli" ${statusVal==='Beli'?'selected':''}>Beli</option></select></td>` : '';
+
+            tr.innerHTML = `
+                <td class="p-2"><input type="text" value="${nameVal}" placeholder="Nama Item Baru" class="w-full px-2 py-1 border rounded item-name"></td>
+                <td class="p-2"><input type="number" value="${volVal}" min="1" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-center item-vol"></td>
+                <td class="p-2"><input type="text" value="${unitVal}" class="w-full px-2 py-1 border rounded text-center item-unit"></td>
+                ${statusHtml}
+                <td class="p-2"><input type="number" value="${deprVal}" min="1" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-center item-depr"></td>
+                <td class="p-2"><input type="number" value="${priceVal}" oninput="calculateDynamicRows()" class="w-full px-2 py-1 border rounded text-right item-price"></td>
+                <td class="p-2 text-right font-bold text-slate-800 item-total-cell">Rp 0</td>
+                <td class="p-2 text-center"><button type="button" onclick="removeRow(this)" class="text-rose-500 font-bold hover:text-rose-700">×</button></td>
+            `;
+
+            tbody.appendChild(tr);
+            calculateDynamicRows();
+        }
+
+        // REMOVE ROW
+        function removeRow(btn) {
+            const row = btn.closest('tr');
+            row.remove();
+            calculateDynamicRows();
+        }
+
+        // CALCULATE DYNAMIC TABLES
+        function calculateDynamicRows() {
+            function processTable(tableId, badgeId) {
+                let subtotal = 0;
+                const rows = document.querySelectorAll('#' + tableId + ' .item-row');
+                document.getElementById(badgeId).innerText = rows.length;
+
+                rows.forEach(row => {
+                    const vol = parseFloat(row.querySelector('.item-vol')?.value) || 0;
+                    const depr = parseFloat(row.querySelector('.item-depr')?.value) || 1;
+                    const price = parseFloat(row.querySelector('.item-price')?.value) || 0;
+
+                    const totalMonthly = (vol * price) / (depr > 0 ? depr : 1);
+                    subtotal += totalMonthly;
+
+                    row.querySelector('.item-total-cell').innerText = formatRupiah(totalMonthly);
+                });
+                return subtotal;
+            }
+
+            const totalMachinery = processTable('machineryTable', 'badge-count-mac');
+            const totalChemicals = processTable('chemicalsTable', 'badge-count-chem');
+            const totalConsumables = processTable('consumablesTable', 'badge-count-cons');
+
+            document.getElementById('subtotalMachinery').innerText = formatRupiah(totalMachinery);
+            document.getElementById('subtotalChemicals').innerText = formatRupiah(totalChemicals);
+            document.getElementById('subtotalConsumables').innerText = formatRupiah(totalConsumables);
+
+            calculateOverallTotals();
+        }
+
+        // CALCULATE OVERALL TOTALS & MANAGEMENT FEE FORMULA
+        function calculateOverallTotals() {
+            manpowerComponents = getManpowerComponentsFromUI();
+
+            const costMpTotal = manpowerComponents.reduce(
+                (sum, item) => sum + manpowerCalc(item).subtotalTotal,
+                0
+            );
+
+            function getTableSubtotal(tableId) {
+                let sub = 0;
+                document.querySelectorAll('#' + tableId + ' .item-row').forEach(row => {
+                    const vol = parseFloat(row.querySelector('.item-vol')?.value) || 0;
+                    const depr = parseFloat(row.querySelector('.item-depr')?.value) || 1;
+                    const price = parseFloat(row.querySelector('.item-price')?.value) || 0;
+                    sub += (vol * price) / (depr > 0 ? depr : 1);
+                });
+                return sub;
+            }
+
+            const costMachinery = getTableSubtotal('machineryTable');
+            const costChemicals = getTableSubtotal('chemicalsTable');
+            const costConsumables = getTableSubtotal('consumablesTable');
+
+            const totalCostProject = costMpTotal + costMachinery + costChemicals + costConsumables;
+            const mgmtFeePercent = parseFloat(document.getElementById('managementFeePercent').value) || 0;
+            const mgmtFeeVal = totalCostProject * (mgmtFeePercent / 100);
+            const totalBeforeTax = totalCostProject + mgmtFeeVal;
+            const rounded = Math.round(totalBeforeTax / 1000) * 1000;
+            const ppn = rounded * 0.11;
+            const totalAfterTax = rounded + ppn;
+
+            document.getElementById('statCostMp').innerText = formatRupiah(costMpTotal);
+            document.getElementById('statCostMachinery').innerText = formatRupiah(costMachinery);
+            document.getElementById('statCostChemical').innerText = formatRupiah(costChemicals);
+            document.getElementById('statCostConsumable').innerText = formatRupiah(costConsumables);
+            document.getElementById('statTotalCost').innerText = formatRupiah(totalCostProject);
+
+            document.getElementById('calcMgmtFeeVal').innerText = formatRupiah(mgmtFeeVal);
+            document.getElementById('calcTotalBeforeTax').innerText = formatRupiah(totalBeforeTax);
+            document.getElementById('calcRounded').innerText = formatRupiah(rounded);
+            document.getElementById('calcPpn').innerText = formatRupiah(ppn);
+            document.getElementById('calcTotalAfterTax').innerText = formatRupiah(totalAfterTax);
+        }
+
+        function parseCurrency(str) {
+            return parseFloat(str.replace(/[^0-9,-]/g, '').replace(',', '.')) || 0;
+        }
+
+        // SAVE / UPDATE FORM DATA TO SUPABASE
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+
+            const editingId = document.getElementById('editingProjectId').value;
+            const clientName = document.getElementById('clientName').value;
+            const clientLocation = document.getElementById('clientLocation').value;
+            const projectArea = document.getElementById('projectArea').value;
+            const projectTitle = document.getElementById('projectTitle').value;
+            const topDays = parseInt(document.getElementById('topDays').value);
+            const mgmtFeePercent = parseFloat(document.getElementById('managementFeePercent').value) || 0;
+
+            function extractTableItems(tableId) {
+                const items = [];
+                document.querySelectorAll('#' + tableId + ' .item-row').forEach(row => {
+                    const vol = parseFloat(row.querySelector('.item-vol')?.value) || 0;
+                    const depr = parseFloat(row.querySelector('.item-depr')?.value) || 1;
+                    const price = parseFloat(row.querySelector('.item-price')?.value) || 0;
+                    items.push({
+                        name: row.querySelector('.item-name')?.value || '',
+                        vol: vol,
+                        unit: row.querySelector('.item-unit')?.value || '',
+                        status: row.querySelector('.item-status')?.value || '-',
+                        depreciation_months: depr,
+                        price: price,
+                        total_monthly: (vol * price) / (depr > 0 ? depr : 1)
+                    });
+                });
+                return items;
+            }
+
+            const machineryItems = extractTableItems('machineryTable');
+            const chemicalItems = extractTableItems('chemicalsTable');
+            const consumableItems = extractTableItems('consumablesTable');
+
+            const costMp = parseCurrency(document.getElementById('statCostMp').innerText);
+            const costMachinery = parseCurrency(document.getElementById('statCostMachinery').innerText);
+            const costChemical = parseCurrency(document.getElementById('statCostChemical').innerText);
+            const costConsumable = parseCurrency(document.getElementById('statCostConsumable').innerText);
+            
+            const totalCostProject = costMp + costMachinery + costChemical + costConsumable;
+            const mgmtFeeVal = totalCostProject * (mgmtFeePercent / 100);
+            const roundedVal = Math.round((totalCostProject + mgmtFeeVal) / 1000) * 1000;
+            const totalAfterTaxVal = roundedVal + (roundedVal * 0.11);
+
+            const projectId = editingId ? editingId : ('PRJ-' + Date.now().toString().slice(-6));
+
+            const payload = {
+                project_id: projectId,
+                client_name: clientName,
+                client_location: clientLocation,
+                project_area: projectArea,
+                project_title: projectTitle,
+                top_days: topDays,
+                cost_project: totalCostProject,
+                management_fee_percent: mgmtFeePercent,
+                management_fee_value: mgmtFeeVal,
+                rounded_before_tax: roundedVal,
+                total_after_tax: totalAfterTaxVal,
+                cost_manpower: costMp,
+                cost_machinery: costMachinery,
+                cost_chemical: costChemical,
+                cost_consumable: costConsumable,
+                details_json: {
+                    manpower: getManpowerComponentsFromUI(),
+                    manpower_legacy: getManpowerComponentsFromUI()[0] || normalizeManpowerItem({}),
+                    machinery: machineryItems,
+                    chemicals: chemicalItems,
+                    consumables: consumableItems
+                },
+                status: 'APPROVED'
+            };
+
+            if (supabaseClient) {
+                try {
+                    let res;
+                    if (editingId) {
+                        res = await supabaseClient.from('projects').update(payload).eq('project_id', editingId);
+                    } else {
+                        res = await supabaseClient.from('projects').insert([payload]);
+                    }
+                    if (res.error) throw res.error;
+                    alert(editingId ? 'Pembaruan RAB Berhasil Disimpan!' : 'Project RAB Berhasil Disimpan ke Supabase!');
+                    resetForm();
+                    fetchProjects();
+                } catch (err) {
+                    console.error('Save Error:', err);
+                    alert('Gagal menyimpan ke Supabase: ' + err.message);
+                }
+            } else {
+                if (editingId) {
+                    const idx = projectsData.findIndex(p => p.project_id === editingId);
+                    if (idx !== -1) projectsData[idx] = payload;
+                } else {
+                    projectsData.unshift(payload);
+                }
+                renderTable(projectsData);
+                resetForm();
+                alert('Project Berhasil Disimpan (Mode Demo/Lokal)!');
+            }
+        }
+
+        // LOAD PROJECT TO FORM FOR EDIT / ANALYSIS
+        function loadProjectToForm(id) {
+            const prj = projectsData.find(p => p.project_id === id);
+            if (!prj) return;
+
+            document.getElementById('editingProjectId').value = prj.project_id;
+            document.getElementById('formTitle').innerText = `Edit / Analisa RAB (${prj.project_id})`;
+            document.getElementById('editingBadge').innerText = `Editing: ${prj.project_id}`;
+            document.getElementById('editingBadge').className = `text-xs font-bold text-amber-600 bg-amber-100 px-2.5 py-1 rounded-full`;
+            document.getElementById('btnSaveText').innerText = 'Simpan Perubahan RAB';
+
+            document.getElementById('clientName').value = prj.client_name || '';
+            document.getElementById('clientLocation').value = prj.client_location || '';
+            document.getElementById('projectArea').value = prj.project_area || '';
+            document.getElementById('projectTitle').value = prj.project_title || '';
+            document.getElementById('topDays').value = prj.top_days || 30;
+            document.getElementById('managementFeePercent').value = prj.management_fee_percent || 7.5;
+
+            if (prj.details_json) {
+                const savedMp = prj.details_json.manpower;
+                const mpItems = Array.isArray(savedMp)
+                    ? savedMp
+                    : (savedMp ? [savedMp] : [prj.details_json.manpower_legacy].filter(Boolean));
+
+                manpowerComponents = (mpItems.length ? mpItems : [normalizeManpowerItem({})]).map(normalizeManpowerItem);
+                renderManpowerComponents(manpowerComponents);
+
+                // Populate Tables
+                function populateTable(tableId, items) {
+                    const tbody = document.querySelector('#' + tableId + ' tbody');
+                    tbody.innerHTML = '';
+                    if (items && items.length > 0) {
+                        items.forEach(item => addRow(tableId, item));
+                    }
+                }
+
+                populateTable('machineryTable', prj.details_json.machinery);
+                populateTable('chemicalsTable', prj.details_json.chemicals);
+                populateTable('consumablesTable', prj.details_json.consumables);
+            }
+
+            calculateManpower();
+            calculateDynamicRows();
+
+            document.getElementById('formSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // VIEW POPUP DETAIL
+        function viewProjectDetail(id) {
+            const prj = projectsData.find(p => p.project_id === id);
+            if (!prj) return;
+
+            document.getElementById('modalProjectTitle').innerText = `Rincian Detail RAB - ${prj.client_name}`;
+            document.getElementById('modalProjectSub').innerText = `ID Project: ${prj.project_id} | ${prj.project_title} (${prj.client_location})`;
+
+            // Attach Export Handlers to Modal Buttons
+            document.getElementById('btnExportModalExcel').onclick = () => exportSingleProjectExcel(prj.project_id);
+            document.getElementById('btnExportModalPDF').onclick = () => exportSingleProjectPDF(prj.project_id);
+
+            const details = prj.details_json || {};
+            const savedMp = details.manpower;
+            const mpItems = Array.isArray(savedMp)
+                ? savedMp
+                : (savedMp ? [savedMp] : (details.manpower_legacy ? [details.manpower_legacy] : []));
+            const mac = details.machinery || [];
+            const chem = details.chemicals || [];
+            const cons = details.consumables || [];
+
+            function renderItemsRows(arr) {
+                if (!arr || arr.length === 0) return `<tr><td colspan="5" class="p-2 text-center text-slate-400">Tidak ada item</td></tr>`;
+                return arr.map(i => `
+                    <tr class="border-b border-slate-100">
+                        <td class="p-2 font-medium">${i.name}</td>
+                        <td class="p-2 text-center">${i.vol} ${i.unit}</td>
+                        <td class="p-2 text-center">${i.depreciation_months} Bln</td>
+                        <td class="p-2 text-right">${formatRupiah(i.price)}</td>
+                        <td class="p-2 text-right font-bold">${formatRupiah(i.total_monthly)}</td>
+                    </tr>
+                `).join('');
+            }
+
+            document.getElementById('modalContent').innerHTML = `
+                <!-- I. MANPOWER -->
+                <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-200">
+                    <div class="flex justify-between items-center mb-3">
+                        <h4 class="font-bold text-blue-900 text-xs uppercase">I. Manpower Component</h4>
+                        <span class="font-bold text-blue-800 text-xs">Subtotal: ${formatRupiah(prj.cost_manpower || 0)}</span>
+                    </div>
+                    <div class="space-y-2">
+                        ${mpItems.length ? mpItems.map((m, idx) => {
+                            const c = manpowerCalc(m);
+                            return `
+                                <div class="bg-white p-3 rounded-lg border border-blue-100">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <b class="text-xs text-slate-800">${idx + 1}. ${escapeHtml(c.role)}</b>
+                                        <b class="text-xs text-blue-800">${formatRupiah(c.subtotalTotal)}</b>
+                                    </div>
+                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px]">
+                                        <div><span class="text-slate-400 block">Personel:</span><b>${c.qty} orang</b></div>
+                                        <div><span class="text-slate-400 block">Basic Salary / UMK:</span><b>${formatRupiah(c.basic_salary)}</b></div>
+                                        <div><span class="text-slate-400 block">Uang Makan:</span><b>${formatRupiah(c.uang_makan)}</b></div>
+                                        <div><span class="text-slate-400 block">Uniform:</span><b>${formatRupiah(c.uniform)}</b></div>
+                                    </div>
+                                    ${c.custom_components.length ? `
+                                        <div class="mt-2 pt-2 border-t border-slate-100">
+                                            <div class="text-[10px] font-bold text-blue-800 mb-1">Custom Salary & Benefit</div>
+                                            ${c.custom_components.map(cc => `
+                                                <div class="flex justify-between text-[10px] py-0.5">
+                                                    <span>${escapeHtml(cc.name)}</span>
+                                                    <b>${formatRupiah(cc.amount * c.qty)}</b>
+                                                </div>
+                                            `).join('')}
+                                        </div>` : ''}
+                                </div>`;
+                        }).join('') : '<div class="text-xs text-slate-400">Tidak ada manpower.</div>'}
+                    </div>
+                </div>
+
+                <!-- II. MACHINERY -->
+                <div>
+                    <h4 class="font-bold text-slate-800 mb-2 uppercase text-xs">II. Peralatan & Mesin</h4>
+                    <table class="w-full text-left border-collapse border border-slate-200 rounded-lg overflow-hidden">
+                        <thead class="bg-slate-100 font-bold text-[11px]">
+                            <tr><th class="p-2">Item</th><th class="p-2 text-center">Vol</th><th class="p-2 text-center">Depr</th><th class="p-2 text-right">Harga</th><th class="p-2 text-right">Total/Bln</th></tr>
+                        </thead>
+                        <tbody>${renderItemsRows(mac)}</tbody>
+                    </table>
+                </div>
+
+                <!-- III. CHEMICALS -->
+                <div>
+                    <h4 class="font-bold text-slate-800 mb-2 uppercase text-xs">III. Chemical & Bahan Kimia</h4>
+                    <table class="w-full text-left border-collapse border border-slate-200 rounded-lg overflow-hidden">
+                        <thead class="bg-slate-100 font-bold text-[11px]">
+                            <tr><th class="p-2">Item</th><th class="p-2 text-center">Vol</th><th class="p-2 text-center">Depr</th><th class="p-2 text-right">Harga</th><th class="p-2 text-right">Total/Bln</th></tr>
+                        </thead>
+                        <tbody>${renderItemsRows(chem)}</tbody>
+                    </table>
+                </div>
+
+                <!-- IV. CONSUMABLES -->
+                <div>
+                    <h4 class="font-bold text-slate-800 mb-2 uppercase text-xs">IV. Consumables & Perlengkapan</h4>
+                    <table class="w-full text-left border-collapse border border-slate-200 rounded-lg overflow-hidden">
+                        <thead class="bg-slate-100 font-bold text-[11px]">
+                            <tr><th class="p-2">Item</th><th class="p-2 text-center">Vol</th><th class="p-2 text-center">Depr</th><th class="p-2 text-right">Harga</th><th class="p-2 text-right">Total/Bln</th></tr>
+                        </thead>
+                        <tbody>${renderItemsRows(cons)}</tbody>
+                    </table>
+                </div>
+            `;
+
+            document.getElementById('detailModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('detailModal').classList.add('hidden');
+        }
+
+        // FETCH PROJECTS FROM SUPABASE
+        async function fetchProjects() {
+            if (!supabaseClient) {
+                renderDemoData();
+                return;
+            }
+
+            try {
+                const { data, error } = await supabaseClient.from('projects').select('*').order('created_at', { ascending: false });
+                if (error) throw error;
+                projectsData = data || [];
+                renderTable(projectsData);
+            } catch (err) {
+                console.error('Fetch error:', err);
+                renderDemoData();
+            }
+        }
+
+        // DELETE PROJECT
+        async function deleteProject(id) {
+            if (!confirm(`Apakah Anda yakin ingin menghapus project ${id}?`)) return;
+
+            if (supabaseClient) {
+                try {
+                    const { error } = await supabaseClient.from('projects').delete().eq('project_id', id);
+                    if (error) throw error;
+                    fetchProjects();
+                } catch (err) {
+                    alert('Gagal menghapus: ' + err.message);
+                }
+            } else {
+                projectsData = projectsData.filter(p => p.project_id !== id);
+                renderTable(projectsData);
+            }
+        }
+
+        // RENDER TABLE WITH SEPARATED COST COLUMNS
+        function renderTable(data) {
+            const tbody = document.getElementById('projectTableBody');
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="12" class="py-8 text-center text-slate-400">Belum ada project tersimpan di Supabase.</td></tr>`;
+                return;
+            }
+
+            data.forEach(p => {
+                const locationText = p.client_location || '-';
+                const areaText = p.project_area || '-';
+                const serviceText = p.project_title || '-';
+
+                // Helper kalkulator cadangan jika data berasal dari record lama
+                const details = p.details_json || {};
+                const calcSum = (arr) => (arr || []).reduce((acc, curr) => acc + (curr.total_monthly || 0), 0);
+                
+                const cMp = p.cost_manpower ?? 0;
+                const cMac = p.cost_machinery ?? calcSum(details.machinery);
+                const cCons = p.cost_consumable ?? calcSum(details.consumables);
+                const cChem = p.cost_chemical ?? calcSum(details.chemicals);
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="py-3 px-4 font-mono font-bold text-blue-800">
+                            <button onclick="viewProjectDetail('${p.project_id}')" class="hover:underline text-left" title="Klik untuk lihat rincian detail">${p.project_id}</button>
+                        </td>
+                        <td class="py-3 px-4">
+                            <div class="font-bold text-slate-900">${p.client_name}</div>
+                            <div class="text-[11px] text-slate-500 font-medium">${locationText} • ${areaText}</div>
+                            <div class="text-[11px] text-blue-600 font-semibold">${serviceText}</div>
+                        </td>
+                        <td class="py-3 px-4 text-center font-medium">${p.top_days} Hari</td>
+                        <td class="py-3 px-4 text-right font-bold text-slate-700">${formatRupiah(cMp)}</td>
+                        <td class="py-3 px-4 text-right font-bold text-slate-700">${formatRupiah(cMac)}</td>
+                        <td class="py-3 px-4 text-right font-bold text-slate-700">${formatRupiah(cCons)}</td>
+                        <td class="py-3 px-4 text-right font-bold text-slate-700">${formatRupiah(cChem)}</td>
+                        <td class="py-3 px-4 text-center font-bold text-blue-600">${p.management_fee_percent}%</td>
+                        <td class="py-3 px-4 text-right text-slate-600">${formatRupiah(p.management_fee_value)}</td>
+                        <td class="py-3 px-4 text-right font-bold text-emerald-600">${formatRupiah(p.rounded_before_tax)}</td>
+                        <td class="py-3 px-4 text-right font-bold text-slate-900">${formatRupiah(p.total_after_tax)}</td>
+                        <td class="py-3 px-4 text-center">
+                            <div class="flex items-center justify-center space-x-1.5">
+                                <button onclick="viewProjectDetail('${p.project_id}')" class="text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-2 py-1 rounded border border-blue-200">Lihat</button>
+                                <button onclick="loadProjectToForm('${p.project_id}')" class="text-amber-600 hover:text-amber-800 font-bold bg-amber-50 px-2 py-1 rounded border border-amber-200">Panggil/Edit</button>
+                                <button onclick="exportSingleProjectPDF('${p.project_id}')" title="Export PDF" class="text-rose-600 hover:text-rose-800 font-bold bg-rose-50 px-1.5 py-1 rounded border border-rose-200">PDF</button>
+                                <button onclick="exportSingleProjectExcel('${p.project_id}')" title="Export Excel" class="text-emerald-600 hover:text-emerald-800 font-bold bg-emerald-50 px-1.5 py-1 rounded border border-emerald-200">XLS</button>
+                                <button onclick="deleteProject('${p.project_id}')" class="text-rose-500 hover:text-rose-700 font-bold">Hapus</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderDemoData() {
+            projectsData = [
+                { 
+                    project_id: 'PRJ-692971', 
+                    client_name: 'PT. ADM Animal Nutrition',
+                    client_location: 'Jakarta',
+                    project_area: 'Cibitung',
+                    project_title: 'Cleaning Service', 
+                    top_days: 30, 
+                    cost_project: 17999065, 
+                    cost_manpower: 16083682,
+                    cost_machinery: 500000,
+                    cost_chemical: 817500,
+                    cost_consumable: 597883,
+                    management_fee_percent: 7.5,
+                    management_fee_value: 1349930,
+                    rounded_before_tax: 19349000,
+                    total_after_tax: 21477390,
+                    details_json: {
+                        manpower: { role: 'HOUSEKEEPING', qty: 2, basic_salary: 5938885, tunjangan: 0, uang_makan: 330000, uniform: 175000 },
+                        machinery: [
+                            { name: 'Low Speed Floor Polisher', vol: 1, unit: 'Unit', status: 'Rental', depreciation_months: 36, price: 6950000, total_monthly: 193056 },
+                            { name: 'High Pressure Cleaner KARCHER K 3 HR', vol: 1, unit: 'Unit', status: 'Rental', depreciation_months: 36, price: 4000000, total_monthly: 111111 }
+                        ],
+                        chemicals: [
+                            { name: 'Disinfectan', vol: 1, unit: 'Galon', status: '-', depreciation_months: 1, price: 180000, total_monthly: 180000 },
+                            { name: 'Glass Cleaner', vol: 3, unit: 'Galon', status: '-', depreciation_months: 1, price: 52500, total_monthly: 157500 }
+                        ],
+                        consumables: [
+                            { name: 'Buffing Pad Merah 17"', vol: 2, unit: 'pc', status: '-', depreciation_months: 1, price: 94500, total_monthly: 189000 },
+                            { name: 'Mop set', vol: 6, unit: 'pc', status: '-', depreciation_months: 12, price: 190000, total_monthly: 95000 }
+                        ]
+                    }
+                },
+                { 
+                    project_id: 'PRJ-305711', 
+                    client_name: 'PT. Sampoerna Strategic',
+                    client_location: 'Jakarta',
+                    project_area: 'Head Office',
+                    project_title: 'Office Cleaning', 
+                    top_days: 30, 
+                    cost_project: 9957224, 
+                    cost_manpower: 8041841,
+                    cost_machinery: 500000,
+                    cost_chemical: 817500,
+                    cost_consumable: 597883,
+                    management_fee_percent: 7.5,
+                    management_fee_value: 746792,
+                    rounded_before_tax: 10704000,
+                    total_after_tax: 11881440,
+                    details_json: {
+                        manpower: { role: 'HOUSEKEEPING', qty: 1, basic_salary: 5938885, tunjangan: 0, uang_makan: 330000, uniform: 175000 }
+                    }
+                }
+            ];
+            renderTable(projectsData);
+        }
+
+        function resetForm() {
+            document.getElementById('editingProjectId').value = '';
+            document.getElementById('formTitle').innerText = 'Form Analytical Costing & Detail Input Component';
+            document.getElementById('editingBadge').innerText = 'Input Baru';
+            document.getElementById('editingBadge').className = 'text-xs text-slate-500 font-medium';
+            document.getElementById('btnSaveText').innerText = 'Simpan Hasil Analisa Ke Supabase';
+
+            document.getElementById('rabForm').reset();
+
+            manpowerComponents = [{
+                role: 'HOUSEKEEPING',
+                qty: 2,
+                basic_salary: 5938885,
+                tunjangan: 0,
+                uang_makan: 330000,
+                uniform: 175000,
+                custom_components: []
+            }];
+            renderManpowerComponents(manpowerComponents);
+            calculateDynamicRows();
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function formatRupiah(number) {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(number);
+        }
+
+        // ==========================================
+        // EXPORT FEATURES (EXCEL & PDF FUNCTIONS)
+        // ==========================================
+
+        // 1. EXPORT ALL PROJECTS SUMMARY TO EXCEL
+        function exportAllProjectsExcel() {
+            if (projectsData.length === 0) {
+                alert('Tidak ada data project untuk diekspor!');
+                return;
+            }
+
+            const exportData = projectsData.map(p => {
+                const details = p.details_json || {};
+                const calcSum = (arr) => (arr || []).reduce((acc, curr) => acc + (curr.total_monthly || 0), 0);
+
+                return {
+                    'ID Project': p.project_id,
+                    'Nama Client': p.client_name,
+                    'Lokasi': p.client_location || '-',
+                    'Area': p.project_area || '-',
+                    'Layanan / Service': p.project_title || '-',
+                    'TOP (Hari)': p.top_days,
+                    'Cost Manpower (Rp)': p.cost_manpower || 0,
+                    'Cost Mesin (Rp)': p.cost_machinery ?? calcSum(details.machinery),
+                    'Cost Consumable (Rp)': p.cost_consumable ?? calcSum(details.consumables),
+                    'Cost Chemical (Rp)': p.cost_chemical ?? calcSum(details.chemicals),
+                    'Total Cost Project (Rp)': p.cost_project,
+                    'Mgmt Fee (%)': p.management_fee_percent,
+                    'Mgmt Fee (Rp)': p.management_fee_value,
+                    'Total Before Tax (Rounded)': p.rounded_before_tax,
+                    'Total Inc. PPN 11% (Rp)': p.total_after_tax
+                };
+            });
+
+            const worksheet = XLSX.utils.json_to_sheet(exportData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Daftar RAB Project");
+            XLSX.writeFile(workbook, `Daftar_RAB_Project_PT_NIS_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
+
+        // 2. EXPORT SINGLE PROJECT DETAIL TO EXCEL
+        // V5.1 - Professional Excel Report
+        // Layout dibuat mengikuti struktur Download PDF:
+        // Header Project -> Manpower -> Machinery -> Chemicals -> Consumables -> Cost Summary.
+        function exportSingleProjectExcel(id) {
+            const prj = projectsData.find(p => p.project_id === id);
+            if (!prj) {
+                alert('Data project tidak ditemukan.');
+                return;
+            }
+
+            if (typeof XLSX === 'undefined') {
+                alert('Library Excel belum tersedia. Pastikan koneksi internet aktif lalu tekan Ctrl+F5.');
+                return;
+            }
+
+            const wb = XLSX.utils.book_new();
+            const details = prj.details_json || {};
+
+            const moneyValue = (v) => Number(v) || 0;
+            const calcSum = (arr) => (Array.isArray(arr) ? arr : [])
+                .reduce((acc, curr) => acc + moneyValue(curr.total_monthly), 0);
+
+            const manpowerList = Array.isArray(details.manpower)
+                ? details.manpower
+                : (details.manpower ? [details.manpower] : []);
+
+            const machinery = Array.isArray(details.machinery) ? details.machinery : [];
+            const chemicals = Array.isArray(details.chemicals) ? details.chemicals : [];
+            const consumables = Array.isArray(details.consumables) ? details.consumables : [];
+
+            // Normalize manpower so V4/V5 legacy data and V5 multi-manpower
+            // are both readable by the professional report.
+            const normalizeMP = (m) => {
+                const qty = Math.max(1, moneyValue(m.qty) || 1);
+                const basic = moneyValue(m.basic_salary);
+                const tunjangan = moneyValue(m.tunjangan);
+                const uangMakan = moneyValue(m.uang_makan);
+                const uniform = moneyValue(m.uniform);
+                const thr = basic / 12;
+                const bpjsKes = basic * 0.04;
+                const bpjsJht = basic * 0.037;
+                const bpjsJkm = basic * 0.003;
+                const bpjsJkk = basic * 0.0024;
+                const bpjsJp = basic * 0.02;
+                const pkwt = basic / 12;
+                const custom = Array.isArray(m.custom_components)
+                    ? m.custom_components.map(c => ({
+                        name: String(c?.name || '').trim(),
+                        amount: moneyValue(c?.amount)
+                    })).filter(c => c.name)
+                    : [];
+
+                const perPerson =
+                    basic + tunjangan + uangMakan + thr +
+                    bpjsKes + bpjsJht + bpjsJkm + bpjsJkk +
+                    bpjsJp + pkwt + uniform +
+                    custom.reduce((s, c) => s + c.amount, 0);
+
+                return {
+                    role: m.role || 'MANPOWER',
+                    qty, basic, tunjangan, uangMakan, uniform,
+                    thr, bpjsKes, bpjsJht, bpjsJkm, bpjsJkk, bpjsJp, pkwt,
+                    custom, perPerson, total: perPerson * qty
+                };
+            };
+
+            const manpower = manpowerList.map(normalizeMP);
+
+            // Use calculated category totals as fallback if project summary fields are absent.
+            const manpowerTotal = manpower.reduce((s, m) => s + m.total, 0);
+            const machineryTotal = prj.cost_machinery ?? calcSum(machinery);
+            const chemicalTotal = prj.cost_chemical ?? calcSum(chemicals);
+            const consumableTotal = prj.cost_consumable ?? calcSum(consumables);
+            const projectCost = prj.cost_project ?? (
+                manpowerTotal + machineryTotal + chemicalTotal + consumableTotal
+            );
+
+            const wsData = [];
+            const merges = [];
+            const sectionRows = [];
+            const subtotalRows = [];
+            const moneyCols = new Set();
+
+            function addRow(values, type = '') {
+                const row = wsData.length;
+                wsData.push(values);
+                if (type === 'section') sectionRows.push(row);
+                if (type === 'subtotal') subtotalRows.push(row);
+                return row;
+            }
+
+            function merge(row, c1, c2) {
+                merges.push({ s: { r: row, c: c1 }, e: { r: row, c: c2 } });
+            }
+
+            // Header / project information
+            let r = addRow(['PT NUSANTARA INTI SOLUSINDO']);
+            merge(r, 0, 6);
+            r = addRow(['RINCIAN ANALISA RAB PROJECT']);
+            merge(r, 0, 6);
+            addRow(['']);
+            addRow(['ID PROJECT', prj.project_id, '', 'CLIENT', prj.client_name || '-', '', '']);
+            addRow(['LOKASI', prj.client_location || '-', '', 'AREA', prj.project_area || '-', '', '']);
+            addRow(['SERVICE / PROJECT', prj.project_title || '-', '', 'TOP', `${prj.top_days ?? '-'} Hari`, '', '']);
+            addRow(['']);
+
+            // Section I - Manpower
+            r = addRow(['I. ANALISA MANPOWER (UPAH)'], 'section');
+            merge(r, 0, 6);
+
+            if (manpower.length === 0) {
+                addRow(['Tidak ada data manpower', '', '', '', '', '', '']);
+            }
+
+            manpower.forEach((m) => {
+                r = addRow([`${m.role}`, `${m.qty} Person`, '', '', '', '', '']);
+                merge(r, 0, 6);
+
+                addRow(['Komponen Salary & Benefit', 'Acuan / QTY', 'Amount / Person (Rp)', 'Total / Month (Rp)', '', '', '']);
+
+                const standard = [
+                    ['BASIC SALARY', `${m.qty} person`, m.basic, m.basic * m.qty],
+                    ['TUNJANGAN KEHADIRAN', '-', m.tunjangan, m.tunjangan * m.qty],
+                    ['UANG MAKAN', '-', m.uangMakan, m.uangMakan * m.qty],
+                    ['THR (1/12 Basic)', '12 month', m.thr, m.thr * m.qty],
+                    ['BPJS KESEHATAN (4.00%)', '4.00%', m.bpjsKes, m.bpjsKes * m.qty],
+                    ['BPJS HARI TUA (3.70%)', '3.70%', m.bpjsJht, m.bpjsJht * m.qty],
+                    ['BPJS KEMATIAN (0.30%)', '0.30%', m.bpjsJkm, m.bpjsJkm * m.qty],
+                    ['BPJS JAMINAN KECELAKAAN (0.24%)', '0.24%', m.bpjsJkk, m.bpjsJkk * m.qty],
+                    ['BPJS PENSIUN (2.00%)', '2.00%', m.bpjsJp, m.bpjsJp * m.qty],
+                    ['KOMPENSASI PKWT PP35', '1/12 Basic', m.pkwt, m.pkwt * m.qty],
+                    ['UNIFORM & SHOES', '-', m.uniform, m.uniform * m.qty]
+                ];
+
+                standard.forEach(v => {
+                    const rr = addRow([v[0], v[1], v[2], v[3], '', '', '']);
+                    moneyCols.add(`2:${rr}`);
+                    moneyCols.add(`3:${rr}`);
+                });
+
+                if (m.custom.length) {
+                    r = addRow(['CUSTOM SALARY & BENEFIT'], 'section');
+                    merge(r, 0, 6);
+
+                    m.custom.forEach(c => {
+                        const rr = addRow([c.name, 'Per Person', c.amount, c.amount * m.qty, '', '', '']);
+                        moneyCols.add(`2:${rr}`);
+                        moneyCols.add(`3:${rr}`);
+                    });
+                }
+
+                const rr = addRow([
+                    `SUB TOTAL MANPOWER COST — ${m.qty} PERSON`,
+                    '',
+                    m.perPerson,
+                    m.total,
+                    '',
+                    '',
+                    ''
+                ], 'subtotal');
+                merge(rr, 0, 1);
+                moneyCols.add(`2:${rr}`);
+                moneyCols.add(`3:${rr}`);
+                addRow(['']);
+            });
+
+            // Generic item section builder
+            function addItemSection(title, items, subtotal) {
+                r = addRow([title], 'section');
+                merge(r, 0, 6);
+
+                addRow([
+                    'Item', 'Volume', 'Unit', 'Status',
+                    'Depresiasi (Bln)', 'Harga / Unit (Rp)', 'Total / Month (Rp)'
+                ]);
+
+                if (!items.length) {
+                    addRow(['Tidak ada data', '', '', '', '', 0, 0]);
+                }
+
+                items.forEach(i => {
+                    const rr = addRow([
+                        i.name || '-',
+                        i.vol ?? 0,
+                        i.unit || '-',
+                        i.status || '-',
+                        i.depreciation_months ?? '-',
+                        moneyValue(i.price),
+                        moneyValue(i.total_monthly)
+                    ]);
+                    moneyCols.add(`5:${rr}`);
+                    moneyCols.add(`6:${rr}`);
+                });
+
+                const rr = addRow([
+                    `SUB TOTAL ${title.replace(/^[IVX]+\\.\\s*/, '').toUpperCase()} / MONTH`,
+                    '', '', '', '', '', subtotal
+                ], 'subtotal');
+                merge(rr, 0, 5);
+                moneyCols.add(`6:${rr}`);
+                addRow(['']);
+            }
+
+            addItemSection('II. PERALATAN PEKERJAAN / MESIN', machinery, machineryTotal);
+            addItemSection('III. ANALISA CHEMICALS', chemicals, chemicalTotal);
+            addItemSection('IV. ACCESSORIES & CONSUMABLES', consumables, consumableTotal);
+
+            // Cost summary
+            r = addRow(['PROJECT COST SUMMARY'], 'section');
+            merge(r, 0, 6);
+
+            const summaryRows = [
+                ['Cost Manpower', manpowerTotal],
+                ['Cost Mesin', machineryTotal],
+                ['Cost Chemicals', chemicalTotal],
+                ['Cost Consumables', consumableTotal],
+                ['TOTAL COST PROJECT', projectCost],
+                ['Management Fee (%)', `${prj.management_fee_percent ?? 0}%`],
+                ['Management Fee (Rp)', moneyValue(prj.management_fee_value)],
+                ['TOTAL BEFORE TAX (ROUNDED)', moneyValue(prj.rounded_before_tax)],
+                ['PPN 11%', moneyValue(prj.total_after_tax) - moneyValue(prj.rounded_before_tax)],
+                ['GRAND TOTAL (INC. PPN)', moneyValue(prj.total_after_tax)]
+            ];
+
+            summaryRows.forEach((v, idx) => {
+                const rr = addRow([v[0], '', '', '', '', '', v[1]], idx === 4 || idx === 9 ? 'subtotal' : '');
+                merge(rr, 0, 5);
+                if (typeof v[1] === 'number') moneyCols.add(`6:${rr}`);
+            });
+
+            addRow(['']);
+            r = addRow([
+                'Generated from RAB Database',
+                `Tanggal: ${new Date().toLocaleDateString('id-ID')}`,
+                '', '', '', '', ''
+            ]);
+            merge(r, 1, 6);
+
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            ws['!merges'] = merges;
+
+            // Column widths - optimized for A4 landscape / PDF-like readability.
+            ws['!cols'] = [
+                { wch: 38 }, { wch: 18 }, { wch: 20 }, { wch: 22 },
+                { wch: 18 }, { wch: 22 }, { wch: 24 }
+            ];
+
+            // Row heights.
+            ws['!rows'] = wsData.map((_, idx) => {
+                if (idx === 0) return { hpt: 25 };
+                if (idx === 1) return { hpt: 21 };
+                if (sectionRows.includes(idx)) return { hpt: 20 };
+                if (subtotalRows.includes(idx)) return { hpt: 21 };
+                return { hpt: 18 };
+            });
+
+            // Professional styling.
+            const NAVY = '1E3A8A';
+            const DARK = '0F172A';
+            const BLUE_LIGHT = 'DBEAFE';
+            const SLATE = 'F1F5F9';
+            const AMBER = 'FBBF24';
+            const GREEN = '047857';
+            const BORDER = 'CBD5E1';
+            const WHITE = 'FFFFFF';
+            const TEXT = '1E293B';
+
+            const thinBorder = {
+                top: { style: 'thin', color: { rgb: BORDER } },
+                bottom: { style: 'thin', color: { rgb: BORDER } },
+                left: { style: 'thin', color: { rgb: BORDER } },
+                right: { style: 'thin', color: { rgb: BORDER } }
+            };
+
+            function styleRangeRow(rowIndex, fill, font, align = 'left') {
+                for (let c = 0; c < 7; c++) {
+                    const addr = XLSX.utils.encode_cell({ r: rowIndex, c });
+                    if (!ws[addr]) ws[addr] = { t: 's', v: '' };
+                    ws[addr].s = {
+                        fill: { fgColor: { rgb: fill } },
+                        font,
+                        alignment: { horizontal: align, vertical: 'center', wrapText: true },
+                        border: thinBorder
+                    };
+                }
+            }
+
+            // Base styling.
+            for (let rr = 0; rr < wsData.length; rr++) {
+                for (let cc = 0; cc < 7; cc++) {
+                    const addr = XLSX.utils.encode_cell({ r: rr, c: cc });
+                    if (!ws[addr]) continue;
+                    ws[addr].s = {
+                        font: { name: 'Aptos', sz: 10, color: { rgb: TEXT } },
+                        alignment: {
+                            vertical: 'center',
+                            horizontal: cc >= 2 ? 'right' : 'left',
+                            wrapText: true
+                        },
+                        border: thinBorder
+                    };
+                }
+            }
+
+            // Main title.
+            styleRangeRow(0, DARK, { name: 'Aptos Display', sz: 15, bold: true, color: { rgb: WHITE } });
+            ws['A1'].s.alignment = { horizontal: 'left', vertical: 'center' };
+
+            styleRangeRow(1, NAVY, { name: 'Aptos Display', sz: 12, bold: true, color: { rgb: WHITE } });
+
+            // Metadata labels.
+            for (let rr = 3; rr <= 5; rr++) {
+                ['A', 'D'].forEach(col => {
+                    const cell = ws[`${col}${rr + 1}`];
+                    if (cell) {
+                        cell.s = {
+                            fill: { fgColor: { rgb: SLATE } },
+                            font: { name: 'Aptos', sz: 10, bold: true, color: { rgb: NAVY } },
+                            alignment: { vertical: 'center' },
+                            border: thinBorder
+                        };
+                    }
+                });
+            }
+
+            // Section headers and subtotals.
+            sectionRows.forEach(rr => {
+                styleRangeRow(rr, NAVY, { name: 'Aptos', sz: 10, bold: true, color: { rgb: WHITE } });
+            });
+
+            subtotalRows.forEach(rr => {
+                styleRangeRow(rr, AMBER, { name: 'Aptos', sz: 10, bold: true, color: { rgb: DARK } });
+            });
+
+            // Identify item table header rows from exact labels.
+            wsData.forEach((row, rr) => {
+                if (row[0] === 'Komponen Salary & Benefit' || row[0] === 'Item') {
+                    styleRangeRow(rr, DARK, { name: 'Aptos', sz: 9, bold: true, color: { rgb: WHITE } }, 'center');
+                }
+            });
+
+            // Custom section should use a lighter blue instead of main section blue.
+            wsData.forEach((row, rr) => {
+                if (row[0] === 'CUSTOM SALARY & BENEFIT') {
+                    styleRangeRow(rr, BLUE_LIGHT, { name: 'Aptos', sz: 9, bold: true, color: { rgb: NAVY } });
+                }
+            });
+
+            // Money formatting.
+            moneyCols.forEach(key => {
+                const [cc, rr] = key.split(':').map(Number);
+                const addr = XLSX.utils.encode_cell({ r: rr, c: cc });
+                if (ws[addr] && typeof ws[addr].v === 'number') {
+                    ws[addr].z = '"Rp" #,##0';
+                    ws[addr].s = ws[addr].s || {};
+                    ws[addr].s.alignment = { horizontal: 'right', vertical: 'center' };
+                }
+            });
+
+            // Explicit number formats for columns used as money.
+            for (let rr = 0; rr < wsData.length; rr++) {
+                [2, 3, 5, 6].forEach(cc => {
+                    const addr = XLSX.utils.encode_cell({ r: rr, c: cc });
+                    if (ws[addr] && typeof ws[addr].v === 'number') {
+                        ws[addr].z = '"Rp" #,##0';
+                    }
+                });
+            }
+
+            // Summary emphasis.
+            wsData.forEach((row, rr) => {
+                if (row[0] === 'GRAND TOTAL (INC. PPN)') {
+                    styleRangeRow(rr, GREEN, { name: 'Aptos Display', sz: 11, bold: true, color: { rgb: WHITE } });
+                    ws[XLSX.utils.encode_cell({ r: rr, c: 6 })].z = '"Rp" #,##0';
+                }
+                if (row[0] === 'TOTAL BEFORE TAX (ROUNDED)') {
+                    styleRangeRow(rr, 'DCFCE7', { name: 'Aptos', sz: 10, bold: true, color: { rgb: GREEN } });
+                    ws[XLSX.utils.encode_cell({ r: rr, c: 6 })].z = '"Rp" #,##0';
+                }
+            });
+
+            // Print setup: A4 landscape, fit to 1 page wide.
+            ws['!pageSetup'] = {
+                paperSize: 9,
+                orientation: 'landscape',
+                fitToWidth: 1,
+                fitToHeight: 0
+            };
+            ws['!pageMargins'] = {
+                left: 0.25, right: 0.25, top: 0.4, bottom: 0.4,
+                header: 0.2, footer: 0.2
+            };
+            ws['!printHeader'] = '&BPT NUSANTARA INTI SOLUSINDO&B';
+            ws['!printFooter'] = 'Halaman &P dari &N';
+            ws['!autofilter'] = null;
+            ws['!freeze'] = { xSplit: 0, ySplit: 8 };
+
+            XLSX.utils.book_append_sheet(wb, ws, 'RAB Detail');
+
+            // A compact summary sheet is retained as a management-friendly view.
+            const summary = [
+                ['PT NUSANTARA INTI SOLUSINDO'],
+                ['RINGKASAN RAB PROJECT'],
+                ['ID Project', prj.project_id],
+                ['Client', prj.client_name || '-'],
+                ['Service', prj.project_title || '-'],
+                ['TOP', `${prj.top_days ?? '-'} Hari`],
+                [''],
+                ['KOMPONEN', 'AMOUNT (Rp)'],
+                ['Cost Manpower', manpowerTotal],
+                ['Cost Mesin', machineryTotal],
+                ['Cost Chemicals', chemicalTotal],
+                ['Cost Consumables', consumableTotal],
+                ['Total Cost Project', projectCost],
+                ['Management Fee (%)', `${prj.management_fee_percent ?? 0}%`],
+                ['Management Fee (Rp)', moneyValue(prj.management_fee_value)],
+                ['Total Before Tax (Rounded)', moneyValue(prj.rounded_before_tax)],
+                ['Grand Total (Inc. PPN)', moneyValue(prj.total_after_tax)]
+            ];
+            const wsS = XLSX.utils.aoa_to_sheet(summary);
+            wsS['!cols'] = [{ wch: 34 }, { wch: 25 }];
+            wsS['!merges'] = [
+                { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } },
+                { s: { r: 1, c: 0 }, e: { r: 1, c: 1 } }
+            ];
+            for (let rr = 0; rr < summary.length; rr++) {
+                for (let cc = 0; cc < 2; cc++) {
+                    const addr = XLSX.utils.encode_cell({ r: rr, c: cc });
+                    if (!wsS[addr]) continue;
+                    wsS[addr].s = {
+                        font: { name: 'Aptos', sz: 10, color: { rgb: TEXT }, bold: rr <= 1 },
+                        alignment: { vertical: 'center', wrapText: true },
+                        border: thinBorder
+                    };
+                }
+            }
+            ['A1', 'B1'].forEach(a => wsS[a] && (wsS[a].s = {
+                fill: { fgColor: { rgb: DARK } },
+                font: { name: 'Aptos Display', sz: 14, bold: true, color: { rgb: WHITE } },
+                alignment: { vertical: 'center' }
+            }));
+            ['A2', 'B2'].forEach(a => wsS[a] && (wsS[a].s = {
+                fill: { fgColor: { rgb: NAVY } },
+                font: { name: 'Aptos Display', sz: 11, bold: true, color: { rgb: WHITE } },
+                alignment: { vertical: 'center' }
+            }));
+            for (let rr = 7; rr < summary.length; rr++) {
+                if (summary[rr][0] === 'KOMPONEN') {
+                    ['A', 'B'].forEach(col => wsS[`${col}${rr + 1}`] && (wsS[`${col}${rr + 1}`].s = {
+                        fill: { fgColor: { rgb: DARK } },
+                        font: { name: 'Aptos', sz: 10, bold: true, color: { rgb: WHITE } },
+                        alignment: { vertical: 'center' },
+                        border: thinBorder
+                    }));
+                }
+                if (typeof summary[rr][1] === 'number') {
+                    wsS[`B${rr + 1}`].z = '"Rp" #,##0';
+                    wsS[`B${rr + 1}`].s.alignment = { horizontal: 'right', vertical: 'center' };
+                }
+            }
+            wsS['!pageSetup'] = { paperSize: 9, orientation: 'portrait', fitToWidth: 1, fitToHeight: 1 };
+            wsS['!pageMargins'] = { left: 0.3, right: 0.3, top: 0.4, bottom: 0.4 };
+            XLSX.utils.book_append_sheet(wb, wsS, 'Summary');
+
+            const safeClient = String(prj.client_name || 'Project').replace(/[^a-zA-Z0-9]/g, '_');
+            XLSX.writeFile(
+                wb,
+                `RAB_Professional_${prj.project_id}_${safeClient}.xlsx`
+            );
+        }
+
+        // 3. EXPORT SINGLE PROJECT TO PDF (FIXED BLANK ISSUE)
+        async function exportSingleProjectPDF(id) {
+            const prj = projectsData.find(p => p.project_id === id);
+            if (!prj) {
+                alert('Data project tidak ditemukan.');
+                return;
+            }
+
+            /*
+             * V3 - PDF ENGINE TANPA html2canvas
+             * ---------------------------------
+             * Versi sebelumnya masih menggunakan html2pdf -> html2canvas.
+             * Pada file HTML lokal (file://) html2canvas dapat menghasilkan
+             * canvas kosong/blank.
+             *
+             * Di versi ini PDF digambar langsung menggunakan jsPDF.
+             * Jadi tidak ada proses screenshot DOM/canvas sama sekali.
+             */
+
+            const JsPDF =
+                (window.jspdf && typeof window.jspdf.jsPDF === 'function')
+                    ? window.jspdf.jsPDF
+                    : (typeof window.jsPDF === 'function' ? window.jsPDF : null);
+
+            if (!JsPDF) {
+                alert(
+                    'Engine PDF jsPDF belum tersedia.\n\n' +
+                    'Pastikan koneksi internet aktif, lalu tekan Ctrl+F5 dan coba kembali.'
+                );
+                console.error('jsPDF tidak ditemukan:', {
+                    jspdf: window.jspdf,
+                    jsPDF: window.jsPDF,
+                    html2pdf: typeof window.html2pdf
+                });
+                return;
+            }
+
+            const button = document.getElementById('btnExportModalPDF');
+            const oldHtml = button ? button.innerHTML : '';
+
+            if (button) {
+                button.disabled = true;
+                button.style.opacity = '0.6';
+                button.innerHTML = '<span>Generating PDF...</span>';
+            }
+
+            const details = prj.details_json || {};
+            const mac = Array.isArray(details.machinery) ? details.machinery : [];
+            const chem = Array.isArray(details.chemicals) ? details.chemicals : [];
+            const cons = Array.isArray(details.consumables) ? details.consumables : [];
+
+            const pdf = new JsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4',
+                compress: true
+            });
+
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            const margin = 12;
+            const contentWidth = pageWidth - margin * 2;
+            let y = margin;
+
+            const BLUE = [30, 58, 138];
+            const DARK = [15, 23, 42];
+            const LIGHT = [241, 245, 249];
+            const BORDER = [203, 213, 225];
+            const TEXT = [30, 41, 59];
+            const MUTED = [100, 116, 139];
+
+            function money(value) {
+                return formatRupiah(Number(value) || 0)
+                    .replace(/\u00a0/g, ' ')
+                    .replace(/\s+/g, ' ');
+            }
+
+            function safe(value, fallback = '-') {
+                return String(value ?? fallback);
+            }
+
+            function addPageIfNeeded(height = 8) {
+                if (y + height > pageHeight - margin) {
+                    pdf.addPage();
+                    y = margin;
+                    drawHeader(true);
+                }
+            }
+
+            function drawHeader(isContinuation = false) {
+                pdf.setFillColor(...DARK);
+                pdf.rect(0, 0, pageWidth, 18, 'F');
+
+                pdf.setTextColor(255, 255, 255);
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(10);
+                pdf.text('PT NUSANTARA INTI SOLUSINDO', margin, 7);
+
+                pdf.setFont('helvetica', 'normal');
+                pdf.setFontSize(7);
+                pdf.text(
+                    isContinuation ? 'RAB Detailed Costing - Lanjutan' : 'RAB Detailed Costing & Analisa Komponen',
+                    margin,
+                    12
+                );
+
+                y = 24;
+            }
+
+            function sectionTitle(title) {
+                addPageIfNeeded(12);
+
+                pdf.setFillColor(...BLUE);
+                pdf.roundedRect(margin, y, contentWidth, 7, 1.5, 1.5, 'F');
+
+                pdf.setTextColor(255, 255, 255);
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(8);
+                pdf.text(title, margin + 3, y + 4.8);
+
+                y += 10;
+            }
+
+            function drawMeta() {
+                addPageIfNeeded(36);
+
+                const boxH = 31;
+                pdf.setFillColor(248, 250, 252);
+                pdf.setDrawColor(...BORDER);
+                pdf.roundedRect(margin, y, contentWidth, boxH, 2, 2, 'FD');
+
+                pdf.setTextColor(...TEXT);
+                pdf.setFontSize(7.5);
+
+                const leftX = margin + 4;
+                const rightX = margin + contentWidth / 2 + 2;
+
+                const rowsLeft = [
+                    ['ID Project', safe(prj.project_id)],
+                    ['Client', safe(prj.client_name)],
+                    ['Lokasi / Area', `${safe(prj.client_location)} / ${safe(prj.project_area)}`]
+                ];
+
+                const rowsRight = [
+                    ['Layanan', safe(prj.project_title)],
+                    ['TOP', `${safe(prj.top_days)} Hari`],
+                    ['Management Fee', `${safe(prj.management_fee_percent, 0)}%`]
+                ];
+
+                rowsLeft.forEach((r, i) => {
+                    const yy = y + 7 + i * 8;
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.text(r[0] + ':', leftX, yy);
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.text(r[1], leftX + 25, yy);
+                });
+
+                rowsRight.forEach((r, i) => {
+                    const yy = y + 7 + i * 8;
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.text(r[0] + ':', rightX, yy);
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.text(r[1], rightX + 25, yy);
+                });
+
+                y += boxH + 5;
+            }
+
+            function drawManpower() {
+                const mpItems = Array.isArray(details.manpower)
+                    ? details.manpower
+                    : (details.manpower ? [details.manpower] : (details.manpower_legacy ? [details.manpower_legacy] : []));
+
+                sectionTitle('I. MANPOWER COMPONENT');
+
+                if (!mpItems.length) {
+                    addPageIfNeeded(10);
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.setFontSize(7);
+                    pdf.setTextColor(...MUTED);
+                    pdf.text('Tidak ada manpower component.', margin + 2, y + 5);
+                    y += 10;
+                    return;
+                }
+
+                const x = margin;
+                const col = [
+                    x,
+                    x + 63,
+                    x + 92,
+                    x + 125,
+                    margin + contentWidth
+                ];
+
+                pdf.setFillColor(...LIGHT);
+                pdf.setDrawColor(...BORDER);
+                pdf.rect(x, y, contentWidth, 7, 'FD');
+
+                pdf.setTextColor(...TEXT);
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(7);
+                pdf.text('Jabatan / Role', col[0] + 2, y + 4.5);
+                pdf.text('QTY', col[1] + 2, y + 4.5);
+                pdf.text('Basic Salary', col[2] + 2, y + 4.5);
+                pdf.text('Uang Makan', col[3] + 2, y + 4.5);
+                pdf.text('Total / Bln', col[4] - 2, y + 4.5, { align: 'right' });
+
+                y += 7;
+
+                mpItems.forEach((raw, index) => {
+                    const m = manpowerCalc(raw);
+                    const rowH = 9;
+
+                    addPageIfNeeded(rowH + 2);
+
+                    pdf.setFont('helvetica', index === 0 ? 'bold' : 'normal');
+                    pdf.setFontSize(6.8);
+                    pdf.setTextColor(...TEXT);
+
+                    pdf.text(safe(m.role), col[0] + 2, y + 5);
+                    pdf.text(`${m.qty} org`, col[1] + 2, y + 5);
+                    pdf.text(money(m.basic_salary), col[2] + 2, y + 5);
+                    pdf.text(money(m.uang_makan), col[3] + 2, y + 5);
+
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.text(
+                        money(m.subtotalTotal),
+                        col[4] - 2,
+                        y + 5,
+                        { align: 'right' }
+                    );
+
+                    pdf.setDrawColor(...BORDER);
+                    pdf.line(x, y + rowH, x + contentWidth, y + rowH);
+                    y += rowH;
+
+                    // Custom salary & benefit components
+                    if (m.custom_components.length) {
+                        m.custom_components.forEach(cc => {
+                            addPageIfNeeded(8);
+                            pdf.setFont('helvetica', 'normal');
+                            pdf.setFontSize(6.4);
+                            pdf.setTextColor(...MUTED);
+                            pdf.text('  + ' + safe(cc.name), col[0] + 4, y + 4.5);
+                            pdf.text('Per Person', col[1] + 2, y + 4.5);
+                            pdf.text(money(cc.amount), col[2] + 2, y + 4.5);
+                            pdf.text(money(cc.amount * m.qty), col[4] - 2, y + 4.5, { align: 'right' });
+                            pdf.setDrawColor(...BORDER);
+                            pdf.line(x, y + 8, x + contentWidth, y + 8);
+                            y += 8;
+                        });
+                    }
+                });
+
+                const totalMp = mpItems.reduce((sum, item) => sum + manpowerCalc(item).subtotalTotal, 0);
+
+                addPageIfNeeded(9);
+                pdf.setFillColor(245, 190, 50);
+                pdf.rect(x, y, contentWidth, 8, 'F');
+                pdf.setTextColor(...DARK);
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(7);
+                pdf.text('TOTAL MANPOWER COST', x + 2, y + 5.2);
+                pdf.text(money(totalMp), x + contentWidth - 2, y + 5.2, { align: 'right' });
+                y += 12;
+            }
+
+            function drawTable(title, items) {
+                sectionTitle(title);
+
+                const x = margin;
+                const col = [
+                    x,
+                    x + 77,
+                    x + 105,
+                    x + 133,
+                    margin + contentWidth
+                ];
+
+                pdf.setFillColor(...LIGHT);
+                pdf.setDrawColor(...BORDER);
+                pdf.rect(x, y, contentWidth, 7, 'FD');
+
+                pdf.setTextColor(...TEXT);
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(6.8);
+                pdf.text('Item', col[0] + 2, y + 4.5);
+                pdf.text('Vol', col[1] + 2, y + 4.5);
+                pdf.text('Depr', col[2] + 2, y + 4.5);
+                pdf.text('Harga', col[3] + 2, y + 4.5);
+                pdf.text('Total/Bln', col[4] - 2, y + 4.5, { align: 'right' });
+
+                y += 7;
+
+                if (!items.length) {
+                    addPageIfNeeded(8);
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.setFontSize(7);
+                    pdf.setTextColor(...MUTED);
+                    pdf.text('Tidak ada item', x + 2, y + 5);
+                    y += 9;
+                    return;
+                }
+
+                items.forEach(item => {
+                    addPageIfNeeded(10);
+
+                    const itemName = safe(item.name);
+                    const maxChars = 42;
+                    const nameLines = pdf.splitTextToSize(itemName, 72);
+
+                    const rowH = Math.max(8, nameLines.length * 3.2 + 3);
+
+                    if (y + rowH > pageHeight - margin) {
+                        pdf.addPage();
+                        y = margin;
+                        drawHeader(true);
+                        sectionTitle(title + ' - Lanjutan');
+
+                        pdf.setFillColor(...LIGHT);
+                        pdf.setDrawColor(...BORDER);
+                        pdf.rect(x, y, contentWidth, 7, 'FD');
+                        pdf.setTextColor(...TEXT);
+                        pdf.setFont('helvetica', 'bold');
+                        pdf.setFontSize(6.8);
+                        pdf.text('Item', col[0] + 2, y + 4.5);
+                        pdf.text('Vol', col[1] + 2, y + 4.5);
+                        pdf.text('Depr', col[2] + 2, y + 4.5);
+                        pdf.text('Harga', col[3] + 2, y + 4.5);
+                        pdf.text('Total/Bln', col[4] - 2, y + 4.5, { align: 'right' });
+                        y += 7;
+                    }
+
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.setFontSize(6.8);
+                    pdf.setTextColor(...TEXT);
+
+                    pdf.text(nameLines.slice(0, 3), col[0] + 2, y + 4);
+
+                    pdf.text(
+                        `${safe(item.vol)} ${safe(item.unit)}`,
+                        col[1] + 2,
+                        y + 4
+                    );
+
+                    pdf.text(
+                        `${safe(item.depreciation_months, 1)} Bln`,
+                        col[2] + 2,
+                        y + 4
+                    );
+
+                    pdf.text(
+                        money(item.price),
+                        col[3] + 2,
+                        y + 4
+                    );
+
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.text(
+                        money(item.total_monthly),
+                        col[4] - 2,
+                        y + 4,
+                        { align: 'right' }
+                    );
+
+                    pdf.setDrawColor(...BORDER);
+                    pdf.line(x, y + rowH, x + contentWidth, y + rowH);
+
+                    y += rowH;
+                });
+
+                y += 3;
+            }
+
+            function drawSummary() {
+                addPageIfNeeded(42);
+
+                const h = 38;
+                pdf.setFillColor(...DARK);
+                pdf.roundedRect(margin, y, contentWidth, h, 2, 2, 'F');
+
+                pdf.setTextColor(255, 255, 255);
+                pdf.setFontSize(7.5);
+                pdf.setFont('helvetica', 'normal');
+
+                const rows = [
+                    ['Total Project Cost (I+II+III+IV)', money(prj.cost_project)],
+                    [`Management Fee (${safe(prj.management_fee_percent, 0)}%)`, money(prj.management_fee_value)],
+                    ['Total Before Tax (Rounded)', money(prj.rounded_before_tax)]
+                ];
+
+                rows.forEach((r, i) => {
+                    const yy = y + 7 + i * 7;
+                    pdf.text(r[0], margin + 4, yy);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.text(r[1], margin + contentWidth - 4, yy, { align: 'right' });
+                    pdf.setFont('helvetica', 'normal');
+                });
+
+                pdf.setDrawColor(71, 85, 105);
+                pdf.line(
+                    margin + 4,
+                    y + 27,
+                    margin + contentWidth - 4,
+                    y + 27
+                );
+
+                pdf.setTextColor(147, 197, 253);
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(8);
+                pdf.text(
+                    'GRAND TOTAL PENAWARAN (Inc. PPN 11%)',
+                    margin + 4,
+                    y + 33
+                );
+
+                pdf.setTextColor(253, 224, 71);
+                pdf.text(
+                    money(prj.total_after_tax),
+                    margin + contentWidth - 4,
+                    y + 33,
+                    { align: 'right' }
+                );
+
+                y += h + 5;
+            }
+
+            function addPageNumbers() {
+                const totalPages = pdf.internal.getNumberOfPages();
+
+                for (let p = 1; p <= totalPages; p++) {
+                    pdf.setPage(p);
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.setFontSize(6.5);
+                    pdf.setTextColor(...MUTED);
+                    pdf.text(
+                        `RAB ${safe(prj.project_id)}  |  Halaman ${p} / ${totalPages}`,
+                        pageWidth - margin,
+                        pageHeight - 5,
+                        { align: 'right' }
+                    );
+                }
+            }
+
+            try {
+                drawHeader(false);
+                drawMeta();
+                drawManpower();
+                drawTable('II. PERALATAN & MESIN', mac);
+                drawTable('III. CHEMICALS & BAHAN KIMIA', chem);
+                drawTable('IV. CONSUMABLES & ACCESSORIES', cons);
+                drawSummary();
+                addPageNumbers();
+
+                const safeProject = safe(prj.project_id).replace(/[^a-zA-Z0-9_-]/g, '_');
+                const safeClient = safe(prj.client_name, 'Project').replace(/[^a-zA-Z0-9_-]/g, '_');
+
+                pdf.save(`RAB_${safeProject}_${safeClient}.pdf`);
+
+            } catch (err) {
+                console.error('Direct jsPDF Export Error:', err);
+                alert('Gagal membuat PDF. Detail: ' + (err?.message || err));
+            } finally {
+                if (button) {
+                    button.disabled = false;
+                    button.style.opacity = '';
+                    button.innerHTML = oldHtml;
+                }
+            }
+        }
+
+        window.onload = function() {
+            renderManpowerComponents(manpowerComponents);
+            initSupabase();
+            calculateManpower();
+            calculateDynamicRows();
+        };
+    </script>
+</body>
+</html>
