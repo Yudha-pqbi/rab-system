@@ -213,8 +213,15 @@ function saveConfig(){
  if(!url||!key){alert('Mohon masukkan SUPABASE_URL dan SUPABASE_ANON_KEY.');return}
  localStorage.setItem('SB_URL',url);localStorage.setItem('SB_KEY',key);initSupabase();alert('Kredensial Supabase berhasil disimpan.');
 }
+  
+const DEFAULT_SB_URL = 'ISI_SUPABASE_URL_ANDA';
+const DEFAULT_SB_KEY = 'ISI_SUPABASE_ANON_KEY_ANDA';
+  
 function initSupabase(){
- const url=localStorage.getItem('SB_URL')||'',key=localStorage.getItem('SB_KEY')||'';
+ const url=localStorage.getItem('SB_URL')||'https://rljqyaycshwpoteoxgem.supabase.co'
+;
+ const key=localStorage.getItem('SB_KEY')||'sb_publishable_-MIacd79BlgIgfiDIDU9Fw_o9ivtipK'
+;
  document.getElementById('supabaseUrl').value=url;document.getElementById('supabaseKey').value=key;
  if(url&&key&&window.supabase){
   try{supabaseClient=window.supabase.createClient(url,key);setDbStatus(true);fetchProjects();return}catch(e){console.error(e)}
