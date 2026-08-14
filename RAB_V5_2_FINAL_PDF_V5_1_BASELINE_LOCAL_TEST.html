@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAB V5.2.1 — V5.1 Header Layout + Editable Salary & Benefit</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{font-family:Inter,sans-serif;background:#f8fafc}
+.gradient-header{background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 50%,#3b82f6 100%)}
+.tab-btn.active{border-bottom:3px solid #2563eb;color:#2563eb;font-weight:700;background:#eff6ff}
+input,select{outline:none}
+input:focus,select:focus{box-shadow:0 0 0 2px rgba(37,99,235,.18)}
+.mode-auto{background:#ecfdf5;color:#047857;border:1px solid #a7f3d0}
+.mode-manual{background:#fff7ed;color:#c2410c;border:1px solid #fed7aa}
+@media print{.no-print{display:none!important}}
+</style>
+</head>
+<body class="min-h-screen text-slate-800 flex flex-col">
+
+<header class="gradient-header text-white shadow-xl sticky top-0 z-50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+    <div class="flex items-center gap-3">
+      <div class="bg-white/10 p-2.5 rounded-xl border border-white/20">
+        <svg class="w-7 h-7 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m-6 4h6m-6 4h6M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold">PT Nusantara Inti Solusindo</h1>
+        <p class="text-xs text-blue-200">RAB V5.2 — Editable Salary & Benefit</p>
+      </div>
+    </div>
+    <div id="dbStatusBadge" class="text-xs px-3 py-1.5 rounded-full bg-amber-500/20 border border-amber-300/30">● Mode Lokal / Demo Data</div>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+<section class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+  <div class="flex justify-between items-center cursor-pointer" onclick="toggleConfig()">
+    <div class="flex items-center gap-2 text-amber-900">
+      <span class="font-bold text-sm">⚙ Pengaturan Connection Database Supabase</span>
+    </div>
+    <span class="text-xs font-semibold underline">Pengaturan Database</span>
+  </div>
+  <div id="configBody" class="hidden mt-4 pt-4 border-t border-amber-200 space-y-3">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div><label class="block text-xs font-semibold mb-1">SUPABASE_URL</label><input id="supabaseUrl" class="w-full text-xs px-3 py-2 border border-amber-300 rounded-lg" placeholder="https://xxxxx.supabase.co"></div>
+      <div><label class="block text-xs font-semibold mb-1">SUPABASE_ANON_KEY</label><input id="supabaseKey" type="password" class="w-full text-xs px-3 py-2 border border-amber-300 rounded-lg" placeholder="eyJ..."></div>
+    </div>
+    <div class="flex justify-end"><button onclick="saveConfig()" class="bg-amber-600 text-white text-xs px-4 py-2 rounded-lg font-semibold">Simpan & Hubungkan</button></div>
+  </div>
+</section>
+
+<section class="grid grid-cols-1 md:grid-cols-5 gap-4">
+  <div class="bg-white p-4 rounded-xl border shadow-sm"><p class="text-[10px] font-bold text-slate-400 uppercase">Cost Manpower</p><p id="statCostMp" class="text-lg font-extrabold text-blue-700">Rp 0</p></div>
+  <div class="bg-white p-4 rounded-xl border shadow-sm"><p class="text-[10px] font-bold text-slate-400 uppercase">Cost Mesin</p><p id="statCostMachinery" class="text-lg font-extrabold">Rp 0</p></div>
+  <div class="bg-white p-4 rounded-xl border shadow-sm"><p class="text-[10px] font-bold text-slate-400 uppercase">Cost Chemicals</p><p id="statCostChemical" class="text-lg font-extrabold">Rp 0</p></div>
+  <div class="bg-white p-4 rounded-xl border shadow-sm"><p class="text-[10px] font-bold text-slate-400 uppercase">Cost Consumables</p><p id="statCostConsumable" class="text-lg font-extrabold">Rp 0</p></div>
+  <div class="bg-slate-900 p-4 rounded-xl shadow-sm text-white"><p class="text-[10px] font-bold text-slate-400 uppercase">Total Cost Project</p><p id="statTotalCost" class="text-lg font-extrabold">Rp 0</p></div>
+</section>
+
+<section id="formSection" class="bg-white rounded-xl border shadow-sm overflow-hidden">
+  <div class="px-6 py-4 bg-slate-50 border-b flex justify-between items-center">
+    <div><h2 id="formTitle" class="text-base font-bold">Form Analytical Costing & Detail Input Component</h2><span id="editingBadge" class="text-xs text-slate-500">Input Baru</span></div>
+    <button onclick="resetForm()" class="text-xs px-3 py-1.5 rounded-lg border bg-white hover:bg-slate-100">Reset Form</button>
+  </div>
+
+  <form id="rabForm" onsubmit="handleFormSubmit(event)" class="p-6 space-y-6">
+    <input type="hidden" id="editingProjectId">
+    <!-- GENERAL PROJECT INFORMATION — V5.1 BASELINE LAYOUT -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 p-5 rounded-xl bg-slate-50 border border-slate-200">
+      <div class="flex flex-col justify-end">
+        <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5 truncate" title="Nama Client / Perusahaan">
+          Nama Client / Perusahaan *
+        </label>
+        <input type="text" id="clientName" required placeholder="Contoh: PT. ADM Animal Nutrition" class="w-full h-9 px-3 py-1.5 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 outline-none transition bg-white">
+      </div>
+
+      <div class="flex flex-col justify-end">
+        <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5 truncate" title="Lokasi / Kota">
+          Lokasi / Kota *
+        </label>
+        <input type="text" id="clientLocation" required placeholder="Contoh: Jakarta Selatan" class="w-full h-9 px-3 py-1.5 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 outline-none transition bg-white">
+      </div>
+
+      <div class="flex flex-col justify-end">
+        <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5 truncate" title="Area">
+          Area *
+        </label>
+        <input type="text" id="projectArea" required placeholder="Contoh: Head Office / Factory" class="w-full h-9 px-3 py-1.5 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 outline-none transition bg-white">
+      </div>
+
+      <div class="flex flex-col justify-end">
+        <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5 truncate" title="Service">
+          Service *
+        </label>
+        <input type="text" id="projectTitle" required placeholder="Contoh: Commercial Cleaning Service" class="w-full h-9 px-3 py-1.5 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 outline-none transition bg-white">
+      </div>
+
+      <div class="flex flex-col justify-end">
+        <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5 truncate" title="Terms of Payment (TOP)">
+          TOP (Hari) *
+        </label>
+        <select id="topDays" required class="w-full h-9 px-3 py-1.5 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 outline-none transition bg-white">
+          <option value="15">15 Hari</option>
+          <option value="30" selected>30 Hari</option>
+          <option value="45">45 Hari</option>
+          <option value="60">60 Hari</option>
+          <option value="90">90 Hari</option>
+          <option value="120">120 Hari</option>
+        </select>
+      </div>
+
+      <div class="flex flex-col justify-end">
+        <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5 truncate" title="Management Fee (%)">
+          Mgmt Fee (%) *
+        </label>
+        <input type="number" id="managementFeePercent" required step="0.1" min="0" value="7.5" placeholder="7.5" oninput="calculateOverallTotals()" class="w-full h-9 px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-bold text-blue-900 focus:ring-2 focus:ring-blue-500 outline-none transition bg-white">
+      </div>
+    </div>
+
+    <div class="border rounded-xl overflow-hidden">
+      <div class="flex overflow-x-auto border-b bg-white">
+        <button type="button" id="btn-tab-manpower" onclick="switchTab('tab-manpower')" class="tab-btn active px-5 py-3 text-xs whitespace-nowrap">I. Analisa Manpower (Upah) <span id="badge-count-mp" class="ml-1 bg-slate-100 rounded-full px-2 py-0.5">1</span></button>
+        <button type="button" id="btn-tab-machinery" onclick="switchTab('tab-machinery')" class="tab-btn px-5 py-3 text-xs whitespace-nowrap">II. Peralatan Pekerjaan (Mesin) <span id="badge-count-mac" class="ml-1 bg-slate-100 rounded-full px-2 py-0.5">0</span></button>
+        <button type="button" id="btn-tab-chemicals" onclick="switchTab('tab-chemicals')" class="tab-btn px-5 py-3 text-xs whitespace-nowrap">III. Analisa Chemicals <span id="badge-count-chem" class="ml-1 bg-slate-100 rounded-full px-2 py-0.5">0</span></button>
+        <button type="button" id="btn-tab-consumables" onclick="switchTab('tab-consumables')" class="tab-btn px-5 py-3 text-xs whitespace-nowrap">IV. Accessories & Consumables <span id="badge-count-cons" class="ml-1 bg-slate-100 rounded-full px-2 py-0.5">0</span></button>
+      </div>
+
+      <div id="tab-manpower" class="tab-content p-4 space-y-4">
+        <div class="flex justify-between items-center"><div><h3 class="font-bold text-sm">I. ANALISA MANPOWER (UPAH)</h3><p class="text-xs text-slate-400">V5.2: seluruh komponen Salary & Benefit dapat diubah manual.</p></div><button type="button" onclick="addManpower()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold">+ Tambah Manpower</button></div>
+        <div id="manpowerList" class="space-y-4"></div>
+      </div>
+
+      <div id="tab-machinery" class="tab-content hidden p-4 space-y-4">
+        <div class="flex justify-between items-center"><h3 class="font-bold text-xs uppercase">II. Analisa Peralatan Pekerjaan / Mesin</h3><button type="button" onclick="addRow('machineryTable')" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold">+ Tambah Mesin</button></div>
+        <div class="overflow-x-auto"><table class="w-full text-xs border-collapse" id="machineryTable"><thead><tr class="bg-slate-800 text-white"><th class="p-2 text-left">Nama</th><th class="p-2">Volume</th><th class="p-2">Unit</th><th class="p-2">Status</th><th class="p-2">Depresiasi</th><th class="p-2 text-right">Harga/Unit</th><th class="p-2 text-right">Total/Month</th><th class="p-2">Aksi</th></tr></thead><tbody></tbody><tfoot><tr class="bg-amber-400 font-bold"><td colspan="6" class="p-2">SUB TOTAL MACHINERY COST / MONTH</td><td id="subtotalMachinery" class="p-2 text-right">Rp 0</td><td></td></tr></tfoot></table></div>
+      </div>
+
+      <div id="tab-chemicals" class="tab-content hidden p-4 space-y-4">
+        <div class="flex justify-between items-center"><h3 class="font-bold text-xs uppercase">III. Analisa Chemicals Pekerjaan</h3><button type="button" onclick="addRow('chemicalsTable')" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold">+ Tambah Chemical</button></div>
+        <div class="overflow-x-auto"><table class="w-full text-xs border-collapse" id="chemicalsTable"><thead><tr class="bg-slate-800 text-white"><th class="p-2 text-left">Nama</th><th class="p-2">Volume</th><th class="p-2">Unit</th><th class="p-2">Depresiasi</th><th class="p-2 text-right">Harga/Unit</th><th class="p-2 text-right">Total/Month</th><th class="p-2">Aksi</th></tr></thead><tbody></tbody><tfoot><tr class="bg-amber-400 font-bold"><td colspan="5" class="p-2">SUB TOTAL CHEMICAL COST / MONTH</td><td id="subtotalChemicals" class="p-2 text-right">Rp 0</td><td></td></tr></tfoot></table></div>
+      </div>
+
+      <div id="tab-consumables" class="tab-content hidden p-4 space-y-4">
+        <div class="flex justify-between items-center"><h3 class="font-bold text-xs uppercase">IV. Analisa Accessories & Consumables</h3><button type="button" onclick="addRow('consumablesTable')" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold">+ Tambah Consumable</button></div>
+        <div class="overflow-x-auto"><table class="w-full text-xs border-collapse" id="consumablesTable"><thead><tr class="bg-slate-800 text-white"><th class="p-2 text-left">Nama</th><th class="p-2">Volume</th><th class="p-2">Unit</th><th class="p-2">Depresiasi</th><th class="p-2 text-right">Harga/Unit</th><th class="p-2 text-right">Total/Month</th><th class="p-2">Aksi</th></tr></thead><tbody></tbody><tfoot><tr class="bg-amber-400 font-bold"><td colspan="5" class="p-2">SUB TOTAL CONSUMABLE COST / MONTH</td><td id="subtotalConsumables" class="p-2 text-right">Rp 0</td><td></td></tr></tfoot></table></div>
+      </div>
+    </div>
+
+    <div class="bg-slate-900 text-white rounded-xl p-4">
+      <div class="grid grid-cols-2 md:grid-cols-6 gap-3 text-xs">
+        <div><span class="text-slate-400 block">Manpower</span><b id="sumMp">Rp 0</b></div>
+        <div><span class="text-slate-400 block">Mesin</span><b id="sumMac">Rp 0</b></div>
+        <div><span class="text-slate-400 block">Chemical</span><b id="sumChem">Rp 0</b></div>
+        <div><span class="text-slate-400 block">Consumable</span><b id="sumCons">Rp 0</b></div>
+        <div><span class="text-slate-400 block">Mgmt Fee</span><b id="sumFee">Rp 0</b></div>
+        <div><span class="text-slate-400 block">Inc. PPN</span><b id="sumGrand">Rp 0</b></div>
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-3"><button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-xs font-bold"><span id="btnSaveText">Simpan Hasil Analisa Ke Supabase</span></button></div>
+  </form>
+</section>
+
+<section class="bg-white rounded-xl border shadow-sm overflow-hidden">
+  <div class="px-6 py-4 bg-slate-50 border-b flex flex-wrap justify-between items-center gap-2">
+    <h2 class="text-base font-bold">Daftar Project RAB Analisa (Database Supabase)</h2>
+    <div class="flex gap-3"><button onclick="exportAllProjectsExcel()" class="text-xs text-emerald-700 font-semibold">↓ Ekspor Semua Ke Excel</button><button onclick="fetchProjects()" class="text-xs text-blue-600 font-semibold">↻ Refresh Database</button></div>
+  </div>
+  <div class="overflow-x-auto"><table class="w-full text-xs"><thead><tr class="bg-slate-100 text-slate-600"><th class="p-3">TOP</th><th class="p-3">Cost Manpower</th><th class="p-3">Cost Mesin</th><th class="p-3">Cost Consumable</th><th class="p-3">Cost Chemicals</th><th class="p-3">Mgmt Fee</th><th class="p-3">Mgmt Fee (Rp)</th><th class="p-3">Rounded</th><th class="p-3">Total Inc. PPN</th><th class="p-3">Aksi</th></tr></thead><tbody id="projectTableBody"></tbody></table></div>
+</section>
+</main>
+
+<div id="detailModal" class="hidden fixed inset-0 bg-slate-900/60 z-[100] p-4">
+  <div class="bg-white max-w-6xl mx-auto mt-6 rounded-xl shadow-2xl max-h-[90vh] flex flex-col">
+    <div class="px-6 py-4 border-b flex justify-between items-center"><div><h3 id="modalProjectTitle" class="font-bold"></h3><p id="modalProjectSub" class="text-xs text-slate-500"></p></div><button onclick="closeModal()" class="text-slate-500 text-xl">×</button></div>
+    <div id="modalContent" class="p-6 overflow-y-auto space-y-6"></div>
+    <div class="bg-slate-100 px-6 py-3 flex justify-between"><div class="flex gap-2"><button id="btnExportModalExcel" class="px-3 py-1.5 bg-emerald-600 text-white rounded text-xs font-semibold">Download Excel</button><button id="btnExportModalPDF" class="px-3 py-1.5 bg-rose-600 text-white rounded text-xs font-semibold">Download PDF</button></div><button onclick="closeModal()" class="px-4 py-2 bg-slate-700 text-white rounded text-xs">Tutup Detail</button></div>
+  </div>
+</div>
+
+<footer class="bg-white border-t py-4 mt-auto"><div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">© 2026 PT Nusantara Inti Solusindo — RAB V5.2</div></footer>
+
+<script>
+let supabaseClient=null, projectsData=[];
+let manpowerComponents=[{
+ role:'HOUSEKEEPING',qty:2,basic_salary:5938885,tunjangan:0,uang_makan:330000,uniform:175000,
+ salary_overrides:{thr:null,bpjsKes:null,bpjsJht:null,bpjsJkm:null,bpjsJkk:null,bpjsJp:null,pkwt:null},
+ custom_components:[]
+}];
+
+const SALARY_RULES={
+ thr:{label:'THR (1/12 Basic)',ref:'12 month',calc:b=>b/12},
+ bpjsKes:{label:'BPJS KESEHATAN (4.00%)',ref:'4.00%',calc:b=>b*.04},
+ bpjsJht:{label:'BPJS HARI TUA / JHT (3.70%)',ref:'3.70%',calc:b=>b*.037},
+ bpjsJkm:{label:'BPJS KEMATIAN / JKM (0.30%)',ref:'0.30%',calc:b=>b*.003},
+ bpjsJkk:{label:'BPJS JAMINAN KECELAKAAN (0.24%)',ref:'0.24%',calc:b=>b*.0024},
+ bpjsJp:{label:'BPJS PENSIUN (2.00%)',ref:'2.00%',calc:b=>b*.02},
+ pkwt:{label:'KOMPENSASI PKWT PP35',ref:'1/12 Basic',calc:b=>b/12}
+};
+
+function n(v){return Math.max(0,parseFloat(v)||0)}
+function formatRupiah(v){return new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(Number(v)||0)}
+function escapeHtml(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
+function toggleConfig(){document.getElementById('configBody').classList.toggle('hidden')}
+function saveConfig(){
+ const url=document.getElementById('supabaseUrl').value.trim(),key=document.getElementById('supabaseKey').value.trim();
+ if(!url||!key){alert('Mohon masukkan SUPABASE_URL dan SUPABASE_ANON_KEY.');return}
+ localStorage.setItem('SB_URL',url);localStorage.setItem('SB_KEY',key);initSupabase();alert('Kredensial Supabase berhasil disimpan.');
+}
+function initSupabase(){
+ const url=localStorage.getItem('SB_URL')||'',key=localStorage.getItem('SB_KEY')||'';
+ document.getElementById('supabaseUrl').value=url;document.getElementById('supabaseKey').value=key;
+ if(url&&key&&window.supabase){
+  try{supabaseClient=window.supabase.createClient(url,key);setDbStatus(true);fetchProjects();return}catch(e){console.error(e)}
+ }
+ supabaseClient=null;setDbStatus(false);renderDemoData();
+}
+function setDbStatus(ok){
+ const b=document.getElementById('dbStatusBadge');
+ b.textContent=ok?'● Database: Supabase Connected':'● Mode Lokal / Demo Data';
+ b.className=ok?'text-xs px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-300/30':'text-xs px-3 py-1.5 rounded-full bg-amber-500/20 border border-amber-300/30';
+}
+function switchTab(id){
+ document.querySelectorAll('.tab-content').forEach(x=>x.classList.add('hidden'));
+ document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));
+ document.getElementById(id).classList.remove('hidden');document.getElementById('btn-'+id).classList.add('active');
+}
+
+function normalizeManpowerItem(x={}){
+ const o=x.salary_overrides||{};
+ return {
+  role:x.role||'STAFF',qty:Math.max(1,parseInt(x.qty)||1),basic_salary:n(x.basic_salary),
+  tunjangan:n(x.tunjangan),uang_makan:n(x.uang_makan),uniform:n(x.uniform),
+  salary_overrides:{
+   thr:o.thr===null||o.thr===undefined?null:n(o.thr),
+   bpjsKes:o.bpjsKes===null||o.bpjsKes===undefined?null:n(o.bpjsKes),
+   bpjsJht:o.bpjsJht===null||o.bpjsJht===undefined?null:n(o.bpjsJht),
+   bpjsJkm:o.bpjsJkm===null||o.bpjsJkm===undefined?null:n(o.bpjsJkm),
+   bpjsJkk:o.bpjsJkk===null||o.bpjsJkk===undefined?null:n(o.bpjsJkk),
+   bpjsJp:o.bpjsJp===null||o.bpjsJp===undefined?null:n(o.bpjsJp),
+   pkwt:o.pkwt===null||o.pkwt===undefined?null:n(o.pkwt)
+  },
+  custom_components:Array.isArray(x.custom_components)?x.custom_components.map(c=>({name:String(c?.name||'').trim(),amount:n(c?.amount)})).filter(c=>c.name):[]
+ }
+}
+function manpowerCalc(x){
+ const m=normalizeManpowerItem(x),b=m.basic_salary,o=m.salary_overrides;
+ const vals={};
+ Object.keys(SALARY_RULES).forEach(k=>vals[k]=o[k]===null?SALARY_RULES[k].calc(b):o[k]);
+ const custom=m.custom_components.reduce((s,c)=>s+c.amount,0);
+ const per=m.basic_salary+m.tunjangan+m.uang_makan+vals.thr+vals.bpjsKes+vals.bpjsJht+vals.bpjsJkm+vals.bpjsJkk+vals.bpjsJp+vals.pkwt+m.uniform+custom;
+ return {...m,...vals,customTotalPerPerson:custom,subtotalPerPerson:per,subtotalTotal:per*m.qty}
+}
+function getManpowerComponentsFromUI(){
+ const cards=[...document.querySelectorAll('.manpower-card')];
+ if(!cards.length)return manpowerComponents.map(normalizeManpowerItem);
+ return cards.map(card=>{
+  const old=manpowerComponents[Number(card.dataset.index)]||{};
+  const overrides={};
+  Object.keys(SALARY_RULES).forEach(k=>{
+   const input=card.querySelector('.mp-'+k);
+   overrides[k]=input?.dataset.mode==='manual'?n(input.value):null;
+  });
+  return normalizeManpowerItem({
+   role:card.querySelector('.mp-role')?.value,qty:card.querySelector('.mp-qty')?.value,
+   basic_salary:card.querySelector('.mp-basic')?.value,tunjangan:card.querySelector('.mp-tunjangan')?.value,
+   uang_makan:card.querySelector('.mp-uang-makan')?.value,uniform:card.querySelector('.mp-uniform')?.value,
+   salary_overrides:overrides,
+   custom_components:[...card.querySelectorAll('.mp-custom-row')].map(r=>({name:r.querySelector('.mp-custom-name')?.value,amount:r.querySelector('.mp-custom-amount')?.value}))
+  })
+ })
+}
+function salaryInput(key,val,mode,qty){
+ const rule=SALARY_RULES[key], cls=mode==='manual'?'mode-manual':'mode-auto';
+ return `<div class="flex items-center gap-1 justify-end"><input type="number" min="0" value="${Math.round(val)}" data-mode="${mode}" class="mp-${key} w-28 text-right px-2 py-1.5 border rounded text-xs ${cls}" oninput="setSalaryManual(this);calculateManpower()"><button type="button" class="text-[9px] px-1.5 py-1 rounded ${cls}" onclick="setSalaryAuto(this)">AUTO</button></div>`
+}
+function createManpowerCard(item,idx){
+ const m=manpowerCalc(item), c=document.createElement('div');c.className='manpower-card border rounded-xl overflow-hidden';c.dataset.index=idx;
+ const rows=Object.keys(SALARY_RULES).map(k=>{
+  const mode=m.salary_overrides[k]===null?'auto':'manual';
+  return `<tr class="border-t"><td class="p-2.5">${SALARY_RULES[k].label}<div class="text-[9px] text-slate-400">Default: ${formatRupiah(SALARY_RULES[k].calc(m.basic_salary))}</div></td><td class="p-2.5 text-center text-slate-500">${SALARY_RULES[k].ref}</td><td class="p-2.5">${salaryInput(k,m[k],mode,m.qty)}</td><td class="p-2.5 text-right font-bold mp-${k}-total">${formatRupiah(m[k]*m.qty)}</td></tr>`
+ }).join('');
+ const custom=item.custom_components.map(c=>`<tr class="mp-custom-row border-t"><td class="p-2.5"><input value="${escapeHtml(c.name)}" class="mp-custom-name w-full px-2 py-1.5 border rounded text-xs" oninput="calculateManpower()"></td><td class="p-2.5 text-center text-slate-500">Per Person</td><td class="p-2.5"><input type="number" value="${c.amount}" min="0" class="mp-custom-amount w-28 text-right px-2 py-1.5 border rounded text-xs" oninput="calculateManpower()"></td><td class="p-2.5 text-right font-bold"><span class="mp-custom-total">${formatRupiah(c.amount*m.qty)}</span><button type="button" onclick="removeCustomManpowerComponent(this)" class="ml-2 text-rose-500 font-bold">×</button></td></tr>`).join('');
+ c.innerHTML=`<div class="p-3 bg-blue-50/70 border-b flex flex-col md:flex-row justify-between gap-3">
+ <div class="grid grid-cols-1 md:grid-cols-2 gap-3 flex-1"><div><label class="block text-[10px] font-semibold mb-1">Jabatan / Role</label><input class="mp-role w-full px-2.5 py-2 text-xs border rounded font-semibold" value="${escapeHtml(m.role)}" oninput="calculateManpower()"></div><div><label class="block text-[10px] font-semibold mb-1">UMK / Basic Salary (Rp)</label><input type="number" min="0" class="mp-basic w-full px-2.5 py-2 text-xs border rounded font-bold" value="${m.basic_salary}" oninput="resetAutoSalaryBecauseBasicChanged(this);calculateManpower()"></div></div>
+ <div class="flex items-end gap-2"><div><label class="block text-[10px] font-semibold mb-1">Jumlah Personel</label><input type="number" min="1" class="mp-qty w-24 px-2.5 py-2 text-xs border rounded font-bold text-center" value="${m.qty}" oninput="calculateManpower()"></div><button type="button" onclick="removeManpower(this)" class="h-9 px-3 rounded-lg bg-rose-50 text-rose-600 border font-bold text-xs">Hapus</button></div></div>
+ <div class="overflow-x-auto"><table class="w-full text-left text-xs"><thead><tr class="bg-slate-800 text-white uppercase"><th class="p-2.5">Komponen Salary & Benefit</th><th class="p-2.5">Acuan / QTY</th><th class="p-2.5 text-right">Amount / Person</th><th class="p-2.5 text-right">Total / Month</th></tr></thead><tbody>
+ <tr><td class="p-2.5">BASIC SALARY</td><td class="p-2.5 text-center">${m.qty} person</td><td class="p-2.5"><input type="number" value="${m.basic_salary}" class="mp-basic-copy w-28 text-right px-2 py-1.5 border rounded" oninput="this.closest('.manpower-card').querySelector('.mp-basic').value=this.value;resetAutoSalaryBecauseBasicChanged(this);calculateManpower()"></td><td class="p-2.5 text-right font-bold mp-basic-total">${formatRupiah(m.basic_salary*m.qty)}</td></tr>
+ <tr><td class="p-2.5">TUNJANGAN KEHADIRAN</td><td class="p-2.5 text-center">-</td><td class="p-2.5"><input type="number" value="${m.tunjangan}" min="0" class="mp-tunjangan w-28 text-right px-2 py-1.5 border rounded" oninput="calculateManpower()"></td><td class="p-2.5 text-right font-bold mp-tunjangan-total">${formatRupiah(m.tunjangan*m.qty)}</td></tr>
+ <tr><td class="p-2.5">UANG MAKAN</td><td class="p-2.5 text-center">-</td><td class="p-2.5"><input type="number" value="${m.uang_makan}" min="0" class="mp-uang-makan w-28 text-right px-2 py-1.5 border rounded" oninput="calculateManpower()"></td><td class="p-2.5 text-right font-bold mp-uang-makan-total">${formatRupiah(m.uang_makan*m.qty)}</td></tr>
+ ${rows}
+ <tr class="border-t"><td class="p-2.5">UNIFORM & SHOES</td><td class="p-2.5 text-center">-</td><td class="p-2.5"><input type="number" value="${m.uniform}" min="0" class="mp-uniform w-28 text-right px-2 py-1.5 border rounded" oninput="calculateManpower()"></td><td class="p-2.5 text-right font-bold mp-uniform-total">${formatRupiah(m.uniform*m.qty)}</td></tr>
+ ${custom}</tbody></table></div>
+ <div class="px-3 py-2 border-t bg-slate-50 flex justify-between items-center"><button type="button" onclick="addManpowerBenefit(this)" class="bg-white text-blue-700 border border-blue-300 font-bold px-3 py-2 rounded-lg text-xs">+ Tambah Komponen Salary & Benefit</button><span class="text-[10px] text-slate-500">Custom dihitung per person × QTY.</span></div>
+ <div class="p-3 bg-amber-400 flex justify-between font-bold text-xs uppercase"><span>SUB TOTAL MANPOWER COST — <span class="mp-qty-label">${m.qty}</span> PERSON</span><div class="text-right"><span class="text-[10px] block font-normal">Per Person: <span class="mp-subtotal-unit">${formatRupiah(m.subtotalPerPerson)}</span></span><span class="mp-subtotal-total text-base">${formatRupiah(m.subtotalTotal)}</span></div></div>`;
+ return c
+}
+function updateManpowerCard(card,m){
+ card.querySelector('.mp-basic-copy').value=m.basic_salary;card.querySelector('.mp-basic-total').textContent=formatRupiah(m.basic_salary*m.qty);
+ card.querySelector('.mp-tunjangan-total').textContent=formatRupiah(m.tunjangan*m.qty);card.querySelector('.mp-uang-makan-total').textContent=formatRupiah(m.uang_makan*m.qty);card.querySelector('.mp-uniform-total').textContent=formatRupiah(m.uniform*m.qty);
+ card.querySelector('.mp-qty-label').textContent=m.qty;card.querySelector('.mp-subtotal-unit').textContent=formatRupiah(m.subtotalPerPerson);card.querySelector('.mp-subtotal-total').textContent=formatRupiah(m.subtotalTotal);
+ Object.keys(SALARY_RULES).forEach(k=>{const el=card.querySelector('.mp-'+k);if(el){el.value=Math.round(m[k]);el.classList.toggle('mode-manual',m.salary_overrides[k]!==null);el.classList.toggle('mode-auto',m.salary_overrides[k]===null);const b=el.nextElementSibling;b.className='text-[9px] px-1.5 py-1 rounded '+(m.salary_overrides[k]===null?'mode-auto':'mode-manual');card.querySelector('.mp-'+k+'-total').textContent=formatRupiah(m[k]*m.qty)}})
+ card.querySelectorAll('.mp-custom-row').forEach(r=>{const a=n(r.querySelector('.mp-custom-amount')?.value);r.querySelector('.mp-custom-total').textContent=formatRupiah(a*m.qty)})
+}
+function renderManpowerComponents(items=manpowerComponents){
+ manpowerComponents=(items&&items.length?items:[normalizeManpowerItem({})]).map(normalizeManpowerItem);
+ const list=document.getElementById('manpowerList');list.innerHTML='';manpowerComponents.forEach((x,i)=>list.appendChild(createManpowerCard(x,i)));document.getElementById('badge-count-mp').textContent=manpowerComponents.length;calculateManpower()
+}
+function setSalaryManual(input){input.dataset.mode='manual';input.classList.remove('mode-auto');input.classList.add('mode-manual')}
+function setSalaryAuto(button){
+ const card=button.closest('.manpower-card'),key=[...button.parentElement.querySelectorAll('input')].length?button.parentElement.querySelector('input').className.match(/mp-(\w+)/)?.[1]:null;
+ if(!key||!SALARY_RULES[key])return;const basic=n(card.querySelector('.mp-basic').value),v=SALARY_RULES[key].calc(basic),input=card.querySelector('.mp-'+key);input.value=Math.round(v);input.dataset.mode='auto';input.classList.remove('mode-manual');input.classList.add('mode-auto');calculateManpower()
+}
+function resetAutoSalaryBecauseBasicChanged(el){const card=el.closest('.manpower-card');if(!card)return;Object.keys(SALARY_RULES).forEach(k=>{const input=card.querySelector('.mp-'+k);if(input&&input.dataset.mode!=='manual'){input.value=Math.round(SALARY_RULES[k].calc(n(card.querySelector('.mp-basic').value)))}})}
+function addManpowerBenefit(btn){
+ const card=btn.closest('.manpower-card'),tbody=card.querySelector('tbody'),row=document.createElement('tr');row.className='mp-custom-row border-t';
+ row.innerHTML=`<td class="p-2.5"><input class="mp-custom-name w-full px-2 py-1.5 border rounded text-xs" placeholder="Contoh: Transport Allowance" oninput="calculateManpower()"></td><td class="p-2.5 text-center text-slate-500">Per Person</td><td class="p-2.5"><input type="number" value="0" min="0" class="mp-custom-amount w-28 text-right px-2 py-1.5 border rounded text-xs" oninput="calculateManpower()"></td><td class="p-2.5 text-right font-bold"><span class="mp-custom-total">Rp 0</span><button type="button" onclick="removeCustomManpowerComponent(this)" class="ml-2 text-rose-500 font-bold">×</button></td>`;
+ tbody.appendChild(row);row.querySelector('.mp-custom-name').focus();calculateManpower()
+}
+function removeCustomManpowerComponent(b){b.closest('.mp-custom-row')?.remove();calculateManpower()}
+function addManpower(){
+ manpowerComponents=getManpowerComponentsFromUI();manpowerComponents.push(normalizeManpowerItem({role:'STAFF',qty:1,basic_salary:manpowerComponents.at(-1)?.basic_salary||0,uang_makan:manpowerComponents.at(-1)?.uang_makan||0,uniform:manpowerComponents.at(-1)?.uniform||0}));renderManpowerComponents(manpowerComponents)
+}
+function removeManpower(b){if(document.querySelectorAll('.manpower-card').length<=1){alert('Minimal harus ada 1 manpower component.');return}b.closest('.manpower-card').remove();manpowerComponents=getManpowerComponentsFromUI();document.getElementById('badge-count-mp').textContent=manpowerComponents.length;calculateManpower()}
+function calculateManpower(){
+ manpowerComponents=getManpowerComponentsFromUI();document.querySelectorAll('.manpower-card').forEach((c,i)=>{const m=manpowerCalc(manpowerComponents[i]);updateManpowerCard(c,m)});calculateOverallTotals()
+}
+
+function addRow(tableId,data=null){
+ const tbody=document.querySelector('#'+tableId+' tbody'),isMac=tableId==='machineryTable',tr=document.createElement('tr');tr.className='item-row';
+ const name=data?.name||'',vol=data?.vol??1,unit=data?.unit||(isMac?'Unit':'pc'),status=data?.status||'Rental',depr=data?.depreciation_months??1,price=data?.price??0;
+ tr.innerHTML=`<td class="p-2"><input value="${escapeHtml(name)}" class="w-full px-2 py-1 border rounded item-name" placeholder="Nama Item Baru"></td><td class="p-2"><input type="number" value="${vol}" min="0" class="w-20 px-2 py-1 border rounded text-center item-vol" oninput="calculateDynamicRows()"></td><td class="p-2"><input value="${escapeHtml(unit)}" class="w-20 px-2 py-1 border rounded text-center item-unit"></td>${isMac?`<td class="p-2"><select class="w-24 px-2 py-1 border rounded item-status"><option ${status==='Rental'?'selected':''}>Rental</option><option ${status==='Beli'?'selected':''}>Beli</option></select></td>`:''}<td class="p-2"><input type="number" value="${depr}" min="1" class="w-24 px-2 py-1 border rounded text-center item-depr" oninput="calculateDynamicRows()"></td><td class="p-2"><input type="number" value="${price}" min="0" class="w-32 px-2 py-1 border rounded text-right item-price" oninput="calculateDynamicRows()"></td><td class="p-2 text-right font-bold item-total-cell">${formatRupiah((n(vol)*n(price))/Math.max(1,n(depr)))}</td><td class="p-2 text-center"><button type="button" onclick="removeRow(this)" class="text-rose-500 font-bold">×</button></td>`;
+ tbody.appendChild(tr);calculateDynamicRows()
+}
+function removeRow(b){b.closest('.item-row').remove();calculateDynamicRows()}
+function tableSubtotal(id){let s=0;document.querySelectorAll('#'+id+' .item-row').forEach(r=>{const v=n(r.querySelector('.item-vol')?.value),d=Math.max(1,n(r.querySelector('.item-depr')?.value)),p=n(r.querySelector('.item-price')?.value),t=v*p/d;s+=t;r.querySelector('.item-total-cell').textContent=formatRupiah(t)});return s}
+function calculateDynamicRows(){
+ const a=tableSubtotal('machineryTable'),b=tableSubtotal('chemicalsTable'),c=tableSubtotal('consumablesTable');
+ document.getElementById('subtotalMachinery').textContent=formatRupiah(a);document.getElementById('subtotalChemicals').textContent=formatRupiah(b);document.getElementById('subtotalConsumables').textContent=formatRupiah(c);
+ document.getElementById('badge-count-mac').textContent=document.querySelectorAll('#machineryTable .item-row').length;document.getElementById('badge-count-chem').textContent=document.querySelectorAll('#chemicalsTable .item-row').length;document.getElementById('badge-count-cons').textContent=document.querySelectorAll('#consumablesTable .item-row').length;
+ calculateOverallTotals()
+}
+function calculateOverallTotals(){
+ manpowerComponents=getManpowerComponentsFromUI();const mp=manpowerComponents.reduce((s,x)=>s+manpowerCalc(x).subtotalTotal,0),mac=tableSubtotal('machineryTable'),chem=tableSubtotal('chemicalsTable'),cons=tableSubtotal('consumablesTable');
+ const total=mp+mac+chem+cons,feePct=n(document.getElementById('managementFeePercent').value),fee=total*feePct/100,rounded=Math.round((total+fee)/1000)*1000,grand=rounded*1.11;
+ document.getElementById('statCostMp').textContent=formatRupiah(mp);document.getElementById('statCostMachinery').textContent=formatRupiah(mac);document.getElementById('statCostChemical').textContent=formatRupiah(chem);document.getElementById('statCostConsumable').textContent=formatRupiah(cons);document.getElementById('statTotalCost').textContent=formatRupiah(total);
+ document.getElementById('sumMp').textContent=formatRupiah(mp);document.getElementById('sumMac').textContent=formatRupiah(mac);document.getElementById('sumChem').textContent=formatRupiah(chem);document.getElementById('sumCons').textContent=formatRupiah(cons);document.getElementById('sumFee').textContent=formatRupiah(fee);document.getElementById('sumGrand').textContent=formatRupiah(grand);
+ return {mp,mac,chem,cons,total,fee,rounded,grand,feePct}
+}
+function extractItems(id){
+ return [...document.querySelectorAll('#'+id+' .item-row')].map(r=>({name:r.querySelector('.item-name')?.value||'',vol:n(r.querySelector('.item-vol')?.value),unit:r.querySelector('.item-unit')?.value||'',status:r.querySelector('.item-status')?.value||'-',depreciation_months:Math.max(1,n(r.querySelector('.item-depr')?.value)),price:n(r.querySelector('.item-price')?.value),total_monthly:n(r.querySelector('.item-vol')?.value)*n(r.querySelector('.item-price')?.value)/Math.max(1,n(r.querySelector('.item-depr')?.value))}))
+}
+async function handleFormSubmit(e){
+ e.preventDefault();const calc=calculateOverallTotals(),editing=document.getElementById('editingProjectId').value,mp=getManpowerComponentsFromUI();
+ const payload={project_id:editing||'PRJ-'+Date.now().toString().slice(-8),client_name:document.getElementById('clientName').value.trim(),client_location:document.getElementById('clientLocation').value.trim(),project_area:document.getElementById('projectArea').value.trim(),project_title:document.getElementById('projectTitle').value.trim(),top_days:parseInt(document.getElementById('topDays').value)||0,cost_project:calc.total,management_fee_percent:calc.feePct,management_fee_value:calc.fee,rounded_before_tax:calc.rounded,total_after_tax:calc.grand,cost_manpower:calc.mp,cost_machinery:calc.mac,cost_chemical:calc.chem,cost_consumable:calc.cons,details_json:{manpower:mp,manpower_legacy:mp[0]||normalizeManpowerItem({}),machinery:extractItems('machineryTable'),chemicals:extractItems('chemicalsTable'),consumables:extractItems('consumablesTable')},status:'APPROVED'};
+ if(supabaseClient){try{const res=editing?await supabaseClient.from('projects').update(payload).eq('project_id',editing):await supabaseClient.from('projects').insert([payload]);if(res.error)throw res.error;alert(editing?'Pembaruan RAB Berhasil Disimpan!':'Project RAB Berhasil Disimpan ke Supabase!');resetForm();await fetchProjects()}catch(err){console.error(err);alert('Gagal menyimpan ke Supabase: '+err.message)}}else{const i=projectsData.findIndex(x=>x.project_id===payload.project_id);if(i>=0)projectsData[i]=payload;else projectsData.unshift(payload);renderTable(projectsData);resetForm();alert('Project Berhasil Disimpan (Mode Lokal)!')}
+}
+async function fetchProjects(){
+ if(!supabaseClient){renderDemoData();return}
+ const {data,error}=await supabaseClient.from('projects').select('*').order('project_id',{ascending:false});
+ if(error){console.error(error);alert('Gagal membaca tabel projects: '+error.message);renderDemoData();return}
+ projectsData=data||[];renderTable(projectsData)
+}
+function renderDemoData(){projectsData=[];renderTable(projectsData)}
+async function deleteProject(projectId){
+ const project=projectsData.find(p=>p.project_id===projectId);
+ const label=project ? (project.client_name || projectId) : projectId;
+ if(!confirm('Hapus project "'+label+'"?\\n\\nData yang dihapus tidak dapat dikembalikan.')) return;
+ try{
+   if(supabaseClient){
+     const {error}=await supabaseClient.from('projects').delete().eq('project_id',projectId);
+     if(error) throw error;
+     projectsData=projectsData.filter(p=>p.project_id!==projectId);
+     renderTable(projectsData);
+     alert('Project berhasil dihapus.');
+     await fetchProjects();
+   }else{
+     projectsData=projectsData.filter(p=>p.project_id!==projectId);
+     renderTable(projectsData);
+     alert('Project berhasil dihapus dari data lokal.');
+   }
+ }catch(err){
+   console.error(err);
+   alert('Gagal menghapus project: '+err.message);
+ }
+}
+
+function renderTable(data){
+ const body=document.getElementById('projectTableBody');body.innerHTML='';
+ if(!data.length){body.innerHTML='<tr><td colspan="10" class="p-8 text-center text-slate-400">Belum ada project tersimpan.</td></tr>';return}
+ data.forEach(p=>{const tr=document.createElement('tr');tr.className='border-b hover:bg-slate-50';tr.innerHTML=`<td class="p-3">${p.top_days??'-'} Hari</td><td class="p-3 font-semibold">${formatRupiah(p.cost_manpower)}</td><td class="p-3">${formatRupiah(p.cost_machinery)}</td><td class="p-3">${formatRupiah(p.cost_consumable)}</td><td class="p-3">${formatRupiah(p.cost_chemical)}</td><td class="p-3">${n(p.management_fee_percent)}%</td><td class="p-3">${formatRupiah(p.management_fee_value)}</td><td class="p-3 text-emerald-700 font-semibold">${formatRupiah(p.rounded_before_tax)}</td><td class="p-3 font-bold">${formatRupiah(p.total_after_tax)}</td><td class="p-3 whitespace-nowrap"><button onclick="viewProjectDetail('${p.project_id}')" class="px-2 py-1 border rounded text-blue-600 mr-1">Lihat</button><button onclick="loadProjectToForm('${p.project_id}')" class="px-2 py-1 border rounded text-amber-600 mr-1">Edit</button><button onclick="exportSingleProjectPDF('${p.project_id}')" class="px-2 py-1 border rounded text-rose-600 mr-1">PDF</button><button onclick="exportSingleProjectExcel('${p.project_id}')" class="px-2 py-1 border rounded text-emerald-600 mr-1">XLS</button><button onclick="deleteProject('${p.project_id}')" class="px-2 py-1 border rounded text-red-600">Hapus</button></td>`;body.appendChild(tr)})
+}
+function resetForm(){
+ document.getElementById('editingProjectId').value='';document.getElementById('formTitle').textContent='Form Analytical Costing & Detail Input Component';document.getElementById('editingBadge').textContent='Input Baru';document.getElementById('btnSaveText').textContent='Simpan Hasil Analisa Ke Supabase';document.getElementById('rabForm').reset();
+ manpowerComponents=[normalizeManpowerItem({role:'HOUSEKEEPING',qty:2,basic_salary:5938885,tunjangan:0,uang_makan:330000,uniform:175000})];renderManpowerComponents(manpowerComponents);
+ ['machineryTable','chemicalsTable','consumablesTable'].forEach(id=>document.querySelector('#'+id+' tbody').innerHTML='');calculateDynamicRows()
+}
+function loadProjectToForm(id){
+ const p=projectsData.find(x=>x.project_id===id);if(!p)return;document.getElementById('editingProjectId').value=p.project_id;document.getElementById('formTitle').textContent='Edit / Analisa RAB ('+p.project_id+')';document.getElementById('editingBadge').textContent='Editing: '+p.project_id;document.getElementById('btnSaveText').textContent='Simpan Perubahan RAB';
+ document.getElementById('clientName').value=p.client_name||'';document.getElementById('clientLocation').value=p.client_location||'';document.getElementById('projectArea').value=p.project_area||'';document.getElementById('projectTitle').value=p.project_title||'';document.getElementById('topDays').value=p.top_days||30;document.getElementById('managementFeePercent').value=p.management_fee_percent||7.5;
+ const d=p.details_json||{},saved=Array.isArray(d.manpower)?d.manpower:(d.manpower?[d.manpower]:d.manpower_legacy?[d.manpower_legacy]:[]);renderManpowerComponents(saved.length?saved:[normalizeManpowerItem({})]);
+ [['machineryTable',d.machinery],['chemicalsTable',d.chemicals],['consumablesTable',d.consumables]].forEach(([id,arr])=>{document.querySelector('#'+id+' tbody').innerHTML='';(arr||[]).forEach(x=>addRow(id,x))});calculateManpower();calculateDynamicRows();document.getElementById('formSection').scrollIntoView({behavior:'smooth'})
+}
+function viewProjectDetail(id){
+ const p=projectsData.find(x=>x.project_id===id);if(!p)return;document.getElementById('modalProjectTitle').textContent='Rincian Detail RAB - '+(p.client_name||'-');document.getElementById('modalProjectSub').textContent=`ID Project: ${p.project_id} | ${p.project_title||'-'} (${p.client_location||'-'})`;
+ document.getElementById('btnExportModalExcel').onclick=()=>exportSingleProjectExcel(id);document.getElementById('btnExportModalPDF').onclick=()=>exportSingleProjectPDF(id);
+ const d=p.details_json||{},ml=Array.isArray(d.manpower)?d.manpower:(d.manpower?[d.manpower]:[]);
+ const mpHtml=ml.map((m,i)=>{const c=manpowerCalc(m);return `<div class="border rounded-lg p-3"><div class="flex justify-between font-bold"><span>${i+1}. ${escapeHtml(c.role)}</span><span>${formatRupiah(c.subtotalTotal)}</span></div><div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 text-[11px]"><div>Personel<br><b>${c.qty}</b></div><div>Basic<br><b>${formatRupiah(c.basic_salary)}</b></div><div>Per Person<br><b>${formatRupiah(c.subtotalPerPerson)}</b></div><div>Mode<br><b>${Object.values(c.salary_overrides).some(v=>v!==null)?'MANUAL':'AUTO'}</b></div></div></div>`}).join('');
+ const itemRows=(arr)=>arr?.length?arr.map(x=>`<tr class="border-b"><td class="p-2">${escapeHtml(x.name)}</td><td class="p-2 text-center">${x.vol} ${escapeHtml(x.unit)}</td><td class="p-2 text-center">${x.depreciation_months}</td><td class="p-2 text-right">${formatRupiah(x.price)}</td><td class="p-2 text-right font-bold">${formatRupiah(x.total_monthly)}</td></tr>`).join(''):'<tr><td colspan="5" class="p-3 text-center text-slate-400">Tidak ada item</td></tr>';
+ document.getElementById('modalContent').innerHTML=`<div class="bg-blue-50 p-4 rounded-xl"><div class="flex justify-between font-bold mb-3"><span>I. MANPOWER</span><span>${formatRupiah(p.cost_manpower)}</span></div>${mpHtml||'<p class="text-xs text-slate-400">Tidak ada manpower.</p>'}</div>${['machinery','chemicals','consumables'].map((k,i)=>`<div><h4 class="font-bold uppercase text-xs mb-2">${i+2}. ${k}</h4><table class="w-full text-xs"><thead class="bg-slate-100"><tr><th class="p-2 text-left">Item</th><th class="p-2">Vol</th><th class="p-2">Depr</th><th class="p-2 text-right">Harga</th><th class="p-2 text-right">Total</th></tr></thead><tbody>${itemRows(d[k]||[])}</tbody></table></div>`).join('')}<div class="bg-slate-900 text-white p-4 rounded-xl"><div class="flex justify-between"><span>Total Cost</span><b>${formatRupiah(p.cost_project)}</b></div><div class="flex justify-between"><span>Mgmt Fee</span><b>${formatRupiah(p.management_fee_value)}</b></div><div class="flex justify-between"><span>Grand Total Inc. PPN</span><b>${formatRupiah(p.total_after_tax)}</b></div></div>`;
+ document.getElementById('detailModal').classList.remove('hidden')
+}
+function closeModal(){document.getElementById('detailModal').classList.add('hidden')}
+
+function normalizedForExport(m){const c=manpowerCalc(m);return c}
+function exportAllProjectsExcel(){
+ if(!projectsData.length){alert('Tidak ada data project untuk diekspor.');return}if(typeof XLSX==='undefined'){alert('Library Excel belum tersedia.');return}
+ const data=projectsData.map(p=>({'ID Project':p.project_id,'Nama Client':p.client_name,'Lokasi':p.client_location||'-','Area':p.project_area||'-','Layanan / Service':p.project_title||'-','TOP (Hari)':p.top_days,'Cost Manpower (Rp)':p.cost_manpower||0,'Cost Mesin (Rp)':p.cost_machinery||0,'Cost Consumable (Rp)':p.cost_consumable||0,'Cost Chemical (Rp)':p.cost_chemical||0,'Total Cost Project (Rp)':p.cost_project||0,'Mgmt Fee (%)':p.management_fee_percent||0,'Mgmt Fee (Rp)':p.management_fee_value||0,'Total Before Tax (Rounded)':p.rounded_before_tax||0,'Total Inc. PPN 11% (Rp)':p.total_after_tax||0}));
+ const wb=XLSX.utils.book_new(),ws=XLSX.utils.json_to_sheet(data);XLSX.utils.book_append_sheet(wb,ws,'Daftar RAB Project');XLSX.writeFile(wb,'Daftar_RAB_Project_V5_2.xlsx')
+}
+function exportSingleProjectExcel(id){
+ const p=projectsData.find(x=>x.project_id===id);if(!p||!window.XLSX){alert('Data/library tidak tersedia.');return}const d=p.details_json||{},mp=Array.isArray(d.manpower)?d.manpower:(d.manpower?[d.manpower]:[]);
+ const rows=[['PT NUSANTARA INTI SOLUSINDO'],['RINCIAN ANALISA RAB PROJECT'],[],['ID PROJECT',p.project_id,'CLIENT',p.client_name],['LOKASI',p.client_location||'-','AREA',p.project_area||'-'],['SERVICE / PROJECT',p.project_title||'-','TOP',(p.top_days||'-')+' Hari'],[],['I. ANALISA MANPOWER (UPAH)'],['Role','QTY','Komponen','Mode','Amount/Person','Total/Month']];
+ mp.forEach(m=>{const c=manpowerCalc(m);rows.push([c.role,c.qty,'BASIC SALARY','MANUAL',c.basic_salary,c.basic_salary*c.qty]);rows.push(['',c.qty,'TUNJANGAN KEHADIRAN','MANUAL',c.tunjangan,c.tunjangan*c.qty]);rows.push(['',c.qty,'UANG MAKAN','MANUAL',c.uang_makan,c.uang_makan*c.qty]);Object.keys(SALARY_RULES).forEach(k=>rows.push(['',c.qty,SALARY_RULES[k].label,c.salary_overrides[k]===null?'AUTO':'MANUAL',c[k],c[k]*c.qty]));rows.push(['',c.qty,'UNIFORM & SHOES','MANUAL',c.uniform,c.uniform*c.qty]);c.custom_components.forEach(x=>rows.push(['',c.qty,x.name,'MANUAL',x.amount,x.amount*c.qty]));rows.push(['','',`SUB TOTAL ${c.role}`,'',c.subtotalPerPerson,c.subtotalTotal])});
+ for(const [title,key] of [['II. PERALATAN / MESIN','machinery'],['III. CHEMICALS','chemicals'],['IV. CONSUMABLES','consumables']]){rows.push([], [title],['Item','Volume','Unit','Depresiasi','Harga/Unit','Total/Month']);(d[key]||[]).forEach(x=>rows.push([x.name,x.vol,x.unit,x.depreciation_months,x.price,x.total_monthly]))}
+ rows.push([],['COST SUMMARY'],['Cost Manpower',p.cost_manpower],['Cost Mesin',p.cost_machinery],['Cost Chemicals',p.cost_chemical],['Cost Consumables',p.cost_consumable],['Management Fee',p.management_fee_value],['TOTAL BEFORE TAX (ROUNDED)',p.rounded_before_tax],['TOTAL INC. PPN 11%',p.total_after_tax]);
+ const wb=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=[{wch:30},{wch:14},{wch:34},{wch:14},{wch:18},{wch:20}];XLSX.utils.book_append_sheet(wb,ws,'RAB Detail');XLSX.writeFile(wb,`RAB_V5_2_${p.project_id}.xlsx`)
+}
+async function exportSingleProjectPDF(id) {
+            const prj = projectsData.find(p => p.project_id === id);
+            if (!prj) {
+                alert('Data project tidak ditemukan.');
+                return;
+            }
+
+            /*
+             * V3 - PDF ENGINE TANPA html2canvas
+             * ---------------------------------
+             * Versi sebelumnya masih menggunakan html2pdf -> html2canvas.
+             * Pada file HTML lokal (file://) html2canvas dapat menghasilkan
+             * canvas kosong/blank.
+             *
+             * Di versi ini PDF digambar langsung menggunakan jsPDF.
+             * Jadi tidak ada proses screenshot DOM/canvas sama sekali.
+             */
+
+            const JsPDF =
+                (window.jspdf && typeof window.jspdf.jsPDF === 'function')
+                    ? window.jspdf.jsPDF
+                    : (typeof window.jsPDF === 'function' ? window.jsPDF : null);
+
+            if (!JsPDF) {
+                alert(
+                    'Engine PDF jsPDF belum tersedia.\n\n' +
+                    'Pastikan koneksi internet aktif, lalu tekan Ctrl+F5 dan coba kembali.'
+                );
+                console.error('jsPDF tidak ditemukan:', {
+                    jspdf: window.jspdf,
+                    jsPDF: window.jsPDF,
+                    html2pdf: typeof window.html2pdf
+                });
+                return;
+            }
+
+            const button = document.getElementById('btnExportModalPDF');
+            const oldHtml = button ? button.innerHTML : '';
+
+            if (button) {
+                button.disabled = true;
+                button.style.opacity = '0.6';
+                button.innerHTML = '<span>Generating PDF...</span>';
+            }
+
+            const details = prj.details_json || {};
+            const mac = Array.isArray(details.machinery) ? details.machinery : [];
+            const chem = Array.isArray(details.chemicals) ? details.chemicals : [];
+            const cons = Array.isArray(details.consumables) ? details.consumables : [];
+
+            const pdf = new JsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4',
+                compress: true
+            });
+
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            const margin = 12;
+            const contentWidth = pageWidth - margin * 2;
+            let y = margin;
+
+            const BLUE = [30, 58, 138];
+            const DARK = [15, 23, 42];
+            const LIGHT = [241, 245, 249];
+            const BORDER = [203, 213, 225];
+            const TEXT = [30, 41, 59];
+            const MUTED = [100, 116, 139];
+
+            function money(value) {
+                return formatRupiah(Number(value) || 0)
+                    .replace(/\u00a0/g, ' ')
+                    .replace(/\s+/g, ' ');
+            }
+
+            function safe(value, fallback = '-') {
+                return String(value ?? fallback);
+            }
+
+            function addPageIfNeeded(height = 8) {
+                if (y + height > pageHeight - margin) {
+                    pdf.addPage();
+                    y = margin;
+                    drawHeader(true);
+                }
+            }
+
+            function drawHeader(isContinuation = false) {
+                pdf.setFillColor(...DARK);
+                pdf.rect(0, 0, pageWidth, 18, 'F');
+
+                pdf.setTextColor(255, 255, 255);
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(10);
+                pdf.text('PT NUSANTARA INTI SOLUSINDO', margin, 7);
+
+                pdf.setFont('helvetica', 'normal');
+                pdf.setFontSize(7);
+                pdf.text(
+                    isContinuation ? 'RAB Detailed Costing - Lanjutan' : 'RAB Detailed Costing & Analisa Komponen',
+                    margin,
+                    12
+                );
+
+                y = 24;
+            }
+
+            function sectionTitle(title) {
+                addPageIfNeeded(12);
+
+                pdf.setFillColor(...BLUE);
+                pdf.roundedRect(margin, y, contentWidth, 7, 1.5, 1.5, 'F');
+
+                pdf.setTextColor(255, 255, 255);
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(8);
+                pdf.text(title, margin + 3, y + 4.8);
+
+                y += 10;
+            }
+
+            function drawMeta() {
+                addPageIfNeeded(36);
+
+                const boxH = 31;
+                pdf.setFillColor(248, 250, 252);
+                pdf.setDrawColor(...BORDER);
+                pdf.roundedRect(margin, y, contentWidth, boxH, 2, 2, 'FD');
+
+                pdf.setTextColor(...TEXT);
+                pdf.setFontSize(7.5);
+
+                const leftX = margin + 4;
+                const rightX = margin + contentWidth / 2 + 2;
+
+                const rowsLeft = [
+                    ['ID Project', safe(prj.project_id)],
+                    ['Client', safe(prj.client_name)],
+                    ['Lokasi / Area', `${safe(prj.client_location)} / ${safe(prj.project_area)}`]
+                ];
+
+                const rowsRight = [
+                    ['Layanan', safe(prj.project_title)],
+                    ['TOP', `${safe(prj.top_days)} Hari`],
+                    ['Management Fee', `${safe(prj.management_fee_percent, 0)}%`]
+                ];
+
+                rowsLeft.forEach((r, i) => {
+                    const yy = y + 7 + i * 8;
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.text(r[0] + ':', leftX, yy);
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.text(r[1], leftX + 25, yy);
+                });
+
+                rowsRight.forEach((r, i) => {
+                    const yy = y + 7 + i * 8;
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.text(r[0] + ':', rightX, yy);
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.text(r[1], rightX + 25, yy);
+                });
+
+                y += boxH + 5;
+            }
+
+            function drawManpower() {
+                const mpItems = Array.isArray(details.manpower)
+                    ? details.manpower
+                    : (details.manpower ? [details.manpower] : (details.manpower_legacy ? [details.manpower_legacy] : []));
+
+                sectionTitle('I. MANPOWER COMPONENT');
+
+                if (!mpItems.length) {
+                    addPageIfNeeded(10);
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.setFontSize(7);
+                    pdf.setTextColor(...MUTED);
+                    pdf.text('Tidak ada manpower component.', margin + 2, y + 5);
+                    y += 10;
+                    return;
+                }
+
+                const x = margin;
+                const col = [
+                    x,
+                    x + 63,
+                    x + 92,
+                    x + 125,
+                    margin + contentWidth
+                ];
+
+                pdf.setFillColor(...LIGHT);
+                pdf.setDrawColor(...BORDER);
+                pdf.rect(x, y, contentWidth, 7, 'FD');
+
+                pdf.setTextColor(...TEXT);
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(7);
+                pdf.text('Jabatan / Role', col[0] + 2, y + 4.5);
+                pdf.text('QTY', col[1] + 2, y + 4.5);
+                pdf.text('Basic Salary', col[2] + 2, y + 4.5);
+                pdf.text('Uang Makan', col[3] + 2, y + 4.5);
+                pdf.text('Total / Bln', col[4] - 2, y + 4.5, { align: 'right' });
+
+                y += 7;
+
+                mpItems.forEach((raw, index) => {
+                    const m = manpowerCalc(raw);
+                    const rowH = 9;
+
+                    addPageIfNeeded(rowH + 2);
+
+                    pdf.setFont('helvetica', index === 0 ? 'bold' : 'normal');
+                    pdf.setFontSize(6.8);
+                    pdf.setTextColor(...TEXT);
+
+                    pdf.text(safe(m.role), col[0] + 2, y + 5);
+                    pdf.text(`${m.qty} org`, col[1] + 2, y + 5);
+                    pdf.text(money(m.basic_salary), col[2] + 2, y + 5);
+                    pdf.text(money(m.uang_makan), col[3] + 2, y + 5);
+
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.text(
+                        money(m.subtotalTotal),
+                        col[4] - 2,
+                        y + 5,
+                        { align: 'right' }
+                    );
+
+                    pdf.setDrawColor(...BORDER);
+                    pdf.line(x, y + rowH, x + contentWidth, y + rowH);
+                    y += rowH;
+
+                    // Custom salary & benefit components
+                    if (m.custom_components.length) {
+                        m.custom_components.forEach(cc => {
+                            addPageIfNeeded(8);
+                            pdf.setFont('helvetica', 'normal');
+                            pdf.setFontSize(6.4);
+                            pdf.setTextColor(...MUTED);
+                            pdf.text('  + ' + safe(cc.name), col[0] + 4, y + 4.5);
+                            pdf.text('Per Person', col[1] + 2, y + 4.5);
+                            pdf.text(money(cc.amount), col[2] + 2, y + 4.5);
+                            pdf.text(money(cc.amount * m.qty), col[4] - 2, y + 4.5, { align: 'right' });
+                            pdf.setDrawColor(...BORDER);
+                            pdf.line(x, y + 8, x + contentWidth, y + 8);
+                            y += 8;
+                        });
+                    }
+                });
+
+                const totalMp = mpItems.reduce((sum, item) => sum + manpowerCalc(item).subtotalTotal, 0);
+
+                addPageIfNeeded(9);
+                pdf.setFillColor(245, 190, 50);
+                pdf.rect(x, y, contentWidth, 8, 'F');
+                pdf.setTextColor(...DARK);
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(7);
+                pdf.text('TOTAL MANPOWER COST', x + 2, y + 5.2);
+                pdf.text(money(totalMp), x + contentWidth - 2, y + 5.2, { align: 'right' });
+                y += 12;
+            }
+
+            function drawTable(title, items) {
+                sectionTitle(title);
+
+                const x = margin;
+                const col = [
+                    x,
+                    x + 77,
+                    x + 105,
+                    x + 133,
+                    margin + contentWidth
+                ];
+
+                pdf.setFillColor(...LIGHT);
+                pdf.setDrawColor(...BORDER);
+                pdf.rect(x, y, contentWidth, 7, 'FD');
+
+                pdf.setTextColor(...TEXT);
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(6.8);
+                pdf.text('Item', col[0] + 2, y + 4.5);
+                pdf.text('Vol', col[1] + 2, y + 4.5);
+                pdf.text('Depr', col[2] + 2, y + 4.5);
+                pdf.text('Harga', col[3] + 2, y + 4.5);
+                pdf.text('Total/Bln', col[4] - 2, y + 4.5, { align: 'right' });
+
+                y += 7;
+
+                if (!items.length) {
+                    addPageIfNeeded(8);
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.setFontSize(7);
+                    pdf.setTextColor(...MUTED);
+                    pdf.text('Tidak ada item', x + 2, y + 5);
+                    y += 9;
+                    return;
+                }
+
+                items.forEach(item => {
+                    addPageIfNeeded(10);
+
+                    const itemName = safe(item.name);
+                    const maxChars = 42;
+                    const nameLines = pdf.splitTextToSize(itemName, 72);
+
+                    const rowH = Math.max(8, nameLines.length * 3.2 + 3);
+
+                    if (y + rowH > pageHeight - margin) {
+                        pdf.addPage();
+                        y = margin;
+                        drawHeader(true);
+                        sectionTitle(title + ' - Lanjutan');
+
+                        pdf.setFillColor(...LIGHT);
+                        pdf.setDrawColor(...BORDER);
+                        pdf.rect(x, y, contentWidth, 7, 'FD');
+                        pdf.setTextColor(...TEXT);
+                        pdf.setFont('helvetica', 'bold');
+                        pdf.setFontSize(6.8);
+                        pdf.text('Item', col[0] + 2, y + 4.5);
+                        pdf.text('Vol', col[1] + 2, y + 4.5);
+                        pdf.text('Depr', col[2] + 2, y + 4.5);
+                        pdf.text('Harga', col[3] + 2, y + 4.5);
+                        pdf.text('Total/Bln', col[4] - 2, y + 4.5, { align: 'right' });
+                        y += 7;
+                    }
+
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.setFontSize(6.8);
+                    pdf.setTextColor(...TEXT);
+
+                    pdf.text(nameLines.slice(0, 3), col[0] + 2, y + 4);
+
+                    pdf.text(
+                        `${safe(item.vol)} ${safe(item.unit)}`,
+                        col[1] + 2,
+                        y + 4
+                    );
+
+                    pdf.text(
+                        `${safe(item.depreciation_months, 1)} Bln`,
+                        col[2] + 2,
+                        y + 4
+                    );
+
+                    pdf.text(
+                        money(item.price),
+                        col[3] + 2,
+                        y + 4
+                    );
+
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.text(
+                        money(item.total_monthly),
+                        col[4] - 2,
+                        y + 4,
+                        { align: 'right' }
+                    );
+
+                    pdf.setDrawColor(...BORDER);
+                    pdf.line(x, y + rowH, x + contentWidth, y + rowH);
+
+                    y += rowH;
+                });
+
+                y += 3;
+            }
+
+            function drawSummary() {
+                addPageIfNeeded(42);
+
+                const h = 38;
+                pdf.setFillColor(...DARK);
+                pdf.roundedRect(margin, y, contentWidth, h, 2, 2, 'F');
+
+                pdf.setTextColor(255, 255, 255);
+                pdf.setFontSize(7.5);
+                pdf.setFont('helvetica', 'normal');
+
+                const rows = [
+                    ['Total Project Cost (I+II+III+IV)', money(prj.cost_project)],
+                    [`Management Fee (${safe(prj.management_fee_percent, 0)}%)`, money(prj.management_fee_value)],
+                    ['Total Before Tax (Rounded)', money(prj.rounded_before_tax)]
+                ];
+
+                rows.forEach((r, i) => {
+                    const yy = y + 7 + i * 7;
+                    pdf.text(r[0], margin + 4, yy);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.text(r[1], margin + contentWidth - 4, yy, { align: 'right' });
+                    pdf.setFont('helvetica', 'normal');
+                });
+
+                pdf.setDrawColor(71, 85, 105);
+                pdf.line(
+                    margin + 4,
+                    y + 27,
+                    margin + contentWidth - 4,
+                    y + 27
+                );
+
+                pdf.setTextColor(147, 197, 253);
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(8);
+                pdf.text(
+                    'GRAND TOTAL PENAWARAN (Inc. PPN 11%)',
+                    margin + 4,
+                    y + 33
+                );
+
+                pdf.setTextColor(253, 224, 71);
+                pdf.text(
+                    money(prj.total_after_tax),
+                    margin + contentWidth - 4,
+                    y + 33,
+                    { align: 'right' }
+                );
+
+                y += h + 5;
+            }
+
+            function addPageNumbers() {
+                const totalPages = pdf.internal.getNumberOfPages();
+
+                for (let p = 1; p <= totalPages; p++) {
+                    pdf.setPage(p);
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.setFontSize(6.5);
+                    pdf.setTextColor(...MUTED);
+                    pdf.text(
+                        `RAB ${safe(prj.project_id)}  |  Halaman ${p} / ${totalPages}`,
+                        pageWidth - margin,
+                        pageHeight - 5,
+                        { align: 'right' }
+                    );
+                }
+            }
+
+            try {
+                drawHeader(false);
+                drawMeta();
+                drawManpower();
+                drawTable('II. PERALATAN & MESIN', mac);
+                drawTable('III. CHEMICALS & BAHAN KIMIA', chem);
+                drawTable('IV. CONSUMABLES & ACCESSORIES', cons);
+                drawSummary();
+                addPageNumbers();
+
+                const safeProject = safe(prj.project_id).replace(/[^a-zA-Z0-9_-]/g, '_');
+                const safeClient = safe(prj.client_name, 'Project').replace(/[^a-zA-Z0-9_-]/g, '_');
+
+                pdf.save(`RAB_${safeProject}_${safeClient}.pdf`);
+
+            } catch (err) {
+                console.error('Direct jsPDF Export Error:', err);
+                alert('Gagal membuat PDF. Detail: ' + (err?.message || err));
+            } finally {
+                if (button) {
+                    button.disabled = false;
+                    button.style.opacity = '';
+                    button.innerHTML = oldHtml;
+                }
+            }
+        }
+document.addEventListener('DOMContentLoaded',()=>{
+ initSupabase();renderManpowerComponents(manpowerComponents);
+ addRow('machineryTable');addRow('chemicalsTable');addRow('consumablesTable');calculateDynamicRows();
+});
+</script>
+</body>
+</html>
