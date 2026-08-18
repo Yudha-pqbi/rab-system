@@ -203,6 +203,10 @@ input:focus,select:focus{box-shadow:0 0 0 2px rgba(37,99,235,.18)}
         <input id="projectClientSearch" type="search" placeholder="Cari Nama Client..." oninput="applyProjectListFilters()" class="w-64 max-w-full px-3 py-2 pr-8 border border-slate-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-blue-500">
         <span class="absolute right-3 top-2 text-slate-400">⌕</span>
       </div>
+      <div class="relative">
+        <input id="projectServiceSearch" type="search" placeholder="Cari Service..." oninput="applyProjectListFilters()" class="w-56 max-w-full px-3 py-2 pr-8 border border-slate-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-blue-500">
+        <span class="absolute right-3 top-2 text-slate-400">⌕</span>
+      </div>
       <button onclick="exportAllProjectsExcel()" class="text-xs text-emerald-700 font-semibold">↓ Ekspor Semua Ke Excel</button>
       <button onclick="fetchProjects()" class="text-xs text-blue-600 font-semibold">↻ Refresh Database</button>
     </div>
@@ -212,6 +216,7 @@ input:focus,select:focus{box-shadow:0 0 0 2px rgba(37,99,235,.18)}
       <thead><tr class="bg-slate-100 text-slate-600">
         <th class="p-3 text-left">Nama Client</th>
         <th class="p-3 text-left">Area</th>
+        <th class="p-3 text-left">Service</th>
         <th class="p-3">Manpower</th>
         <th class="p-3">TOP</th>
         <th class="p-3">Cost Manpower</th>
@@ -226,6 +231,25 @@ input:focus,select:focus{box-shadow:0 0 0 2px rgba(37,99,235,.18)}
         <th class="p-3">Aksi</th>
       </tr></thead>
       <tbody id="projectTableBody"></tbody>
+      <tfoot>
+        <tr id="projectTotalRow" class="bg-amber-100 border-t-2 border-amber-300 font-bold">
+          <td class="p-3 text-left">TOTAL</td>
+          <td class="p-3 text-left">-</td>
+          <td class="p-3 text-left">-</td>
+          <td id="totalProjectManpower" class="p-3 text-center">0 person</td>
+          <td class="p-3 text-center">-</td>
+          <td id="totalProjectCostManpower" class="p-3 text-right">Rp 0</td>
+          <td id="totalProjectCostMachinery" class="p-3 text-right">Rp 0</td>
+          <td id="totalProjectCostConsumable" class="p-3 text-right">Rp 0</td>
+          <td id="totalProjectCostChemical" class="p-3 text-right">Rp 0</td>
+          <td class="p-3 text-center">-</td>
+          <td id="totalProjectMgmtFee" class="p-3 text-right">Rp 0</td>
+          <td id="totalProjectRounded" class="p-3 text-right text-emerald-700">Rp 0</td>
+          <td id="totalProjectExcPpn" class="p-3 text-right">Rp 0</td>
+          <td id="totalProjectIncPpn" class="p-3 text-right">Rp 0</td>
+          <td class="p-3 text-center">-</td>
+        </tr>
+      </tfoot>
     </table>
   </div>
   <div class="px-6 py-3 border-t bg-slate-50 flex flex-wrap justify-between items-center gap-3 text-xs">
@@ -473,9 +497,29 @@ function getProjectManpowerQty(p){
  return items.reduce((sum,m)=>sum+Math.max(0,parseInt(m?.qty)||0),0)
 }
 function getFilteredProjects(){
- const q=(document.getElementById('projectClientSearch')?.value||'').trim().toLowerCase();
- if(!q)return projectsData;
- return projectsData.filter(p=>String(p.client_name||'').toLowerCase().includes(q))
+ const clientQ=(document.getElementById('projectClientSearch')?.value||'').trim().toLowerCase();
+ const serviceQ=(document.getElementById('projectServiceSearch')?.value||'').trim().toLowerCase();
+ if(!clientQ&&!serviceQ)return projectsData;
+ return projectsData.filter(p=>{
+  const client=String(p.client_name||'').toLowerCase();
+  const service=String(p.project_title||'').toLowerCase();
+  return (!clientQ||client.includes(clientQ)) && (!serviceQ||service.includes(serviceQ));
+ })
+}
+function renderProjectTotals(filtered){
+ const rows=Array.isArray(filtered)?filtered:[];
+ const sum=(field)=>rows.reduce((s,p)=>s+n(p?.[field]),0);
+ const manpower=rows.reduce((s,p)=>s+getProjectManpowerQty(p),0);
+ const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value};
+ set('totalProjectManpower',`${manpower} person`);
+ set('totalProjectCostManpower',formatRupiah(sum('cost_manpower')));
+ set('totalProjectCostMachinery',formatRupiah(sum('cost_machinery')));
+ set('totalProjectCostConsumable',formatRupiah(sum('cost_consumable')));
+ set('totalProjectCostChemical',formatRupiah(sum('cost_chemical')));
+ set('totalProjectMgmtFee',formatRupiah(sum('management_fee_value')));
+ set('totalProjectRounded',formatRupiah(sum('rounded_before_tax')));
+ set('totalProjectExcPpn',formatRupiah(sum('rounded_before_tax')));
+ set('totalProjectIncPpn',formatRupiah(sum('total_after_tax')));
 }
 function applyProjectListFilters(){projectListPage=1;renderTable()}
 function changeProjectPageSize(v){projectListPageSize=Math.max(1,parseInt(v)||10);projectListPage=1;renderTable()}
@@ -497,13 +541,14 @@ function renderTable(data){
  const body=document.getElementById('projectTableBody');if(!body)return;body.innerHTML='';
  const filtered=Array.isArray(data)?data:getFilteredProjects();
  const total=filtered.length,totalPages=Math.max(1,Math.ceil(total/projectListPageSize));
+ renderProjectTotals(filtered);
  if(projectListPage>totalPages)projectListPage=totalPages;
  renderProjectPagination(total,totalPages);
- if(!total){body.innerHTML='<tr><td colspan="14" class="p-8 text-center text-slate-400">Belum ada project yang sesuai.</td></tr>';return}
+ if(!total){body.innerHTML='<tr><td colspan="15" class="p-8 text-center text-slate-400">Belum ada project yang sesuai.</td></tr>';return}
  const start=(projectListPage-1)*projectListPageSize;
  filtered.slice(start,start+projectListPageSize).forEach(p=>{
   const tr=document.createElement('tr');tr.className='border-b hover:bg-slate-50';
-  tr.innerHTML=`<td class="p-3 font-semibold text-left min-w-44">${escapeHtml(p.client_name||'-')}</td><td class="p-3 text-left min-w-36">${escapeHtml(p.project_area||'-')}</td><td class="p-3 text-center font-semibold">${getProjectManpowerQty(p)} person</td><td class="p-3">${p.top_days??'-'} Hari</td><td class="p-3 font-semibold">${formatRupiah(p.cost_manpower)}</td><td class="p-3">${formatRupiah(p.cost_machinery)}</td><td class="p-3">${formatRupiah(p.cost_consumable)}</td><td class="p-3">${formatRupiah(p.cost_chemical)}</td><td class="p-3">${n(p.management_fee_percent)}%</td><td class="p-3">${formatRupiah(p.management_fee_value)}</td><td class="p-3 text-emerald-700 font-semibold">${formatRupiah(p.rounded_before_tax)}</td><td class="p-3 font-semibold">${formatRupiah(p.rounded_before_tax)}</td><td class="p-3 font-bold">${formatRupiah(p.total_after_tax)}</td><td class="p-3 whitespace-nowrap"><button onclick="viewProjectDetail('${p.project_id}')" class="px-2 py-1 border rounded text-blue-600 mr-1">Lihat</button><button onclick="loadProjectToForm('${p.project_id}')" class="px-2 py-1 border rounded text-amber-600 mr-1">Edit</button><button onclick="exportSingleProjectPDF('${p.project_id}')" class="px-2 py-1 border rounded text-rose-600 mr-1">PDF</button><button onclick="exportSingleProjectExcel('${p.project_id}')" class="px-2 py-1 border rounded text-emerald-600 mr-1">XLS</button><button onclick="deleteProject('${p.project_id}')" class="px-2 py-1 border rounded text-red-600">Hapus</button></td>`;body.appendChild(tr)
+  tr.innerHTML=`<td class="p-3 font-semibold text-left min-w-44">${escapeHtml(p.client_name||'-')}</td><td class="p-3 text-left min-w-36">${escapeHtml(p.project_area||'-')}</td><td class="p-3 text-left min-w-40">${escapeHtml(p.project_title||'-')}</td><td class="p-3 text-center font-semibold">${getProjectManpowerQty(p)} person</td><td class="p-3">${p.top_days??'-'} Hari</td><td class="p-3 font-semibold">${formatRupiah(p.cost_manpower)}</td><td class="p-3">${formatRupiah(p.cost_machinery)}</td><td class="p-3">${formatRupiah(p.cost_consumable)}</td><td class="p-3">${formatRupiah(p.cost_chemical)}</td><td class="p-3">${n(p.management_fee_percent)}%</td><td class="p-3">${formatRupiah(p.management_fee_value)}</td><td class="p-3 text-emerald-700 font-semibold">${formatRupiah(p.rounded_before_tax)}</td><td class="p-3 font-semibold">${formatRupiah(p.rounded_before_tax)}</td><td class="p-3 font-bold">${formatRupiah(p.total_after_tax)}</td><td class="p-3 whitespace-nowrap"><button onclick="viewProjectDetail('${p.project_id}')" class="px-2 py-1 border rounded text-blue-600 mr-1">Lihat</button><button onclick="loadProjectToForm('${p.project_id}')" class="px-2 py-1 border rounded text-amber-600 mr-1">Edit</button><button onclick="exportSingleProjectPDF('${p.project_id}')" class="px-2 py-1 border rounded text-rose-600 mr-1">PDF</button><button onclick="exportSingleProjectExcel('${p.project_id}')" class="px-2 py-1 border rounded text-emerald-600 mr-1">XLS</button><button onclick="deleteProject('${p.project_id}')" class="px-2 py-1 border rounded text-red-600">Hapus</button></td>`;body.appendChild(tr)
  })
 }
 function resetForm(){
