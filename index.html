@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RAB V5.2.1 — Incremental Local Test</title>
+<title>RAB V5.2.8 — Local Test</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -30,7 +30,7 @@ input:focus,select:focus{box-shadow:0 0 0 2px rgba(37,99,235,.18)}
       </div>
       <div>
         <h1 class="text-xl font-bold">PT Nusantara Inti Solusindo</h1>
-        <p class="text-xs text-blue-200">RAB V5.2 — Editable Salary & Benefit</p>
+        <p class="text-xs text-blue-200">RAB V5.2.8 — Editable Salary & Benefit</p>
       </div>
     </div>
     <div id="dbStatusBadge" class="text-xs px-3 py-1.5 rounded-full bg-amber-500/20 border border-amber-300/30">● Mode Lokal / Demo Data</div>
@@ -130,17 +130,48 @@ input:focus,select:focus{box-shadow:0 0 0 2px rgba(37,99,235,.18)}
       </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-xl bg-blue-50/50 border border-blue-100">
-      <div>
-        <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">Basis Management Fee *</label>
-        <select id="managementFeeBasis" required onchange="calculateOverallTotals()" class="w-full h-9 px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-blue-500 outline-none bg-white">
-          <option value="total_cost" selected>Total Cost</option>
-          <option value="basic_salary">Basic Salary</option>
-        </select>
+    <div class="p-4 rounded-xl bg-blue-50/50 border border-blue-100 space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">Basis Management Fee *</label>
+          <select id="managementFeeBasis" required onchange="updateManagementFeeControls();calculateOverallTotals()" class="w-full h-9 px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+            <option value="total_cost" selected>Total Cost</option>
+            <option value="basic_salary">Basic Salary</option>
+            <option value="selected_components">Pilih Komponen</option>
+          </select>
+        </div>
+        <div class="flex items-end">
+          <div class="w-full text-xs text-slate-600 bg-white border rounded-lg px-3 py-2">
+            Management Fee dihitung berdasarkan <b id="managementFeeBasisLabel">Total Cost</b>.
+          </div>
+        </div>
       </div>
-      <div class="flex items-end">
-        <div class="w-full text-xs text-slate-600 bg-white border rounded-lg px-3 py-2">
-          Management Fee dihitung berdasarkan <b id="managementFeeBasisLabel">Total Cost</b>.
+      <div id="managementFeeComponentBox" class="hidden border-t border-blue-100 pt-3">
+        <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2">Komponen yang dikenakan Management Fee</label>
+        <div class="flex flex-wrap gap-x-5 gap-y-2 text-xs">
+          <label class="flex items-center gap-2"><input type="checkbox" class="mgmt-fee-component" value="manpower" onchange="calculateOverallTotals()"> Manpower</label>
+          <label class="flex items-center gap-2"><input type="checkbox" class="mgmt-fee-component" value="uniform" onchange="calculateOverallTotals()"> Uniform</label>
+          <label class="flex items-center gap-2"><input type="checkbox" class="mgmt-fee-component" value="machinery" onchange="calculateOverallTotals()"> Machinery</label>
+          <label class="flex items-center gap-2"><input type="checkbox" class="mgmt-fee-component" value="chemicals" onchange="calculateOverallTotals()"> Chemicals</label>
+          <label class="flex items-center gap-2"><input type="checkbox" class="mgmt-fee-component" value="consumables" onchange="calculateOverallTotals()"> Consumables</label>
+          <label class="flex items-center gap-2"><input type="checkbox" class="mgmt-fee-component" value="equipment" onchange="calculateOverallTotals()"> Equipment</label>
+          <label class="flex items-center gap-2"><input type="checkbox" class="mgmt-fee-component" value="additional" onchange="calculateOverallTotals()"> Additional Cost</label>
+        </div>
+        <div id="managementFeeComponentValidation" class="hidden mt-2 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
+          Pilih minimal satu komponen yang dikenakan Management Fee.
+        </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-blue-100 pt-3">
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2">Cara Input Management Fee *</label>
+          <div class="flex flex-wrap gap-5 text-xs">
+            <label class="flex items-center gap-2"><input type="radio" name="managementFeeMode" value="auto" checked onchange="updateManagementFeeControls();calculateOverallTotals()"> Otomatis (%)</label>
+            <label class="flex items-center gap-2"><input type="radio" name="managementFeeMode" value="manual" onchange="updateManagementFeeControls();calculateOverallTotals()"> Manual (%)</label>
+          </div>
+        </div>
+        <div id="managementFeeManualBox" class="hidden">
+          <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">Management Fee Manual (%)</label>
+          <input type="number" id="managementFeeManualValue" min="0" step="0.1" value="0" placeholder="Contoh: 7.5" oninput="calculateOverallTotals()" class="w-full h-9 px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-semibold bg-white">
         </div>
       </div>
     </div>
@@ -148,10 +179,12 @@ input:focus,select:focus{box-shadow:0 0 0 2px rgba(37,99,235,.18)}
     <div class="border rounded-xl overflow-hidden">
       <div class="flex overflow-x-auto border-b bg-white">
         <button type="button" id="btn-tab-manpower" onclick="switchTab('tab-manpower')" class="tab-btn active px-5 py-3 text-xs whitespace-nowrap">I. Manpower <span id="badge-count-mp" class="ml-1 bg-slate-100 rounded-full px-2 py-0.5">1</span></button>
-        <button type="button" id="btn-tab-machinery" onclick="switchTab('tab-machinery')" class="tab-btn px-5 py-3 text-xs whitespace-nowrap">II. Machinery <span id="badge-count-mac" class="ml-1 bg-slate-100 rounded-full px-2 py-0.5">0</span></button>
-        <button type="button" id="btn-tab-chemicals" onclick="switchTab('tab-chemicals')" class="tab-btn px-5 py-3 text-xs whitespace-nowrap">III. Chemicals <span id="badge-count-chem" class="ml-1 bg-slate-100 rounded-full px-2 py-0.5">0</span></button>
-        <button type="button" id="btn-tab-consumables" onclick="switchTab('tab-consumables')" class="tab-btn px-5 py-3 text-xs whitespace-nowrap">IV. Consumables <span id="badge-count-cons" class="ml-1 bg-slate-100 rounded-full px-2 py-0.5">0</span></button>
-        <button type="button" id="btn-tab-uniform" onclick="switchTab('tab-uniform')" class="tab-btn px-5 py-3 text-xs whitespace-nowrap">V. Uniform <span id="badge-count-uniform" class="ml-1 bg-slate-100 rounded-full px-2 py-0.5">0</span></button>
+        <button type="button" id="btn-tab-uniform" onclick="switchTab('tab-uniform')" class="tab-btn px-5 py-3 text-xs whitespace-nowrap">II. Uniform <span id="badge-count-uniform" class="ml-1 bg-slate-100 rounded-full px-2 py-0.5">0</span></button>
+        <button type="button" id="btn-tab-machinery" onclick="switchTab('tab-machinery')" class="tab-btn px-5 py-3 text-xs whitespace-nowrap">III. Machinery <span id="badge-count-mac" class="ml-1 bg-slate-100 rounded-full px-2 py-0.5">0</span></button>
+        <button type="button" id="btn-tab-chemicals" onclick="switchTab('tab-chemicals')" class="tab-btn px-5 py-3 text-xs whitespace-nowrap">IV. Chemicals <span id="badge-count-chem" class="ml-1 bg-slate-100 rounded-full px-2 py-0.5">0</span></button>
+        <button type="button" id="btn-tab-consumables" onclick="switchTab('tab-consumables')" class="tab-btn px-5 py-3 text-xs whitespace-nowrap">V. Consumables <span id="badge-count-cons" class="ml-1 bg-slate-100 rounded-full px-2 py-0.5">0</span></button>
+        <button type="button" id="btn-tab-equipment" onclick="switchTab('tab-equipment')" class="tab-btn px-5 py-3 text-xs whitespace-nowrap">VI. Equipment <span id="badge-count-equipment" class="ml-1 bg-slate-100 rounded-full px-2 py-0.5">0</span></button>
+        <button type="button" id="btn-tab-additional" onclick="switchTab('tab-additional')" class="tab-btn px-5 py-3 text-xs whitespace-nowrap">VII. Additional Cost <span id="badge-count-additional" class="ml-1 bg-slate-100 rounded-full px-2 py-0.5">0</span></button>
       </div>
 
       <div id="tab-manpower" class="tab-content p-4 space-y-4">
@@ -159,33 +192,46 @@ input:focus,select:focus{box-shadow:0 0 0 2px rgba(37,99,235,.18)}
         <div id="manpowerList" class="space-y-4"></div>
       </div>
 
+      <div id="tab-uniform" class="tab-content hidden p-4 space-y-4">
+        <div class="flex justify-between items-center"><h3 class="font-bold text-xs uppercase">II. Uniform</h3><button type="button" onclick="addRow('uniformTable')" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold">+ Tambah Uniform</button></div>
+        <div class="overflow-x-auto"><table class="w-full text-xs border-collapse" id="uniformTable"><thead><tr class="bg-slate-800 text-white"><th class="p-2 text-left">Nama</th><th class="p-2">Volume</th><th class="p-2">Unit</th><th class="p-2">Depresiasi</th><th class="p-2 text-right">Harga/Unit</th><th class="p-2 text-right">Total/Month</th><th class="p-2">Aksi</th></tr></thead><tbody></tbody><tfoot><tr class="bg-amber-400 font-bold"><td colspan="5" class="p-2">SUB TOTAL UNIFORM COST / MONTH</td><td id="subtotalUniform" class="p-2 text-right">Rp 0</td><td></td></tr></tfoot></table></div>
+      </div>
+
       <div id="tab-machinery" class="tab-content hidden p-4 space-y-4">
-        <div class="flex justify-between items-center"><h3 class="font-bold text-xs uppercase">II. Machinery</h3><button type="button" onclick="addRow('machineryTable')" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold">+ Tambah Mesin</button></div>
+        <div class="flex justify-between items-center"><h3 class="font-bold text-xs uppercase">III. Machinery</h3><button type="button" onclick="addRow('machineryTable')" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold">+ Tambah Mesin</button></div>
         <div class="overflow-x-auto"><table class="w-full text-xs border-collapse" id="machineryTable"><thead><tr class="bg-slate-800 text-white"><th class="p-2 text-left">Nama</th><th class="p-2">Volume</th><th class="p-2">Unit</th><th class="p-2">Status</th><th class="p-2">Depresiasi</th><th class="p-2 text-right">Harga/Unit</th><th class="p-2 text-right">Total/Month</th><th class="p-2">Aksi</th></tr></thead><tbody></tbody><tfoot><tr class="bg-amber-400 font-bold"><td colspan="6" class="p-2">SUB TOTAL MACHINERY COST / MONTH</td><td id="subtotalMachinery" class="p-2 text-right">Rp 0</td><td></td></tr></tfoot></table></div>
       </div>
 
       <div id="tab-chemicals" class="tab-content hidden p-4 space-y-4">
-        <div class="flex justify-between items-center"><h3 class="font-bold text-xs uppercase">III. Chemicals Pekerjaan</h3><button type="button" onclick="addRow('chemicalsTable')" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold">+ Tambah Chemical</button></div>
+        <div class="flex justify-between items-center"><h3 class="font-bold text-xs uppercase">IV. Chemicals Pekerjaan</h3><button type="button" onclick="addRow('chemicalsTable')" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold">+ Tambah Chemical</button></div>
         <div class="overflow-x-auto"><table class="w-full text-xs border-collapse" id="chemicalsTable"><thead><tr class="bg-slate-800 text-white"><th class="p-2 text-left">Nama</th><th class="p-2">Volume</th><th class="p-2">Unit</th><th class="p-2">Depresiasi</th><th class="p-2 text-right">Harga/Unit</th><th class="p-2 text-right">Total/Month</th><th class="p-2">Aksi</th></tr></thead><tbody></tbody><tfoot><tr class="bg-amber-400 font-bold"><td colspan="5" class="p-2">SUB TOTAL CHEMICAL COST / MONTH</td><td id="subtotalChemicals" class="p-2 text-right">Rp 0</td><td></td></tr></tfoot></table></div>
       </div>
 
       <div id="tab-consumables" class="tab-content hidden p-4 space-y-4">
-        <div class="flex justify-between items-center"><h3 class="font-bold text-xs uppercase">IV. Consumables</h3><button type="button" onclick="addRow('consumablesTable')" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold">+ Tambah Consumable</button></div>
+        <div class="flex justify-between items-center"><h3 class="font-bold text-xs uppercase">V. Consumables</h3><button type="button" onclick="addRow('consumablesTable')" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold">+ Tambah Consumable</button></div>
         <div class="overflow-x-auto"><table class="w-full text-xs border-collapse" id="consumablesTable"><thead><tr class="bg-slate-800 text-white"><th class="p-2 text-left">Nama</th><th class="p-2">Volume</th><th class="p-2">Unit</th><th class="p-2">Depresiasi</th><th class="p-2 text-right">Harga/Unit</th><th class="p-2 text-right">Total/Month</th><th class="p-2">Aksi</th></tr></thead><tbody></tbody><tfoot><tr class="bg-amber-400 font-bold"><td colspan="5" class="p-2">SUB TOTAL CONSUMABLE COST / MONTH</td><td id="subtotalConsumables" class="p-2 text-right">Rp 0</td><td></td></tr></tfoot></table></div>
       </div>
 
-      <div id="tab-uniform" class="tab-content hidden p-4 space-y-4">
-        <div class="flex justify-between items-center"><h3 class="font-bold text-xs uppercase">V. Uniform</h3><button type="button" onclick="addRow('uniformTable')" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold">+ Tambah Uniform</button></div>
-        <div class="overflow-x-auto"><table class="w-full text-xs border-collapse" id="uniformTable"><thead><tr class="bg-slate-800 text-white"><th class="p-2 text-left">Nama</th><th class="p-2">Volume</th><th class="p-2">Unit</th><th class="p-2">Depresiasi</th><th class="p-2 text-right">Harga/Unit</th><th class="p-2 text-right">Total/Month</th><th class="p-2">Aksi</th></tr></thead><tbody></tbody><tfoot><tr class="bg-amber-400 font-bold"><td colspan="5" class="p-2">SUB TOTAL UNIFORM COST / MONTH</td><td id="subtotalUniform" class="p-2 text-right">Rp 0</td><td></td></tr></tfoot></table></div>
+      <div id="tab-equipment" class="tab-content hidden p-4 space-y-4">
+        <div class="flex justify-between items-center"><h3 class="font-bold text-xs uppercase">VI. Equipment</h3><button type="button" onclick="addRow('equipmentTable')" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold">+ Tambah Equipment</button></div>
+        <div class="overflow-x-auto"><table class="w-full text-xs border-collapse" id="equipmentTable"><thead><tr class="bg-slate-800 text-white"><th class="p-2 text-left">Nama</th><th class="p-2">Volume</th><th class="p-2">Unit</th><th class="p-2">Depresiasi</th><th class="p-2 text-right">Harga/Unit</th><th class="p-2 text-right">Total/Month</th><th class="p-2">Aksi</th></tr></thead><tbody></tbody><tfoot><tr class="bg-amber-400 font-bold"><td colspan="5" class="p-2">SUB TOTAL EQUIPMENT COST / MONTH</td><td id="subtotalEquipment" class="p-2 text-right">Rp 0</td><td></td></tr></tfoot></table></div>
+      </div>
+
+      <div id="tab-additional" class="tab-content hidden p-4 space-y-4">
+        <div class="flex justify-between items-center"><h3 class="font-bold text-xs uppercase">VII. Additional Cost</h3><button type="button" onclick="addRow('additionalCostTable')" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold">+ Tambah Additional Cost</button></div>
+        <div class="overflow-x-auto"><table class="w-full text-xs border-collapse" id="additionalCostTable"><thead><tr class="bg-slate-800 text-white"><th class="p-2 text-left">Nama</th><th class="p-2">Volume</th><th class="p-2">Unit</th><th class="p-2">Depresiasi</th><th class="p-2 text-right">Harga/Unit</th><th class="p-2 text-right">Total/Month</th><th class="p-2">Aksi</th></tr></thead><tbody></tbody><tfoot><tr class="bg-amber-400 font-bold"><td colspan="5" class="p-2">SUB TOTAL ADDITIONAL COST / MONTH</td><td id="subtotalAdditional" class="p-2 text-right">Rp 0</td><td></td></tr></tfoot></table></div>
       </div>
     </div>
 
     <div class="bg-slate-900 text-white rounded-xl p-4">
-      <div class="grid grid-cols-2 md:grid-cols-6 gap-3 text-xs">
+      <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-9 gap-3 text-xs">
         <div><span class="text-slate-400 block">Manpower</span><b id="sumMp">Rp 0</b></div>
+        <div><span class="text-slate-400 block">Uniform</span><b id="sumUniform">Rp 0</b></div>
         <div><span class="text-slate-400 block">Mesin</span><b id="sumMac">Rp 0</b></div>
         <div><span class="text-slate-400 block">Chemical</span><b id="sumChem">Rp 0</b></div>
         <div><span class="text-slate-400 block">Consumable</span><b id="sumCons">Rp 0</b></div>
+        <div><span class="text-slate-400 block">Equipment</span><b id="sumEquipment">Rp 0</b></div>
+        <div><span class="text-slate-400 block">Additional Cost</span><b id="sumAdditional">Rp 0</b></div>
         <div><span class="text-slate-400 block">Mgmt Fee</span><b id="sumFee">Rp 0</b></div>
         <div><span class="text-slate-400 block">Inc. PPN</span><b id="sumGrand">Rp 0</b></div>
       </div>
@@ -275,7 +321,7 @@ input:focus,select:focus{box-shadow:0 0 0 2px rgba(37,99,235,.18)}
   </div>
 </div>
 
-<footer class="bg-white border-t py-4 mt-auto"><div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">© 2026 PT Nusantara Inti Solusindo — RAB V5.2</div></footer>
+<footer class="bg-white border-t py-4 mt-auto"><div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">© 2026 PT Nusantara Inti Solusindo — RAB V5.2.8</div></footer>
 
 <script>
 let supabaseClient=null, projectsData=[];
@@ -438,26 +484,42 @@ function addRow(tableId,data=null){
 }
 function removeRow(b){b.closest('.item-row').remove();calculateDynamicRows()}
 function tableSubtotal(id){let s=0;document.querySelectorAll('#'+id+' .item-row').forEach(r=>{const v=n(r.querySelector('.item-vol')?.value),d=Math.max(1,n(r.querySelector('.item-depr')?.value)),p=n(r.querySelector('.item-price')?.value),t=v*p/d;s+=t;r.querySelector('.item-total-cell').textContent=formatRupiah(t)});return s}
+function getManagementFeeMode(){return document.querySelector('input[name="managementFeeMode"]:checked')?.value||'auto'}
+function getSelectedManagementFeeComponents(){return [...document.querySelectorAll('.mgmt-fee-component:checked')].map(x=>x.value)}
+function updateManagementFeeControls(){
+ const basis=document.getElementById('managementFeeBasis')?.value||'total_cost',mode=getManagementFeeMode();
+ const componentBox=document.getElementById('managementFeeComponentBox'),manualBox=document.getElementById('managementFeeManualBox'),pct=document.getElementById('managementFeePercent');
+ if(componentBox)componentBox.classList.toggle('hidden',basis!=='selected_components');
+ if(manualBox)manualBox.classList.toggle('hidden',mode!=='manual');
+ if(pct)pct.disabled=mode==='manual';
+}
 function calculateDynamicRows(){
- const a=tableSubtotal('machineryTable'),b=tableSubtotal('chemicalsTable'),c=tableSubtotal('consumablesTable'),u=tableSubtotal('uniformTable');
- document.getElementById('subtotalMachinery').textContent=formatRupiah(a);document.getElementById('subtotalChemicals').textContent=formatRupiah(b);document.getElementById('subtotalConsumables').textContent=formatRupiah(c);document.getElementById('subtotalUniform').textContent=formatRupiah(u);
- document.getElementById('badge-count-mac').textContent=document.querySelectorAll('#machineryTable .item-row').length;document.getElementById('badge-count-chem').textContent=document.querySelectorAll('#chemicalsTable .item-row').length;document.getElementById('badge-count-cons').textContent=document.querySelectorAll('#consumablesTable .item-row').length;document.getElementById('badge-count-uniform').textContent=document.querySelectorAll('#uniformTable .item-row').length;
+ const a=tableSubtotal('machineryTable'),b=tableSubtotal('chemicalsTable'),c=tableSubtotal('consumablesTable'),u=tableSubtotal('uniformTable'),eq=tableSubtotal('equipmentTable'),add=tableSubtotal('additionalCostTable');
+ document.getElementById('subtotalMachinery').textContent=formatRupiah(a);document.getElementById('subtotalChemicals').textContent=formatRupiah(b);document.getElementById('subtotalConsumables').textContent=formatRupiah(c);document.getElementById('subtotalUniform').textContent=formatRupiah(u);document.getElementById('subtotalEquipment').textContent=formatRupiah(eq);document.getElementById('subtotalAdditional').textContent=formatRupiah(add);
+ document.getElementById('badge-count-mac').textContent=document.querySelectorAll('#machineryTable .item-row').length;document.getElementById('badge-count-chem').textContent=document.querySelectorAll('#chemicalsTable .item-row').length;document.getElementById('badge-count-cons').textContent=document.querySelectorAll('#consumablesTable .item-row').length;document.getElementById('badge-count-uniform').textContent=document.querySelectorAll('#uniformTable .item-row').length;document.getElementById('badge-count-equipment').textContent=document.querySelectorAll('#equipmentTable .item-row').length;document.getElementById('badge-count-additional').textContent=document.querySelectorAll('#additionalCostTable .item-row').length;
  calculateOverallTotals()
 }
 function calculateOverallTotals(){
- manpowerComponents=getManpowerComponentsFromUI();const mp=manpowerComponents.reduce((s,x)=>s+manpowerCalc(x).subtotalTotal,0),basicSalaryTotal=manpowerComponents.reduce((s,x)=>{const m=normalizeManpowerItem(x);return s+(m.basic_salary*m.qty)},0),mac=tableSubtotal('machineryTable'),chem=tableSubtotal('chemicalsTable'),cons=tableSubtotal('consumablesTable'),uniform=tableSubtotal('uniformTable');
- const total=mp+mac+chem+cons+uniform,feePct=n(document.getElementById('managementFeePercent').value),feeBasis=document.getElementById('managementFeeBasis')?.value||'total_cost',feeBase=feeBasis==='basic_salary'?basicSalaryTotal:total,fee=feeBase*feePct/100,rounded=Math.round((total+fee)/1000)*1000,grand=rounded*1.11;
- const basisLabel=document.getElementById('managementFeeBasisLabel');if(basisLabel)basisLabel.textContent=feeBasis==='basic_salary'?'Basic Salary':'Total Cost';
+ manpowerComponents=getManpowerComponentsFromUI();
+ const mp=manpowerComponents.reduce((s,x)=>s+manpowerCalc(x).subtotalTotal,0),basicSalaryTotal=manpowerComponents.reduce((s,x)=>{const m=normalizeManpowerItem(x);return s+(m.basic_salary*m.qty)},0),mac=tableSubtotal('machineryTable'),chem=tableSubtotal('chemicalsTable'),cons=tableSubtotal('consumablesTable'),uniform=tableSubtotal('uniformTable'),equipment=tableSubtotal('equipmentTable'),additional=tableSubtotal('additionalCostTable');
+ const total=mp+uniform+mac+chem+cons+equipment+additional,autoFeePct=n(document.getElementById('managementFeePercent').value),feeBasis=document.getElementById('managementFeeBasis')?.value||'total_cost',feeMode=getManagementFeeMode(),selectedFeeComponents=getSelectedManagementFeeComponents();
+ const componentValues={manpower:mp,uniform:uniform,machinery:mac,chemicals:chem,consumables:cons,equipment:equipment,additional:additional};
+ let feeBase=feeBasis==='basic_salary'?basicSalaryTotal:(feeBasis==='selected_components'?selectedFeeComponents.reduce((s,k)=>s+n(componentValues[k]),0):total);
+ const selectedComponentsValid=feeBasis!=='selected_components'||selectedFeeComponents.length>0;
+ const componentValidation=document.getElementById('managementFeeComponentValidation');if(componentValidation)componentValidation.classList.toggle('hidden',selectedComponentsValid);
+ const manualFeePct=n(document.getElementById('managementFeeManualValue')?.value),feePct=feeMode==='manual'?manualFeePct:autoFeePct,fee=selectedComponentsValid?feeBase*feePct/100:0,rounded=Math.round((total+fee)/1000)*1000,grand=rounded*1.11;
+ const basisLabel=document.getElementById('managementFeeBasisLabel');if(basisLabel)basisLabel.textContent=feeBasis==='basic_salary'?'Basic Salary':feeBasis==='selected_components'?(selectedFeeComponents.length?selectedFeeComponents.map(x=>({manpower:'Manpower',uniform:'Uniform',machinery:'Machinery',chemicals:'Chemicals',consumables:'Consumables',equipment:'Equipment',additional:'Additional Cost'}[x]||x)).join(' + '):'Pilih Komponen'):'Total Cost';
  document.getElementById('statCostMp').textContent=formatRupiah(mp);document.getElementById('statCostMachinery').textContent=formatRupiah(mac);document.getElementById('statCostChemical').textContent=formatRupiah(chem);document.getElementById('statCostConsumable').textContent=formatRupiah(cons);document.getElementById('statTotalCost').textContent=formatRupiah(total);
- document.getElementById('sumMp').textContent=formatRupiah(mp);document.getElementById('sumMac').textContent=formatRupiah(mac);document.getElementById('sumChem').textContent=formatRupiah(chem);document.getElementById('sumCons').textContent=formatRupiah(cons);document.getElementById('sumFee').textContent=formatRupiah(fee);document.getElementById('sumGrand').textContent=formatRupiah(grand);
- return {mp,mac,chem,cons,uniform,basicSalaryTotal,total,fee,rounded,grand,feePct,feeBasis,feeBase}
+ document.getElementById('sumMp').textContent=formatRupiah(mp);document.getElementById('sumUniform').textContent=formatRupiah(uniform);document.getElementById('sumMac').textContent=formatRupiah(mac);document.getElementById('sumChem').textContent=formatRupiah(chem);document.getElementById('sumCons').textContent=formatRupiah(cons);document.getElementById('sumEquipment').textContent=formatRupiah(equipment);document.getElementById('sumAdditional').textContent=formatRupiah(additional);document.getElementById('sumFee').textContent=formatRupiah(fee);document.getElementById('sumGrand').textContent=formatRupiah(grand);
+ return {mp,mac,chem,cons,uniform,equipment,additional,basicSalaryTotal,total,fee,rounded,grand,feePct,autoFeePct,feeBasis,feeBase,feeMode,manualFeePct,selectedFeeComponents,selectedComponentsValid}
 }
 function extractItems(id){
  return [...document.querySelectorAll('#'+id+' .item-row')].map(r=>({name:r.querySelector('.item-name')?.value||'',vol:n(r.querySelector('.item-vol')?.value),unit:r.querySelector('.item-unit')?.value||'',status:r.querySelector('.item-status')?.value||'-',depreciation_months:Math.max(1,n(r.querySelector('.item-depr')?.value)),price:n(r.querySelector('.item-price')?.value),total_monthly:n(r.querySelector('.item-vol')?.value)*n(r.querySelector('.item-price')?.value)/Math.max(1,n(r.querySelector('.item-depr')?.value))}))
 }
 async function handleFormSubmit(e){
  e.preventDefault();const calc=calculateOverallTotals(),editing=document.getElementById('editingProjectId').value,mp=getManpowerComponentsFromUI();
- const payload={project_id:editing||'PRJ-'+Date.now().toString().slice(-8),client_name:document.getElementById('clientName').value.trim(),client_location:document.getElementById('clientLocation').value.trim(),project_area:document.getElementById('projectArea').value.trim(),project_title:document.getElementById('projectTitle').value.trim(),top_days:parseInt(document.getElementById('topDays').value)||0,cost_project:calc.total,management_fee_percent:calc.feePct,management_fee_value:calc.fee,rounded_before_tax:calc.rounded,total_after_tax:calc.grand,cost_manpower:calc.mp,cost_machinery:calc.mac,cost_chemical:calc.chem,cost_consumable:calc.cons,details_json:{project_meta:{province:document.getElementById('clientProvince').value.trim(),management_fee_basis:calc.feeBasis},manpower:mp,manpower_legacy:mp[0]||normalizeManpowerItem({}),machinery:extractItems('machineryTable'),chemicals:extractItems('chemicalsTable'),consumables:extractItems('consumablesTable'),uniform:extractItems('uniformTable')},status:'APPROVED'};
+ if(!calc.selectedComponentsValid){alert('Pilih minimal satu komponen yang dikenakan Management Fee.');return;}
+ const payload={project_id:editing||'PRJ-'+Date.now().toString().slice(-8),client_name:document.getElementById('clientName').value.trim(),client_location:document.getElementById('clientLocation').value.trim(),project_area:document.getElementById('projectArea').value.trim(),project_title:document.getElementById('projectTitle').value.trim(),top_days:parseInt(document.getElementById('topDays').value)||0,cost_project:calc.total,management_fee_percent:calc.feePct,management_fee_value:calc.fee,rounded_before_tax:calc.rounded,total_after_tax:calc.grand,cost_manpower:calc.mp,cost_machinery:calc.mac,cost_chemical:calc.chem,cost_consumable:calc.cons,details_json:{project_meta:{province:document.getElementById('clientProvince').value.trim(),management_fee_basis:calc.feeBasis,management_fee_mode:calc.feeMode,management_fee_components:calc.selectedFeeComponents,management_fee_manual_percent:calc.manualFeePct},manpower:mp,manpower_legacy:mp[0]||normalizeManpowerItem({}),machinery:extractItems('machineryTable'),chemicals:extractItems('chemicalsTable'),consumables:extractItems('consumablesTable'),uniform:extractItems('uniformTable'),equipment:extractItems('equipmentTable'),additional_cost:extractItems('additionalCostTable')},status:'APPROVED'};
  if(supabaseClient){try{const res=editing?await supabaseClient.from('projects').update(payload).eq('project_id',editing):await supabaseClient.from('projects').insert([payload]);if(res.error)throw res.error;alert(editing?'Pembaruan RAB Berhasil Disimpan!':'Project RAB Berhasil Disimpan ke Supabase!');resetForm();await fetchProjects()}catch(err){console.error(err);alert('Gagal menyimpan ke Supabase: '+err.message)}}else{const i=projectsData.findIndex(x=>x.project_id===payload.project_id);if(i>=0)projectsData[i]=payload;else projectsData.unshift(payload);renderTable();resetForm();alert('Project Berhasil Disimpan (Mode Lokal)!')}
 }
 async function fetchProjects(){
@@ -552,15 +614,15 @@ function renderTable(data){
  })
 }
 function resetForm(){
- document.getElementById('editingProjectId').value='';document.getElementById('formTitle').textContent='Form Analytical Costing & Detail Input Component';document.getElementById('editingBadge').textContent='Input Baru';document.getElementById('btnSaveText').textContent='Simpan Hasil Analisa Ke Supabase';document.getElementById('rabForm').reset();document.getElementById('managementFeeBasis').value='total_cost';
+ document.getElementById('editingProjectId').value='';document.getElementById('formTitle').textContent='Form Analytical Costing & Detail Input Component';document.getElementById('editingBadge').textContent='Input Baru';document.getElementById('btnSaveText').textContent='Simpan Hasil Analisa Ke Supabase';document.getElementById('rabForm').reset();document.getElementById('managementFeeBasis').value='total_cost';document.querySelector('input[name="managementFeeMode"][value="auto"]').checked=true;document.getElementById('managementFeeManualValue').value=0;document.querySelectorAll('.mgmt-fee-component').forEach(x=>x.checked=false);updateManagementFeeControls();
  manpowerComponents=[normalizeManpowerItem({role:'HOUSEKEEPING',qty:2,basic_salary:5938885,tunjangan:0,uang_makan:330000,uniform:175000})];renderManpowerComponents(manpowerComponents);
- ['machineryTable','chemicalsTable','consumablesTable','uniformTable'].forEach(id=>document.querySelector('#'+id+' tbody').innerHTML='');calculateDynamicRows()
+ ['machineryTable','chemicalsTable','consumablesTable','uniformTable','equipmentTable','additionalCostTable'].forEach(id=>document.querySelector('#'+id+' tbody').innerHTML='');calculateDynamicRows()
 }
 function loadProjectToForm(id){
  const p=projectsData.find(x=>x.project_id===id);if(!p)return;document.getElementById('editingProjectId').value=p.project_id;document.getElementById('formTitle').textContent='Edit / Analisa RAB ('+p.project_id+')';document.getElementById('editingBadge').textContent='Editing: '+p.project_id;document.getElementById('btnSaveText').textContent='Simpan Perubahan RAB';
  document.getElementById('clientName').value=p.client_name||'';document.getElementById('clientLocation').value=p.client_location||'';document.getElementById('projectArea').value=p.project_area||'';document.getElementById('projectTitle').value=p.project_title||'';document.getElementById('topDays').value=p.top_days||30;document.getElementById('managementFeePercent').value=p.management_fee_percent||7.5;
- const d=p.details_json||{},meta=d.project_meta||{};document.getElementById('clientProvince').value=meta.province||'';document.getElementById('managementFeeBasis').value=meta.management_fee_basis||'total_cost';const saved=Array.isArray(d.manpower)?d.manpower:(d.manpower?[d.manpower]:d.manpower_legacy?[d.manpower_legacy]:[]);renderManpowerComponents(saved.length?saved:[normalizeManpowerItem({})]);
- [['machineryTable',d.machinery],['chemicalsTable',d.chemicals],['consumablesTable',d.consumables],['uniformTable',d.uniform]].forEach(([id,arr])=>{document.querySelector('#'+id+' tbody').innerHTML='';(arr||[]).forEach(x=>addRow(id,x))});calculateManpower();calculateDynamicRows();document.getElementById('formSection').scrollIntoView({behavior:'smooth'})
+ const d=p.details_json||{},meta=d.project_meta||{};document.getElementById('clientProvince').value=meta.province||'';document.getElementById('managementFeeBasis').value=meta.management_fee_basis||'total_cost';const feeMode=meta.management_fee_mode||'auto';const feeModeEl=document.querySelector('input[name="managementFeeMode"][value="'+feeMode+'"]');if(feeModeEl)feeModeEl.checked=true;document.getElementById('managementFeeManualValue').value=n(meta.management_fee_manual_percent??meta.management_fee_manual_value??p.management_fee_percent);const feeComponents=Array.isArray(meta.management_fee_components)?meta.management_fee_components:[];document.querySelectorAll('.mgmt-fee-component').forEach(x=>x.checked=feeComponents.includes(x.value));updateManagementFeeControls();const saved=Array.isArray(d.manpower)?d.manpower:(d.manpower?[d.manpower]:d.manpower_legacy?[d.manpower_legacy]:[]);renderManpowerComponents(saved.length?saved:[normalizeManpowerItem({})]);
+ [['uniformTable',d.uniform],['machineryTable',d.machinery],['chemicalsTable',d.chemicals],['consumablesTable',d.consumables],['equipmentTable',d.equipment],['additionalCostTable',d.additional_cost]].forEach(([id,arr])=>{document.querySelector('#'+id+' tbody').innerHTML='';(arr||[]).forEach(x=>addRow(id,x))});calculateManpower();calculateDynamicRows();document.getElementById('formSection').scrollIntoView({behavior:'smooth'})
 }
 function viewProjectDetail(id){
  const p=projectsData.find(x=>x.project_id===id);if(!p)return;document.getElementById('modalProjectTitle').textContent='Rincian Detail RAB - '+(p.client_name||'-');document.getElementById('modalProjectSub').textContent=`ID Project: ${p.project_id} | ${p.project_title||'-'} (${p.client_location||'-'})`;
@@ -568,7 +630,7 @@ function viewProjectDetail(id){
  const d=p.details_json||{},ml=Array.isArray(d.manpower)?d.manpower:(d.manpower?[d.manpower]:[]);
  const mpHtml=ml.map((m,i)=>{const c=manpowerCalc(m);return `<div class="border rounded-lg p-3"><div class="flex justify-between font-bold"><span>${i+1}. ${escapeHtml(c.role)}</span><span>${formatRupiah(c.subtotalTotal)}</span></div><div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 text-[11px]"><div>Personel<br><b>${c.qty}</b></div><div>Basic<br><b>${formatRupiah(c.basic_salary)}</b></div><div>Per Person<br><b>${formatRupiah(c.subtotalPerPerson)}</b></div><div>Mode<br><b>${Object.values(c.salary_overrides).some(v=>v!==null)?'MANUAL':'AUTO'}</b></div></div></div>`}).join('');
  const itemRows=(arr)=>arr?.length?arr.map(x=>`<tr class="border-b"><td class="p-2">${escapeHtml(x.name)}</td><td class="p-2 text-center">${x.vol} ${escapeHtml(x.unit)}</td><td class="p-2 text-center">${x.depreciation_months}</td><td class="p-2 text-right">${formatRupiah(x.price)}</td><td class="p-2 text-right font-bold">${formatRupiah(x.total_monthly)}</td></tr>`).join(''):'<tr><td colspan="5" class="p-3 text-center text-slate-400">Tidak ada item</td></tr>';
- document.getElementById('modalContent').innerHTML=`<div class="bg-blue-50 p-4 rounded-xl"><div class="flex justify-between font-bold mb-3"><span>I. MANPOWER</span><span>${formatRupiah(p.cost_manpower)}</span></div>${mpHtml||'<p class="text-xs text-slate-400">Tidak ada manpower.</p>'}</div>${['machinery','chemicals','consumables','uniform'].map((k,i)=>`<div><h4 class="font-bold uppercase text-xs mb-2">${i+2}. ${k}</h4><table class="w-full text-xs"><thead class="bg-slate-100"><tr><th class="p-2 text-left">Item</th><th class="p-2">Vol</th><th class="p-2">Depr</th><th class="p-2 text-right">Harga</th><th class="p-2 text-right">Total</th></tr></thead><tbody>${itemRows(d[k]||[])}</tbody></table></div>`).join('')}<div class="bg-slate-900 text-white p-4 rounded-xl"><div class="flex justify-between"><span>Total Cost</span><b>${formatRupiah(p.cost_project)}</b></div><div class="flex justify-between"><span>Mgmt Fee</span><b>${formatRupiah(p.management_fee_value)}</b></div><div class="flex justify-between"><span>Grand Total Inc. PPN</span><b>${formatRupiah(p.total_after_tax)}</b></div></div>`;
+ document.getElementById('modalContent').innerHTML=`<div class="bg-blue-50 p-4 rounded-xl"><div class="flex justify-between font-bold mb-3"><span>I. MANPOWER</span><span>${formatRupiah(p.cost_manpower)}</span></div>${mpHtml||'<p class="text-xs text-slate-400">Tidak ada manpower.</p>'}</div>${['uniform','machinery','chemicals','consumables','equipment','additional_cost'].map((k,i)=>`<div><h4 class="font-bold uppercase text-xs mb-2">${i+2}. ${k==='additional_cost'?'Additional Cost':k}</h4><table class="w-full text-xs"><thead class="bg-slate-100"><tr><th class="p-2 text-left">Item</th><th class="p-2">Vol</th><th class="p-2">Depr</th><th class="p-2 text-right">Harga</th><th class="p-2 text-right">Total</th></tr></thead><tbody>${itemRows(d[k]||[])}</tbody></table></div>`).join('')}<div class="bg-slate-900 text-white p-4 rounded-xl"><div class="flex justify-between"><span>Total Cost</span><b>${formatRupiah(p.cost_project)}</b></div><div class="flex justify-between"><span>Mgmt Fee</span><b>${formatRupiah(p.management_fee_value)}</b></div><div class="flex justify-between"><span>Grand Total Inc. PPN</span><b>${formatRupiah(p.total_after_tax)}</b></div></div>`;
  document.getElementById('detailModal').classList.remove('hidden')
 }
 function closeModal(){document.getElementById('detailModal').classList.add('hidden')}
@@ -583,8 +645,8 @@ function exportSingleProjectExcel(id){
  const p=projectsData.find(x=>x.project_id===id);if(!p||!window.XLSX){alert('Data/library tidak tersedia.');return}const d=p.details_json||{},mp=Array.isArray(d.manpower)?d.manpower:(d.manpower?[d.manpower]:[]);
  const rows=[['PT NUSANTARA INTI SOLUSINDO'],['RINCIAN ANALISA RAB PROJECT'],[],['ID PROJECT',p.project_id,'CLIENT',p.client_name],['LOKASI',p.client_location||'-','AREA',p.project_area||'-'],['SERVICE / PROJECT',p.project_title||'-','TOP',(p.top_days||'-')+' Hari'],[],['I. MANPOWER'],['Role','QTY','Komponen','Mode','Amount/Person','Total/Month']];
  mp.forEach(m=>{const c=manpowerCalc(m);rows.push([c.role,c.qty,'BASIC SALARY','MANUAL',c.basic_salary,c.basic_salary*c.qty]);rows.push(['',c.qty,'TUNJANGAN KEHADIRAN','MANUAL',c.tunjangan,c.tunjangan*c.qty]);rows.push(['',c.qty,'UANG MAKAN','MANUAL',c.uang_makan,c.uang_makan*c.qty]);Object.keys(SALARY_RULES).forEach(k=>rows.push(['',c.qty,SALARY_RULES[k].label,c.salary_overrides[k]===null?'AUTO':'MANUAL',c[k],c[k]*c.qty]));rows.push(['',c.qty,'UNIFORM & SHOES','MANUAL',c.uniform,c.uniform*c.qty]);c.custom_components.forEach(x=>rows.push(['',c.qty,x.name,'MANUAL',x.amount,x.amount*c.qty]));rows.push(['','',`SUB TOTAL ${c.role}`,'',c.subtotalPerPerson,c.subtotalTotal])});
- for(const [title,key] of [['II. MACHINERY','machinery'],['III. CHEMICALS','chemicals'],['IV. CONSUMABLES','consumables'],['V. UNIFORM','uniform']]){rows.push([], [title],['Item','Volume','Unit','Depresiasi','Harga/Unit','Total/Month']);(d[key]||[]).forEach(x=>rows.push([x.name,x.vol,x.unit,x.depreciation_months,x.price,x.total_monthly]))}
- rows.push([],['COST SUMMARY'],['Cost Manpower',p.cost_manpower],['Cost Mesin',p.cost_machinery],['Cost Chemicals',p.cost_chemical],['Cost Consumables',p.cost_consumable],['Management Fee',p.management_fee_value],['TOTAL BEFORE TAX (ROUNDED)',p.rounded_before_tax],['TOTAL INC. PPN 11%',p.total_after_tax]);
+ for(const [title,key] of [['II. UNIFORM','uniform'],['III. MACHINERY','machinery'],['IV. CHEMICALS','chemicals'],['V. CONSUMABLES','consumables'],['VI. EQUIPMENT','equipment'],['VII. ADDITIONAL COST','additional_cost']]){rows.push([], [title],['Item','Volume','Unit','Depresiasi','Harga/Unit','Total/Month']);(d[key]||[]).forEach(x=>rows.push([x.name,x.vol,x.unit,x.depreciation_months,x.price,x.total_monthly]))}
+ rows.push([],['COST SUMMARY'],['Cost Manpower',p.cost_manpower],['Cost Mesin',p.cost_machinery],['Cost Chemicals',p.cost_chemical],['Cost Consumables',p.cost_consumable],['Cost Uniform',(d.uniform||[]).reduce((s,x)=>s+n(x.total_monthly),0)],['Cost Equipment',(d.equipment||[]).reduce((s,x)=>s+n(x.total_monthly),0)],['Additional Cost',(d.additional_cost||[]).reduce((s,x)=>s+n(x.total_monthly),0)],['Management Fee',p.management_fee_value],['TOTAL BEFORE TAX (ROUNDED)',p.rounded_before_tax],['TOTAL INC. PPN 11%',p.total_after_tax]);
  const wb=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=[{wch:30},{wch:14},{wch:34},{wch:14},{wch:18},{wch:20}];XLSX.utils.book_append_sheet(wb,ws,'RAB Detail');XLSX.writeFile(wb,`RAB_V5_2_${p.project_id}.xlsx`)
 }
 async function exportSingleProjectPDF(id) {
@@ -637,6 +699,8 @@ async function exportSingleProjectPDF(id) {
             const chem = Array.isArray(details.chemicals) ? details.chemicals : [];
             const cons = Array.isArray(details.consumables) ? details.consumables : [];
             const uniform = Array.isArray(details.uniform) ? details.uniform : [];
+            const equipment = Array.isArray(details.equipment) ? details.equipment : [];
+            const additional = Array.isArray(details.additional_cost) ? details.additional_cost : [];
 
             const pdf = new JsPDF({
                 orientation: 'portrait',
@@ -1035,10 +1099,12 @@ async function exportSingleProjectPDF(id) {
                 drawHeader(false);
                 drawMeta();
                 drawManpower();
-                drawTable('II. MACHINERY', mac);
-                drawTable('III. CHEMICALS', chem);
-                drawTable('IV. CONSUMABLES', cons);
-                drawTable('V. UNIFORM', uniform);
+                drawTable('II. UNIFORM', uniform);
+                drawTable('III. MACHINERY', mac);
+                drawTable('IV. CHEMICALS', chem);
+                drawTable('V. CONSUMABLES', cons);
+                drawTable('VI. EQUIPMENT', equipment);
+                drawTable('VII. ADDITIONAL COST', additional);
                 drawSummary();
                 addPageNumbers();
 
@@ -1059,8 +1125,8 @@ async function exportSingleProjectPDF(id) {
             }
         }
 document.addEventListener('DOMContentLoaded',()=>{
- initSupabase();renderManpowerComponents(manpowerComponents);
- addRow('machineryTable');addRow('chemicalsTable');addRow('consumablesTable');addRow('uniformTable');calculateDynamicRows();
+ initSupabase();renderManpowerComponents(manpowerComponents);updateManagementFeeControls();
+ addRow('uniformTable');addRow('machineryTable');addRow('chemicalsTable');addRow('consumablesTable');addRow('equipmentTable');addRow('additionalCostTable');calculateDynamicRows();
 });
 </script>
 </body>
