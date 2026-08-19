@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAB Report</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{font-family:Inter,sans-serif;background:#f8fafc;font-size:12px;line-height:1.4}
+.gradient-header{background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 55%,#2563eb 100%)}
+.filter-box{max-height:170px;overflow:auto}
+
+.report-title{font-size:18px;line-height:1.2}
+.section-title{font-size:13px;line-height:1.25}
+.label-xs{font-size:10px;line-height:1.3}
+.body-sm{font-size:11px;line-height:1.4}
+.table-sm{font-size:10.5px;line-height:1.35}
+.kpi-value{font-size:14px;line-height:1.2}
+.compact-cell{padding:8px 10px}
+
+
+/* RAB Report table palette — aligned with PDF */
+.rab-table-head,
+#summaryCostBody ~ tfoot,
+table thead {
+  border-color:#d5dbe6;
+}
+#reportContent table thead tr {
+  background:#2d438f !important;
+  color:#ffffff !important;
+}
+#reportContent table thead th {
+  color:#ffffff !important;
+  font-weight:700;
+  border-color:#2d438f !important;
+}
+#reportContent table tfoot tr {
+  background:#f5c542 !important;
+  color:#0f172a !important;
+}
+#reportContent table tfoot td {
+  color:#0f172a !important;
+  font-weight:700 !important;
+}
+#reportContent table tbody tr:nth-child(even) {
+  background:#f8fafc;
+}
+#reportContent table tbody td {
+  border-color:#e2e8f0;
+}
+
+
+#reportContent table tfoot tr.rab-total-row,
+#reportContent table tfoot tr:not(.rab-grand-total) {
+  background:#f5c542 !important;
+  color:#0f172a !important;
+}
+#reportContent table tfoot tr.rab-grand-total {
+  background:#0f172a !important;
+  color:#ffffff !important;
+}
+#reportContent table tfoot tr.rab-grand-total td {
+  color:#ffffff !important;
+}
+
+@media print{.no-print{display:none!important}}
+</style>
+</head>
+<body class="min-h-screen text-slate-800">
+
+<header class="gradient-header text-white shadow-lg">
+  <div class="max-w-[1600px] mx-auto px-5 lg:px-8 py-5 flex flex-wrap items-center justify-between gacompact-cell">
+    <div>
+      <h1 class="report-title font-extrabold">PT. NUSANTARA INTI SOLUSINDO</h1>
+      <p class="body-sm text-blue-200 mt-1">RAB Report</p>
+    </div>
+    <div class="flex items-center gacompact-cell">
+      <span id="dbStatus" class="text-sm px-3 py-1.5 rounded-full bg-amber-400/15 border border-amber-300/30">● Connecting...</span>
+      <span id="reportTime" class="text-sm text-blue-100"></span>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-[1600px] mx-auto p-4 lg:p-6 space-y-5">
+
+  <section class="bg-white rounded-2xl border shadow-sm p-4 no-print">
+    <div class="flex flex-wrap justify-between gap-4 items-end">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1 min-w-0">
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Client</label>
+          <select id="clientFilter" onchange="onClientChange()" class="w-full h-10 border border-slate-300 rounded-lg px-3 body-sm bg-white">
+            <option value="">Pilih Client</option>
+          </select>
+        </div>
+
+        <div class="relative">
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Area</label>
+          <button type="button" onclick="toggleFilterBox('areaBox')" class="w-full h-10 border border-slate-300 rounded-lg px-3 body-sm bg-white text-left flex justify-between items-center">
+            <span id="areaFilterLabel">Pilih Client terlebih dahulu</span><span>⌄</span>
+          </button>
+          <div id="areaBox" class="hidden absolute z-20 mt-1 w-full bg-white border rounded-xl shadow-xl compact-cell">
+            <div class="flex justify-between text-xs font-semibold mb-2">
+              <button onclick="setAllChecks('areaOptions',true)" class="text-blue-600">Pilih Semua</button>
+              <button onclick="setAllChecks('areaOptions',false)" class="text-slate-500">Kosongkan</button>
+            </div>
+            <div id="areaOptions" class="filter-box space-y-1"></div>
+          </div>
+        </div>
+
+        <div class="relative">
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Service</label>
+          <button type="button" onclick="toggleFilterBox('serviceBox')" class="w-full h-10 border border-slate-300 rounded-lg px-3 body-sm bg-white text-left flex justify-between items-center">
+            <span id="serviceFilterLabel">Pilih Client terlebih dahulu</span><span>⌄</span>
+          </button>
+          <div id="serviceBox" class="hidden absolute z-20 mt-1 w-full bg-white border rounded-xl shadow-xl compact-cell">
+            <div class="flex justify-between text-xs font-semibold mb-2">
+              <button onclick="setAllChecks('serviceOptions',true)" class="text-blue-600">Pilih Semua</button>
+              <button onclick="setAllChecks('serviceOptions',false)" class="text-slate-500">Kosongkan</button>
+            </div>
+            <div id="serviceOptions" class="filter-box space-y-1"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap gap-2">
+        <button onclick="renderReport()" class="h-10 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white body-sm font-bold">Tampilkan Laporan</button>
+        <button onclick="exportExcel()" class="h-10 px-4 rounded-lg border border-emerald-300 text-emerald-700 bg-white body-sm font-bold">Excel</button>
+        <button onclick="exportPDF()" class="h-10 px-4 rounded-lg border border-rose-300 text-rose-700 bg-white body-sm font-bold">PDF</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="emptyState" class="bg-white rounded-2xl border shadow-sm p-12 text-center text-slate-400">
+    Pilih Client, Area, dan Service untuk menampilkan laporan.
+  </section>
+
+  <div id="reportContent" class="hidden space-y-5">
+    <section class="bg-white rounded-2xl border shadow-sm p-4">
+      <div class="flex flex-wrap items-start justify-between gap-4 mb-4">
+        <div>
+          <h2 id="reportClient" class="font-extrabold text-lg text-slate-900">-</h2>
+          <p id="reportScope" class="text-sm text-slate-500 mt-1">-</p>
+        </div>
+        <div class="text-right">
+          <p class="text-xs uppercase tracking-wider text-slate-400 font-bold">Project Terpilih</p>
+          <p id="projectCount" class="text-xl font-extrabold text-blue-700">0</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gacompact-cell">
+        <div class="rounded-xl border bg-slate-50 compact-cell"><span class="text-xs font-bold text-slate-400 uppercase">Manpower</span><div id="kpiManpower" class="mt-1  font-extrabold text-blue-700 kpi-value">0</div><span class="text-xs text-slate-400">person</span></div>
+        <div class="rounded-xl border compact-cell"><span class="text-xs font-bold text-slate-400 uppercase">Cost Manpower</span><div id="kpiCostMp" class="mt-1 font-extrabold kpi-value">Rp 0</div></div>
+        <div class="rounded-xl border compact-cell"><span class="text-xs font-bold text-slate-400 uppercase">Machinery</span><div id="kpiMachinery" class="mt-1 font-extrabold kpi-value">Rp 0</div></div>
+        <div class="rounded-xl border compact-cell"><span class="text-xs font-bold text-slate-400 uppercase">Consumables</span><div id="kpiConsumables" class="mt-1 font-extrabold kpi-value">Rp 0</div></div>
+        <div class="rounded-xl border compact-cell"><span class="text-xs font-bold text-slate-400 uppercase">Uniform</span><div id="kpiUniform" class="mt-1 font-extrabold kpi-value">Rp 0</div></div>
+        <div class="rounded-xl border compact-cell"><span class="text-xs font-bold text-slate-400 uppercase">Chemicals</span><div id="kpiChemicals" class="mt-1 font-extrabold kpi-value">Rp 0</div></div>
+        <div class="rounded-xl border compact-cell"><span class="text-xs font-bold text-slate-400 uppercase">Equipment + Add.</span><div id="kpiOther" class="mt-1 font-extrabold kpi-value">Rp 0</div></div>
+        <div class="rounded-xl bg-slate-900 text-white compact-cell"><span class="text-xs font-bold text-slate-400 uppercase">Total Cost Project</span><div id="kpiTotalCost" class="mt-1 font-extrabold kpi-value">Rp 0</div></div>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <div class="bg-white rounded-2xl border shadow-sm overflow-hidden">
+        <div class="px-4 py-3 border-b bg-slate-50"><h3 class="section-title font-bold">Summary Cost</h3></div>
+        <div class="overflow-x-auto">
+          <table class="w-full table-sm">
+            <thead><tr class="bg-slate-100 text-slate-500"><th class="compact-cell text-left">Komponen</th><th class="compact-cell text-right">Total Cost</th></tr></thead>
+            <tbody id="summaryCostBody"></tbody>
+            <tfoot id="summaryCostFoot"></tfoot>
+          </table>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl border shadow-sm overflow-hidden">
+        <div class="px-4 py-3 border-b bg-slate-50"><h3 class="section-title font-bold">Ringkasan Manpower per Role</h3></div>
+        <div class="overflow-x-auto max-h-[430px]">
+          <table class="w-full table-sm">
+            <thead class="sticky top-0 bg-slate-100 text-slate-500"><tr><th class="compact-cell text-left">Role</th><th class="compact-cell text-center">Jumlah</th><th class="compact-cell text-right">Total Cost</th></tr></thead>
+            <tbody id="manpowerBody"></tbody>
+            <tfoot id="manpowerFoot"></tfoot>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-2xl border shadow-sm overflow-hidden">
+      <div class="px-4 py-3 border-b bg-slate-50">
+        <h3 class="section-title font-bold">Detail Manpower & Salary Benefit</h3>
+        <p class="text-xs text-slate-500 mt-1">Setiap komponen salary & benefit ditampilkan per role, termasuk custom benefit secara rinci.</p>
+      </div>
+      <div class="overflow-x-auto max-h-[620px]">
+        <table class="min-w-[1150px] w-full table-sm">
+          <thead class="sticky top-0 bg-slate-800 text-white">
+            <tr>
+              <th class="compact-cell text-left">Area</th>
+              <th class="compact-cell text-left">Service</th>
+              <th class="compact-cell text-left">Role</th>
+              <th class="compact-cell text-left">Komponen Salary & Benefit</th>
+              <th class="compact-cell text-center">Qty</th>
+              <th class="compact-cell text-center">Acuan</th>
+              <th class="compact-cell text-right">Amount / Person</th>
+              <th class="compact-cell text-right">Total / Month</th>
+            </tr>
+          </thead>
+          <tbody id="salaryDetailBody"></tbody>
+          <tfoot id="salaryDetailFoot"></tfoot>
+        </table>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-2xl border shadow-sm p-4">
+      <div class="flex flex-wrap gap-2 mb-4 no-print" id="detailTabs"></div>
+      <div class="overflow-x-auto max-h-[500px]">
+        <table class="w-full table-sm">
+          <thead id="detailHead" class="sticky top-0 bg-slate-100 text-slate-500"></thead>
+          <tbody id="detailBody"></tbody>
+          <tfoot id="detailFoot"></tfoot>
+        </table>
+      </div>
+    </section>
+  </div>
+
+</main>
+
+<script>
+let supabaseClient=null, projectsData=[], currentFiltered=[], currentReport=null, activeDetail='machinery';
+
+const SB_URL='https://rljqyaycshwpoteoxgem.supabase.co';
+const SB_KEY='sb_publishable_-MIacd79BlgIgfiDIDU9Fw_o9ivtipK';
+
+const SALARY_RULES={
+ thr:b=>b/12,bpjsKes:b=>b*.04,bpjsJht:b=>b*.037,bpjsJkm:b=>b*.003,
+ bpjsJkk:b=>b*.0024,bpjsJp:b=>b*.02,pkwt:b=>b/12
+};
+
+function n(v){return Math.max(0,parseFloat(v)||0)}
+function money(v){return new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(n(v))}
+function esc(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
+function unique(arr){return [...new Set(arr.filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'id'))}
+function sumDetails(arr=[]){return arr.reduce((s,x)=>s+n(x?.total_monthly),0)}
+
+function manpowerCalc(x={}){
+ const b=n(x.basic_salary),o=x.salary_overrides||{},qty=Math.max(0,parseInt(x.qty)||0);
+ const vals={};Object.keys(SALARY_RULES).forEach(k=>vals[k]=(o[k]===null||o[k]===undefined)?SALARY_RULES[k](b):n(o[k]));
+ const custom=(Array.isArray(x.custom_components)?x.custom_components:[]).reduce((s,c)=>s+n(c.amount),0);
+ const tunjangan=n(x.tunjangan),uangMakan=n(x.uang_makan),uniform=n(x.uniform);
+ const per=b+tunjangan+uangMakan+Object.values(vals).reduce((s,v)=>s+n(v),0)+uniform+custom;
+ return {qty,basic:b,tunjangan,uangMakan,uniform,custom,...vals,per,total:per*qty}
+}
+function manpowerItems(p){
+ const d=p?.details_json||{};
+ return Array.isArray(d.manpower)?d.manpower:(d.manpower?[d.manpower]:(d.manpower_legacy?[d.manpower_legacy]:[]))
+}
+
+const SALARY_LABELS={
+ basic:'BASIC SALARY',
+ tunjangan:'TUNJANGAN KEHADIRAN',
+ uangMakan:'UANG MAKAN',
+ thr:'THR (1/12 Basic)',
+ bpjsKes:'BPJS KESEHATAN (4.00%)',
+ bpjsJht:'BPJS HARI TUA / JHT (3.70%)',
+ bpjsJkm:'BPJS KEMATIAN / JKM (0.30%)',
+ bpjsJkk:'BPJS JAMINAN KECELAKAAN (0.24%)',
+ bpjsJp:'BPJS PENSIUN (2.00%)',
+ pkwt:'KOMPENSASI PKWT PP35',
+ uniform:'UNIFORM & SHOES'
+};
+const SALARY_ACUAN={
+ basic:'Per Person',tunjangan:'Per Person',uangMakan:'Per Person',
+ thr:'1/12 Basic',bpjsKes:'4.00%',bpjsJht:'3.70%',bpjsJkm:'0.30%',
+ bpjsJkk:'0.24%',bpjsJp:'2.00%',pkwt:'1/12 Basic',uniform:'Per Person'
+};
+
+async function init(){
+ document.getElementById('reportTime').textContent=new Date().toLocaleString('id-ID');
+ try{
+  supabaseClient=window.supabase.createClient(SB_URL,SB_KEY);
+  const {data,error}=await supabaseClient.from('projects').select('*').order('client_name',{ascending:true});
+  if(error)throw error;
+  projectsData=data||[];
+  document.getElementById('dbStatus').textContent='● Supabase Connected';
+  document.getElementById('dbStatus').className='text-sm px-3 py-1.5 rounded-full bg-emerald-400/15 border border-emerald-300/30';
+  populateClients();
+ }catch(err){
+  console.error(err);
+  document.getElementById('dbStatus').textContent='● Connection Error';
+  alert('Gagal membaca data Supabase: '+(err?.message||err));
+ }
+}
+
+function populateClients(){
+ const sel=document.getElementById('clientFilter');
+ const clients=unique(projectsData.map(p=>p.client_name));
+ sel.innerHTML='<option value="">Pilih Client</option>'+clients.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');
+}
+
+function onClientChange(){
+ const client=document.getElementById('clientFilter').value;
+ const rows=projectsData.filter(p=>p.client_name===client);
+ renderCheckOptions('areaOptions',unique(rows.map(p=>p.project_area)),'area');
+ renderCheckOptions('serviceOptions',unique(rows.map(p=>p.project_title)),'service');
+ updateFilterLabels();
+ if(client)renderReport();else showEmpty();
+}
+
+function renderCheckOptions(id,items,type){
+ const box=document.getElementById(id);
+ box.innerHTML=items.length?items.map((x,i)=>`<label class="flex items-center gap-2 py-1"><input type="checkbox" class="${type}-check" value="${esc(x)}" checked onchange="updateFilterLabels();renderReport()"><span>${esc(x)}</span></label>`).join(''):'<div class="text-slate-400">Tidak ada data.</div>';
+}
+
+function toggleFilterBox(id){
+ const el=document.getElementById(id);el.classList.toggle('hidden');
+ ['areaBox','serviceBox'].filter(x=>x!==id).forEach(x=>document.getElementById(x).classList.add('hidden'));
+}
+function setAllChecks(containerId,checked){
+ document.querySelectorAll('#'+containerId+' input[type=checkbox]').forEach(x=>x.checked=checked);
+ updateFilterLabels();renderReport();
+}
+function selectedValues(cls){return [...document.querySelectorAll('.'+cls+':checked')].map(x=>x.value)}
+function updateFilterLabels(){
+ const allAreas=document.querySelectorAll('.area-check').length,areas=selectedValues('area-check');
+ const allServices=document.querySelectorAll('.service-check').length,services=selectedValues('service-check');
+ document.getElementById('areaFilterLabel').textContent=!allAreas?'Tidak ada Area':areas.length===allAreas?'Semua Area':areas.length?`${areas.length} Area dipilih`:'Tidak ada Area dipilih';
+ document.getElementById('serviceFilterLabel').textContent=!allServices?'Tidak ada Service':services.length===allServices?'Semua Service':services.length?`${services.length} Service dipilih`:'Tidak ada Service dipilih';
+}
+
+function getFiltered(){
+ const client=document.getElementById('clientFilter').value,areas=selectedValues('area-check'),services=selectedValues('service-check');
+ if(!client||!areas.length||!services.length)return [];
+ return projectsData.filter(p=>p.client_name===client&&areas.includes(p.project_area)&&services.includes(p.project_title));
+}
+
+function aggregateItems(projects,key){
+ const map=new Map();
+ projects.forEach(p=>{
+  const arr=Array.isArray(p?.details_json?.[key])?p.details_json[key]:[];
+  arr.forEach(x=>{
+   const name=String(x?.name||'Tanpa Nama').trim()||'Tanpa Nama',unit=String(x?.unit||'-'),k=name.toLowerCase()+'|'+unit.toLowerCase();
+   if(!map.has(k))map.set(k,{name,unit,qty:0,total:0});
+   const r=map.get(k);r.qty+=n(x.vol);r.total+=n(x.total_monthly);
+  })
+ });
+ return [...map.values()].sort((a,b)=>a.name.localeCompare(b.name,'id'));
+}
+
+function buildReport(projects){
+ const sum=(field)=>projects.reduce((s,p)=>s+n(p?.[field]),0);
+ const manpowerByRole=new Map(),salaryRows=[];
+ projects.forEach(p=>manpowerItems(p).forEach(m=>{
+  const role=String(m?.role||'STAFF').trim()||'STAFF',k=role.toLowerCase(),c=manpowerCalc(m),qty=c.qty;
+  if(!manpowerByRole.has(k))manpowerByRole.set(k,{role,qty:0,total:0});
+  const r=manpowerByRole.get(k);r.qty+=qty;r.total+=c.total;
+  const base={area:p.project_area||'-',service:p.project_title||'-',role,qty};
+  ['basic','tunjangan','uangMakan','thr','bpjsKes','bpjsJht','bpjsJkm','bpjsJkk','bpjsJp','pkwt','uniform'].forEach(key=>{
+   salaryRows.push({...base,component:SALARY_LABELS[key],acuan:SALARY_ACUAN[key],amount:n(c[key]),total:n(c[key])*qty});
+  });
+  const customs=Array.isArray(m?.custom_components)?m.custom_components:[];
+  customs.forEach(custom=>{
+   const name=String(custom?.name||'Custom Benefit').trim()||'Custom Benefit',amount=n(custom?.amount);
+   salaryRows.push({...base,component:name,acuan:'Per Person (Custom)',amount,total:amount*qty});
+  });
+ }));
+ const mpRows=[...manpowerByRole.values()].sort((a,b)=>a.role.localeCompare(b.role,'id'));
+ const detail={
+  uniform:aggregateItems(projects,'uniform'),
+  machinery:aggregateItems(projects,'machinery'),
+  chemicals:aggregateItems(projects,'chemicals'),
+  consumables:aggregateItems(projects,'consumables'),
+  equipment:aggregateItems(projects,'equipment'),
+  additional_cost:aggregateItems(projects,'additional_cost')
+ };
+ const totals={
+  manpowerQty:mpRows.reduce((s,x)=>s+x.qty,0),
+  manpower:sum('cost_manpower'),
+  machinery:sum('cost_machinery'),
+  chemicals:sum('cost_chemical'),
+  consumables:sum('cost_consumable'),
+  uniform:projects.reduce((s,p)=>s+sumDetails(p?.details_json?.uniform||[]),0),
+  equipment:projects.reduce((s,p)=>s+sumDetails(p?.details_json?.equipment||[]),0),
+  additional:projects.reduce((s,p)=>s+sumDetails(p?.details_json?.additional_cost||[]),0),
+  managementFee:sum('management_fee_value'),
+  totalCost:sum('cost_project'),
+  totalExc:sum('rounded_before_tax'),
+  totalInc:sum('total_after_tax')
+ };
+ return {projects,mpRows,salaryRows,detail,totals}
+}
+
+function showEmpty(){
+ document.getElementById('emptyState').classList.remove('hidden');
+ document.getElementById('reportContent').classList.add('hidden');
+ currentFiltered=[];currentReport=null;
+}
+
+function renderReport(){
+ const rows=getFiltered();
+ currentFiltered=rows;
+ if(!rows.length){showEmpty();return}
+ currentReport=buildReport(rows);
+ const r=currentReport,t=r.totals;
+ document.getElementById('emptyState').classList.add('hidden');
+ document.getElementById('reportContent').classList.remove('hidden');
+ const client=document.getElementById('clientFilter').value,areas=selectedValues('area-check'),services=selectedValues('service-check');
+ document.getElementById('reportClient').textContent=client;
+ document.getElementById('reportScope').textContent=`Area: ${areas.join(', ')} · Service: ${services.join(', ')}`;
+ document.getElementById('projectCount').textContent=rows.length;
+ document.getElementById('kpiManpower').textContent=t.manpowerQty;
+ document.getElementById('kpiCostMp').textContent=money(t.manpower);
+ document.getElementById('kpiMachinery').textContent=money(t.machinery);
+ document.getElementById('kpiConsumables').textContent=money(t.consumables);
+ document.getElementById('kpiUniform').textContent=money(t.uniform);
+ document.getElementById('kpiChemicals').textContent=money(t.chemicals);
+ document.getElementById('kpiOther').textContent=money(t.equipment+t.additional);
+ document.getElementById('kpiTotalCost').textContent=money(t.totalCost);
+
+ const comps=[
+  ['Manpower',t.manpower],['Uniform',t.uniform],['Machinery',t.machinery],['Chemicals',t.chemicals],
+  ['Consumables',t.consumables],['Equipment',t.equipment],['Additional Cost',t.additional]
+ ];
+ document.getElementById('summaryCostBody').innerHTML=comps.map(x=>`<tr class="border-b"><td class="compact-cell">${x[0]}</td><td class="compact-cell text-right font-semibold">${money(x[1])}</td></tr>`).join('');
+ document.getElementById('summaryCostFoot').innerHTML=`
+  <tr class="rab-total-row"><td class="compact-cell">TOTAL COST PROJECT</td><td class="compact-cell text-right">${money(t.totalCost)}</td></tr>
+  <tr class="rab-total-row"><td class="compact-cell">MANAGEMENT FEE</td><td class="compact-cell text-right">${money(t.managementFee)}</td></tr>
+  <tr class="rab-total-row"><td class="compact-cell">TOTAL EXC. PPN</td><td class="compact-cell text-right">${money(t.totalExc)}</td></tr>
+  <tr class="rab-grand-total"><td class="compact-cell">TOTAL INC. PPN</td><td class="compact-cell text-right">${money(t.totalInc)}</td></tr>`;
+
+ document.getElementById('manpowerBody').innerHTML=r.mpRows.length?r.mpRows.map(x=>`<tr class="border-b"><td class="compact-cell">${esc(x.role)}</td><td class="compact-cell text-center">${x.qty}</td><td class="compact-cell text-right">${money(x.total)}</td></tr>`).join(''):'<tr><td colspan="3" class="p-6 text-center text-slate-400">Tidak ada data manpower.</td></tr>';
+ document.getElementById('manpowerFoot').innerHTML=`<tr class="bg-slate-100 font-bold"><td class="compact-cell">TOTAL</td><td class="compact-cell text-center">${t.manpowerQty}</td><td class="compact-cell text-right">${money(t.manpower)}</td></tr>`;
+
+ const sal=r.salaryRows||[];
+ document.getElementById('salaryDetailBody').innerHTML=sal.length?sal.map((x,i)=>`<tr class="border-b ${i%2?'bg-slate-50/60':''}">
+  <td class="compact-cell">${esc(x.area)}</td>
+  <td class="compact-cell">${esc(x.service)}</td>
+  <td class="p-3 font-semibold">${esc(x.role)}</td>
+  <td class="compact-cell">${esc(x.component)}</td>
+  <td class="compact-cell text-center font-semibold">${x.qty}</td>
+  <td class="compact-cell text-center text-slate-500">${esc(x.acuan)}</td>
+  <td class="compact-cell text-right">${money(x.amount)}</td>
+  <td class="compact-cell text-right font-semibold">${money(x.total)}</td>
+ </tr>`).join(''):'<tr><td colspan="8" class="p-8 text-center text-slate-400">Tidak ada detail salary benefit.</td></tr>';
+ document.getElementById('salaryDetailFoot').innerHTML=`<tr class="bg-amber-100 font-bold">
+  <td colspan="7" class="compact-cell">TOTAL MANPOWER & SALARY BENEFIT</td>
+  <td class="compact-cell text-right">${money(t.manpower)}</td>
+ </tr>`;
+
+ renderTabs();
+ renderDetail(activeDetail);
+}
+
+const detailLabels={machinery:'Machinery',consumables:'Consumables',uniform:'Uniform',chemicals:'Chemicals',equipment:'Equipment',additional_cost:'Additional Cost'};
+function renderTabs(){
+ document.getElementById('detailTabs').innerHTML=Object.entries(detailLabels).map(([k,v])=>`<button onclick="renderDetail('${k}')" class="detail-tab px-3 py-2 rounded-lg body-sm font-semibold border ${activeDetail===k?'bg-blue-600 text-white border-blue-600':'bg-white text-slate-600'}">${v}</button>`).join('');
+}
+function renderDetail(key){
+ activeDetail=key;renderTabs();
+ if(!currentReport)return;
+ const rows=currentReport.detail[key]||[],total=rows.reduce((s,x)=>s+x.total,0),qty=rows.reduce((s,x)=>s+x.qty,0);
+ document.getElementById('detailHead').innerHTML='<tr><th class="compact-cell text-left">Item</th><th class="compact-cell text-center">Qty</th><th class="compact-cell text-center">Unit</th><th class="compact-cell text-right">Total Cost</th></tr>';
+ document.getElementById('detailBody').innerHTML=rows.length?rows.map(x=>`<tr class="border-b"><td class="compact-cell">${esc(x.name)}</td><td class="compact-cell text-center">${x.qty}</td><td class="compact-cell text-center">${esc(x.unit)}</td><td class="compact-cell text-right">${money(x.total)}</td></tr>`).join(''):'<tr><td colspan="4" class="p-8 text-center text-slate-400">Tidak ada data.</td></tr>';
+ document.getElementById('detailFoot').innerHTML=`<tr class="bg-slate-100 font-bold"><td class="compact-cell">TOTAL ${detailLabels[key].toUpperCase()}</td><td class="compact-cell text-center">${qty}</td><td></td><td class="compact-cell text-right">${money(total)}</td></tr>`;
+}
+
+function exportExcel(){
+ if(!currentReport){alert('Tampilkan laporan terlebih dahulu.');return}
+ if(!window.XLSX){alert('Library Excel belum tersedia.');return}
+ const r=currentReport,t=r.totals,wb=XLSX.utils.book_new();
+ const meta=[
+  ['RAB REPORT'],['Client',document.getElementById('clientFilter').value],
+  ['Area',selectedValues('area-check').join(', ')],['Service',selectedValues('service-check').join(', ')],
+  ['Jumlah Project',r.projects.length],['Total Manpower',t.manpowerQty],[],
+  ['SUMMARY COST','TOTAL (Rp)'],['Manpower',t.manpower],['Uniform',t.uniform],['Machinery',t.machinery],
+  ['Chemicals',t.chemicals],['Consumables',t.consumables],['Equipment',t.equipment],['Additional Cost',t.additional],
+  ['Total Cost Project',t.totalCost],['Management Fee',t.managementFee],['Total Exc. PPN',t.totalExc],['Total Inc. PPN',t.totalInc]
+ ];
+ const wsSummary=XLSX.utils.aoa_to_sheet(meta);wsSummary['!cols']=[{wch:28},{wch:55}];XLSX.utils.book_append_sheet(wb,wsSummary,'Summary');
+
+ const mp=[['Area','Service','Role','Komponen Salary & Benefit','Qty','Acuan','Amount / Person','Total / Month'],
+ ...(r.salaryRows||[]).map(x=>[x.area,x.service,x.role,x.component,x.qty,x.acuan,x.amount,x.total])];
+ const wsMp=XLSX.utils.aoa_to_sheet(mp);
+ wsMp['!cols']=[{wch:22},{wch:28},{wch:24},{wch:34},{wch:10},{wch:18},{wch:20},{wch:20}];
+ XLSX.utils.book_append_sheet(wb,wsMp,'Manpower Detail');
+
+ Object.entries(detailLabels).forEach(([k,label])=>{
+  const data=[['Item','Qty','Unit','Total Cost (Rp)'],...(r.detail[k]||[]).map(x=>[x.name,x.qty,x.unit,x.total])];
+  const ws=XLSX.utils.aoa_to_sheet(data);ws['!cols']=[{wch:35},{wch:12},{wch:12},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,ws,label.slice(0,31));
+ });
+ XLSX.writeFile(wb,'RAB_Report.xlsx');
+}
+
+function exportPDF(){
+ if(!currentReport){alert('Tampilkan laporan terlebih dahulu.');return}
+ const JsPDF=window.jspdf?.jsPDF;if(!JsPDF){alert('Library PDF belum tersedia.');return}
+ const pdf=new JsPDF({orientation:'portrait',unit:'mm',format:'a4'}),r=currentReport,t=r.totals;
+ const W=pdf.internal.pageSize.getWidth(),H=pdf.internal.pageSize.getHeight(),M=12,CONTENT=W-2*M;
+ const client=document.getElementById('clientFilter').value;
+ const areas=selectedValues('area-check'),services=selectedValues('service-check');
+ const f=v=>'Rp '+new Intl.NumberFormat('id-ID').format(Math.round(n(v)));
+ let pageNo=0,y=0,sectionNo=0;
+
+ function fit(s,max=48){s=String(s??'');return s.length>max?s.slice(0,max-1)+'…':s}
+ function footer(){
+  pdf.setDrawColor(220,226,235);pdf.line(M,H-10,W-M,H-10);
+  pdf.setFont('helvetica','normal');pdf.setFontSize(6.5);pdf.setTextColor(110,120,135);
+  pdf.text(`RAB Report · RAB V5.2.8 · Page ${pageNo}`,M,H-5.5);
+  pdf.text(new Date().toLocaleDateString('id-ID'),W-M,H-5.5,{align:'right'});
+ }
+ function pageHeader(){
+  pageNo++;
+  pdf.setFillColor(15,23,42);pdf.rect(0,0,W,25,'F');
+  pdf.setTextColor(255,255,255);pdf.setFont('helvetica','bold');pdf.setFontSize(12.5);
+  pdf.text('PT NUSANTARA INTI SOLUSINDO',M,10);
+  pdf.setFont('helvetica','normal');pdf.setFontSize(7.5);pdf.setTextColor(226,232,240);
+  pdf.text('RAB Report',M,16);
+  y=32;
+ }
+ function newPage(){
+  footer();pdf.addPage();pageHeader();
+ }
+ function ensure(h){
+  if(y+h>H-14)newPage();
+ }
+ function infoBox(){
+  const boxY=y,boxH=39;
+  pdf.setFillColor(248,250,252);pdf.setDrawColor(203,213,225);pdf.roundedRect(M,boxY,CONTENT,boxH,2,2,'FD');
+  const lx=M+4,lval=M+31,rx=M+100,rval=M+127;
+  pdf.setFontSize(7.3);pdf.setTextColor(30,41,59);
+  const rows=[
+   ['Client:',fit(client,34),'Service:',fit(services.join(', '),30)],
+   ['Area:',fit(areas.join(', '),34),'Project:',String(r.projects.length)],
+   ['Manpower:',`${t.manpowerQty} person`,'Total Cost:',f(t.totalCost)]
+  ];
+  rows.forEach((row,i)=>{
+   const yy=boxY+9+i*10;
+   pdf.setFont('helvetica','bold');pdf.text(row[0],lx,yy);pdf.text(row[2],rx,yy);
+   pdf.setFont('helvetica','normal');pdf.text(row[1],lval,yy);pdf.text(row[3],rval,yy);
+  });
+  y=boxY+boxH+7;
+ }
+ function sectionBar(title){
+  ensure(12);
+  sectionNo++;
+  pdf.setFillColor(45,67,143);pdf.roundedRect(M,y,CONTENT,8,1.5,1.5,'F');
+  pdf.setTextColor(255,255,255);pdf.setFont('helvetica','bold');pdf.setFontSize(8);
+  pdf.text(`${roman(sectionNo)}. ${title.toUpperCase()}`,M+3,y+5.3);
+  y+=11;
+ }
+ function roman(num){
+  const vals=[[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']];let out='';
+  vals.forEach(([v,s])=>{while(num>=v){out+=s;num-=v}});return out;
+ }
+ function tableHeader(headers,widths){
+  ensure(8);
+  pdf.setFillColor(243,246,250);pdf.setDrawColor(205,213,224);pdf.rect(M,y,CONTENT,7,'FD');
+  pdf.setFont('helvetica','bold');pdf.setFontSize(6.6);pdf.setTextColor(30,41,59);
+  let x=M;
+  headers.forEach((h,i)=>{
+   const align=i===headers.length-1?'right':'left';
+   pdf.text(fit(h,24),align==='right'?x+widths[i]-2:x+2,y+4.7,{align});
+   x+=widths[i];
+  });
+  y+=7;
+ }
+ function row(vals,widths,opts={}){
+  ensure(opts.h||7);
+  const h=opts.h||7;
+  if(opts.fill){pdf.setFillColor(...opts.fill);pdf.rect(M,y,CONTENT,h,'F')}
+  pdf.setDrawColor(226,232,240);pdf.line(M,y+h,M+CONTENT,y+h);
+  pdf.setFont('helvetica',opts.bold?'bold':'normal');pdf.setFontSize(opts.fontSize||6.7);
+  pdf.setTextColor(...(opts.color||[51,65,85]));
+  let x=M;
+  vals.forEach((v,i)=>{
+   const right=(opts.rightCols||[]).includes(i);
+   pdf.text(fit(v,opts.maxChars||35),right?x+widths[i]-2:x+2,y+h-2.2,{align:right?'right':'left'});
+   x+=widths[i];
+  });
+  y+=h;
+ }
+ function subtotal(label,value){
+  ensure(9);
+  pdf.setFillColor(245,197,66);pdf.rect(M,y,CONTENT,8,'F');
+  pdf.setFont('helvetica','bold');pdf.setFontSize(7.2);pdf.setTextColor(15,23,42);
+  pdf.text(label,M+2,y+5.4);pdf.text(f(value),W-M-2,y+5.4,{align:'right'});
+  y+=12;
+ }
+
+ pageHeader();
+ infoBox();
+
+ // I. Manpower - role then every salary component.
+ sectionBar('Manpower Component');
+ const mw=[50,20,34,40,39];
+ tableHeader(['Jabatan / Role','QTY','Acuan','Amount / Person','Total / Bln'],mw);
+ const salaryRows=r.salaryRows||[];
+ const roles=[];
+ salaryRows.forEach(x=>{if(!roles.includes(x.role))roles.push(x.role)});
+ roles.forEach(role=>{
+  const rs=salaryRows.filter(x=>x.role===role);
+  const qty=rs[0]?.qty||0;
+  const roleTotal=rs.reduce((s,x)=>s+n(x.total),0);
+  row([role,`${qty} org`,'','',''],mw,{bold:true,fill:[250,251,253],rightCols:[3,4],h:7.5});
+  rs.forEach(x=>{
+   row([`   + ${x.component}`,'',x.acuan,f(x.amount),f(x.total)],mw,{color:[91,105,125],rightCols:[3,4],fontSize:6.4});
+  });
+  row(['SUBTOTAL '+role.toUpperCase(),'','','',f(roleTotal)],mw,{bold:true,fill:[248,250,252],rightCols:[4],fontSize:6.5});
+ });
+ subtotal('TOTAL MANPOWER COST',t.manpower);
+
+ function detailSection(label,key,total){
+  sectionBar(label);
+  const widths=[74,22,23,31,35];
+  tableHeader(['Item','Vol','Unit','Harga / Unit','Total / Bln'],widths);
+  const rows=r.detail[key]||[];
+  if(!rows.length){
+   row(['Tidak ada item','','','',''],widths,{color:[100,116,139],rightCols:[3,4]});
+  }else{
+   rows.forEach(x=>{
+    const unitPrice=n(x.qty)?n(x.total)/n(x.qty):n(x.total);
+    row([x.name,String(x.qty),x.unit,f(unitPrice),f(x.total)],widths,{rightCols:[3,4]});
+   });
+  }
+  subtotal('TOTAL '+label.toUpperCase(),total);
+ }
+
+ detailSection('Uniform','uniform',t.uniform);
+ detailSection('Machinery','machinery',t.machinery);
+ detailSection('Chemicals','chemicals',t.chemicals);
+ detailSection('Consumables','consumables',t.consumables);
+ detailSection('Equipment','equipment',t.equipment);
+ detailSection('Additional Cost','additional_cost',t.additional);
+
+ // Final cost summary
+ sectionBar('Cost Summary');
+ const sw=[112,73];
+ tableHeader(['Description','Amount'],sw);
+ [
+  ['Manpower',t.manpower],['Uniform',t.uniform],['Machinery',t.machinery],
+  ['Chemicals',t.chemicals],['Consumables',t.consumables],
+  ['Equipment',t.equipment],['Additional Cost',t.additional],
+  ['TOTAL COST PROJECT',t.totalCost],['MANAGEMENT FEE',t.managementFee],
+  ['TOTAL EXC. PPN',t.totalExc],['TOTAL INC. PPN',t.totalInc]
+ ].forEach(([lab,val],i)=>{
+   const emph=i>=7;
+   row([lab,f(val)],sw,{bold:emph,fill:emph?[248,250,252]:null,rightCols:[1],h:7.2});
+ });
+ ensure(10);
+ pdf.setFillColor(15,23,42);pdf.rect(M,y,CONTENT,9,'F');
+ pdf.setTextColor(255,255,255);pdf.setFont('helvetica','bold');pdf.setFontSize(8);
+ pdf.text('TOTAL INC. PPN',M+3,y+6);pdf.text(f(t.totalInc),W-M-3,y+6,{align:'right'});
+ y+=12;
+
+ footer();
+ pdf.save('RAB_Report.pdf');
+}
+document.addEventListener('click',e=>{
+ if(!e.target.closest('#areaBox')&&!e.target.closest('[onclick*="areaBox"]'))document.getElementById('areaBox').classList.add('hidden');
+ if(!e.target.closest('#serviceBox')&&!e.target.closest('[onclick*="serviceBox"]'))document.getElementById('serviceBox').classList.add('hidden');
+});
+document.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>
