@@ -22,6 +22,14 @@ body{font-family:Inter,sans-serif;background:#f8fafc;font-size:12px;line-height:
 .kpi-value{font-size:14px;line-height:1.2}
 .compact-cell{padding:8px 10px}
 
+/* Executive summary typography & spacing */
+.report-client-title{font-size:13px;line-height:1.25}
+.report-scope-text{font-size:11px;line-height:1.45}
+.summary-kpi-grid{gap:10px}
+.summary-kpi-card{padding:12px 14px}
+.summary-kpi-label{font-size:9.5px;line-height:1.25;display:block;margin-bottom:7px;letter-spacing:.01em}
+.summary-kpi-value{margin-top:0}
+
 
 /* RAB Report table palette — aligned with PDF */
 .rab-table-head,
@@ -73,15 +81,18 @@ table thead {
 <body class="min-h-screen text-slate-800">
 
 <header class="gradient-header text-white shadow-lg">
-  <div class="max-w-[1600px] mx-auto px-5 lg:px-8 py-5 flex flex-wrap items-center justify-between gacompact-cell">
+  <div class="max-w-[1600px] mx-auto px-5 lg:px-8 py-5 flex flex-wrap items-center justify-between gap-4">
     <div>
       <h1 class="report-title font-extrabold">PT. NUSANTARA INTI SOLUSINDO</h1>
       <p class="body-sm text-blue-200 mt-1">RAB Report</p>
     </div>
-    <div class="flex items-center gacompact-cell">
-      <a href="index.html" class="text-sm px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 hover:bg-white/20 transition">RAB Analisa</a>
-      <span id="dbStatus" class="text-sm px-3 py-1.5 rounded-full bg-amber-400/15 border border-amber-300/30">● Connecting...</span>
-      <span id="reportTime" class="text-sm text-blue-100"></span>
+    <div class="flex items-center gap-3 sm:gap-4">
+      <span id="dbStatus" class="text-xs font-medium px-3 py-1.5 rounded-full bg-amber-400/15 border border-amber-300/30 whitespace-nowrap">● Connecting...</span>
+      <span class="hidden sm:block h-5 w-px bg-blue-200/40" aria-hidden="true"></span>
+      <span class="flex items-center gap-2 text-xs text-blue-100 whitespace-nowrap">
+        <svg class="w-4 h-4 opacity-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M16 3v4M8 3v4M3 11h18"></path></svg>
+        <span id="reportTime"></span>
+      </span>
     </div>
   </div>
 </header>
@@ -143,8 +154,8 @@ table thead {
     <section class="bg-white rounded-2xl border shadow-sm p-4">
       <div class="flex flex-wrap items-start justify-between gap-4 mb-4">
         <div>
-          <h2 id="reportClient" class="font-extrabold text-lg text-slate-900">-</h2>
-          <p id="reportScope" class="text-sm text-slate-500 mt-1">-</p>
+          <h2 id="reportClient" class="report-client-title font-extrabold text-slate-900">-</h2>
+          <p id="reportScope" class="report-scope-text text-slate-500 mt-1">-</p>
         </div>
         <div class="text-right">
           <p class="text-xs uppercase tracking-wider text-slate-400 font-bold">Project Terpilih</p>
@@ -152,15 +163,61 @@ table thead {
         </div>
       </div>
 
-      <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gacompact-cell">
-        <div class="rounded-xl border bg-slate-50 compact-cell"><span class="text-xs font-bold text-slate-400 uppercase">Manpower</span><div id="kpiManpower" class="mt-1  font-extrabold text-blue-700 kpi-value">0</div><span class="text-xs text-slate-400">person</span></div>
-        <div class="rounded-xl border compact-cell"><span class="text-xs font-bold text-slate-400 uppercase">Cost Manpower</span><div id="kpiCostMp" class="mt-1 font-extrabold kpi-value">Rp 0</div></div>
-        <div class="rounded-xl border compact-cell"><span class="text-xs font-bold text-slate-400 uppercase">Machinery</span><div id="kpiMachinery" class="mt-1 font-extrabold kpi-value">Rp 0</div></div>
-        <div class="rounded-xl border compact-cell"><span class="text-xs font-bold text-slate-400 uppercase">Consumables</span><div id="kpiConsumables" class="mt-1 font-extrabold kpi-value">Rp 0</div></div>
-        <div class="rounded-xl border compact-cell"><span class="text-xs font-bold text-slate-400 uppercase">Uniform</span><div id="kpiUniform" class="mt-1 font-extrabold kpi-value">Rp 0</div></div>
-        <div class="rounded-xl border compact-cell"><span class="text-xs font-bold text-slate-400 uppercase">Chemicals</span><div id="kpiChemicals" class="mt-1 font-extrabold kpi-value">Rp 0</div></div>
-        <div class="rounded-xl border compact-cell"><span class="text-xs font-bold text-slate-400 uppercase">Equipment + Add.</span><div id="kpiOther" class="mt-1 font-extrabold kpi-value">Rp 0</div></div>
-        <div class="rounded-xl bg-slate-900 text-white compact-cell"><span class="text-xs font-bold text-slate-400 uppercase">Total Cost Project</span><div id="kpiTotalCost" class="mt-1 font-extrabold kpi-value">Rp 0</div></div>
+      <div class="summary-kpi-grid grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8">
+        <div class="summary-kpi-card rounded-xl border bg-slate-50"><span class="summary-kpi-label font-bold text-slate-400 uppercase">Manpower</span><div id="kpiManpower" class="summary-kpi-value font-extrabold text-blue-700 kpi-value">0</div><span class="text-xs text-slate-400">person</span></div>
+        <div class="summary-kpi-card rounded-xl border"><span class="summary-kpi-label font-bold text-slate-400 uppercase">Cost Manpower</span><div id="kpiCostMp" class="summary-kpi-value font-extrabold kpi-value">Rp 0</div></div>
+        <div class="summary-kpi-card rounded-xl border"><span class="summary-kpi-label font-bold text-slate-400 uppercase">Machinery</span><div id="kpiMachinery" class="summary-kpi-value font-extrabold kpi-value">Rp 0</div></div>
+        <div class="summary-kpi-card rounded-xl border"><span class="summary-kpi-label font-bold text-slate-400 uppercase">Consumables</span><div id="kpiConsumables" class="summary-kpi-value font-extrabold kpi-value">Rp 0</div></div>
+        <div class="summary-kpi-card rounded-xl border"><span class="summary-kpi-label font-bold text-slate-400 uppercase">Uniform</span><div id="kpiUniform" class="summary-kpi-value font-extrabold kpi-value">Rp 0</div></div>
+        <div class="summary-kpi-card rounded-xl border"><span class="summary-kpi-label font-bold text-slate-400 uppercase">Chemicals</span><div id="kpiChemicals" class="summary-kpi-value font-extrabold kpi-value">Rp 0</div></div>
+        <div class="summary-kpi-card rounded-xl border"><span class="summary-kpi-label font-bold text-slate-400 uppercase">Equipment + Add.</span><div id="kpiOther" class="summary-kpi-value font-extrabold kpi-value">Rp 0</div></div>
+        <div class="summary-kpi-card rounded-xl bg-slate-900 text-white"><span class="summary-kpi-label font-bold text-slate-400 uppercase">Total Cost Project</span><div id="kpiTotalCost" class="summary-kpi-value font-extrabold kpi-value">Rp 0</div></div>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-2xl border shadow-sm overflow-hidden">
+      <div class="px-4 py-3 border-b bg-slate-50 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h3 class="section-title font-bold">Profit & Loss Design RAB</h3>
+          <p class="text-xs text-slate-500 mt-1">Pendapatan = nilai RAB sebelum PPN (Total Cost + Management Fee). Nilai periode dihitung dari design bulanan RAB.</p>
+        </div>
+        <div class="flex flex-wrap gap-2 no-print">
+          <div>
+            <label class="block label-xs font-bold uppercase text-slate-400 mb-1">Periode</label>
+            <select id="pnlPeriodType" onchange="updatePnlPeriodOptions();renderProfitLoss()" class="h-9 border border-slate-300 rounded-lg px-3 body-sm bg-white">
+              <option value="month">1 Bulan</option>
+              <option value="quarter">Kuartal</option>
+              <option value="semester">Semester</option>
+              <option value="year">1 Tahun</option>
+            </select>
+          </div>
+          <div id="pnlPeriodValueWrap">
+            <label class="block label-xs font-bold uppercase text-slate-400 mb-1">Pilihan</label>
+            <select id="pnlPeriodValue" onchange="renderProfitLoss()" class="h-9 border border-slate-300 rounded-lg px-3 body-sm bg-white min-w-32"></select>
+          </div>
+          <div>
+            <label class="block label-xs font-bold uppercase text-slate-400 mb-1">Tahun</label>
+            <select id="pnlYear" onchange="renderProfitLoss()" class="h-9 border border-slate-300 rounded-lg px-3 body-sm bg-white min-w-24"></select>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-4">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+          <div class="rounded-xl border bg-blue-50 compact-cell"><span class="label-xs font-bold uppercase text-blue-500">Pendapatan</span><div id="pnlRevenueKpi" class="mt-1 kpi-value font-extrabold text-blue-800">Rp 0</div></div>
+          <div class="rounded-xl border bg-slate-50 compact-cell"><span class="label-xs font-bold uppercase text-slate-500">Total COGS</span><div id="pnlCogsKpi" class="mt-1 kpi-value font-extrabold text-slate-800">Rp 0</div></div>
+          <div class="rounded-xl border bg-emerald-50 compact-cell"><span class="label-xs font-bold uppercase text-emerald-600">Gross Profit</span><div id="pnlGrossProfitKpi" class="mt-1 kpi-value font-extrabold text-emerald-800">Rp 0</div></div>
+          <div class="rounded-xl border bg-amber-50 compact-cell"><span class="label-xs font-bold uppercase text-amber-600">Gross Margin</span><div id="pnlGrossMarginKpi" class="mt-1 kpi-value font-extrabold text-amber-800">0%</div></div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full table-sm">
+            <thead><tr><th class="compact-cell text-left">Profit & Loss</th><th class="compact-cell text-right">Per Bulan</th><th id="pnlPeriodHead" class="compact-cell text-right">Periode Terpilih</th></tr></thead>
+            <tbody id="pnlBody"></tbody>
+            <tfoot id="pnlFoot"></tfoot>
+          </table>
+        </div>
+        <p id="pnlNote" class="text-[10px] text-slate-400 mt-3">Design P&L project-level; belum termasuk OPEX korporat dan pajak penghasilan.</p>
       </div>
     </section>
 
@@ -278,13 +335,14 @@ const SALARY_ACUAN={
 
 async function init(){
  document.getElementById('reportTime').textContent=new Date().toLocaleString('id-ID');
+ initPnlPeriodControls();
  try{
   supabaseClient=window.supabase.createClient(SB_URL,SB_KEY);
   const {data,error}=await supabaseClient.from('projects').select('*').order('client_name',{ascending:true});
   if(error)throw error;
   projectsData=data||[];
   document.getElementById('dbStatus').textContent='● Supabase Connected';
-  document.getElementById('dbStatus').className='text-sm px-3 py-1.5 rounded-full bg-emerald-400/15 border border-emerald-300/30';
+  document.getElementById('dbStatus').className='text-xs font-medium px-3 py-1.5 rounded-full bg-emerald-400/15 border border-emerald-300/30 whitespace-nowrap';
   populateClients();
  }catch(err){
   console.error(err);
@@ -296,12 +354,12 @@ async function init(){
 function populateClients(){
  const sel=document.getElementById('clientFilter');
  const clients=unique(projectsData.map(p=>p.client_name));
- sel.innerHTML='<option value="">Pilih Client</option>'+clients.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');
+ sel.innerHTML='<option value="">Pilih Client</option><option value="__ALL__">SEMUA CLIENT / PERUSAHAAN</option>'+clients.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');
 }
 
 function onClientChange(){
  const client=document.getElementById('clientFilter').value;
- const rows=projectsData.filter(p=>p.client_name===client);
+ const rows=client==='__ALL__'?projectsData:projectsData.filter(p=>p.client_name===client);
  renderCheckOptions('areaOptions',unique(rows.map(p=>p.project_area)),'area');
  renderCheckOptions('serviceOptions',unique(rows.map(p=>p.project_title)),'service');
  updateFilterLabels();
@@ -332,7 +390,7 @@ function updateFilterLabels(){
 function getFiltered(){
  const client=document.getElementById('clientFilter').value,areas=selectedValues('area-check'),services=selectedValues('service-check');
  if(!client||!areas.length||!services.length)return [];
- return projectsData.filter(p=>p.client_name===client&&areas.includes(p.project_area)&&services.includes(p.project_title));
+ return projectsData.filter(p=>(client==='__ALL__'||p.client_name===client)&&areas.includes(p.project_area)&&services.includes(p.project_title));
 }
 
 function aggregateItems(projects,key){
@@ -391,6 +449,85 @@ function buildReport(projects){
  return {projects,mpRows,salaryRows,detail,totals}
 }
 
+function initPnlPeriodControls(){
+ const yearEl=document.getElementById('pnlYear');
+ if(!yearEl)return;
+ const now=new Date(),y=now.getFullYear();
+ yearEl.innerHTML='';
+ for(let yr=y-1;yr<=y+3;yr++)yearEl.innerHTML+=`<option value="${yr}" ${yr===y?'selected':''}>${yr}</option>`;
+ updatePnlPeriodOptions();
+}
+
+function updatePnlPeriodOptions(){
+ const type=document.getElementById('pnlPeriodType')?.value||'month';
+ const val=document.getElementById('pnlPeriodValue');
+ const wrap=document.getElementById('pnlPeriodValueWrap');
+ if(!val||!wrap)return;
+ const months=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+ if(type==='month'){
+  const current=new Date().getMonth()+1;
+  val.innerHTML=months.map((m,i)=>`<option value="${i+1}" ${(i+1)===current?'selected':''}>${m}</option>`).join('');
+  wrap.classList.remove('hidden');
+ }else if(type==='quarter'){
+  val.innerHTML='<option value="1">Q1 (Jan–Mar)</option><option value="2">Q2 (Apr–Jun)</option><option value="3">Q3 (Jul–Sep)</option><option value="4">Q4 (Okt–Des)</option>';
+  wrap.classList.remove('hidden');
+ }else if(type==='semester'){
+  val.innerHTML='<option value="1">Semester 1 (Jan–Jun)</option><option value="2">Semester 2 (Jul–Des)</option>';
+  wrap.classList.remove('hidden');
+ }else{
+  val.innerHTML='<option value="1">1 Tahun</option>';
+  wrap.classList.add('hidden');
+ }
+}
+
+function getPnlPeriod(){
+ const type=document.getElementById('pnlPeriodType')?.value||'month';
+ const value=parseInt(document.getElementById('pnlPeriodValue')?.value)||1;
+ const year=parseInt(document.getElementById('pnlYear')?.value)||new Date().getFullYear();
+ const months=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+ if(type==='month')return {type,value,year,months:1,label:`${months[value-1]} ${year}`};
+ if(type==='quarter')return {type,value,year,months:3,label:`Q${value} ${year}`};
+ if(type==='semester')return {type,value,year,months:6,label:`Semester ${value} ${year}`};
+ return {type,value:1,year,months:12,label:`Tahun ${year}`};
+}
+
+function getPnlRows(){
+ if(!currentReport)return [];
+ const t=currentReport.totals;
+ return [
+  {label:'PENDAPATAN RAB (EXC. PPN)',monthly:t.totalExc,type:'revenue'},
+  {label:'COGS - Manpower',monthly:t.manpower,type:'cost'},
+  {label:'COGS - Uniform',monthly:t.uniform,type:'cost'},
+  {label:'COGS - Machinery',monthly:t.machinery,type:'cost'},
+  {label:'COGS - Chemicals',monthly:t.chemicals,type:'cost'},
+  {label:'COGS - Consumables',monthly:t.consumables,type:'cost'},
+  {label:'COGS - Equipment',monthly:t.equipment,type:'cost'},
+  {label:'COGS - Additional Cost',monthly:t.additional,type:'cost'}
+ ];
+}
+
+function renderProfitLoss(){
+ if(!currentReport)return;
+ const period=getPnlPeriod(),rows=getPnlRows(),mult=period.months;
+ const revenue=currentReport.totals.totalExc;
+ const cogs=currentReport.totals.totalCost;
+ const gp=revenue-cogs;
+ const margin=revenue?gp/revenue*100:0;
+ document.getElementById('pnlPeriodHead').textContent=period.label;
+ document.getElementById('pnlRevenueKpi').textContent=money(revenue*mult);
+ document.getElementById('pnlCogsKpi').textContent=money(cogs*mult);
+ document.getElementById('pnlGrossProfitKpi').textContent=money(gp*mult);
+ document.getElementById('pnlGrossMarginKpi').textContent=margin.toLocaleString('id-ID',{minimumFractionDigits:1,maximumFractionDigits:2})+'%';
+ document.getElementById('pnlBody').innerHTML=rows.map((x,i)=>`<tr class="border-b ${x.type==='revenue'?'font-bold bg-blue-50/50':''}"><td class="compact-cell">${x.label}</td><td class="compact-cell text-right">${money(x.monthly)}</td><td class="compact-cell text-right">${money(x.monthly*mult)}</td></tr>`).join('');
+ document.getElementById('pnlFoot').innerHTML=`
+  <tr class="rab-total-row"><td class="compact-cell">TOTAL COGS</td><td class="compact-cell text-right">${money(cogs)}</td><td class="compact-cell text-right">${money(cogs*mult)}</td></tr>
+  <tr class="rab-grand-total"><td class="compact-cell">GROSS PROFIT</td><td class="compact-cell text-right">${money(gp)}</td><td class="compact-cell text-right">${money(gp*mult)}</td></tr>
+  <tr class="bg-emerald-50 font-bold text-emerald-800"><td class="compact-cell">GROSS MARGIN</td><td class="compact-cell text-right" colspan="2">${margin.toLocaleString('id-ID',{minimumFractionDigits:1,maximumFractionDigits:2})}%</td></tr>`;
+ const selectedClient=document.getElementById('clientFilter').value;
+ const scopeNote=selectedClient==='__ALL__'?'Gross Margin Perusahaan dihitung dari total Gross Profit seluruh client ÷ total Pendapatan seluruh client, bukan rata-rata margin per client. ':'';
+ document.getElementById('pnlNote').textContent=`${scopeNote}Design P&L ${period.label} = nilai RAB bulanan × ${mult} bulan. Pendapatan menggunakan Total Exc. PPN. Belum termasuk OPEX korporat dan pajak penghasilan.`;
+}
+
 function showEmpty(){
  document.getElementById('emptyState').classList.remove('hidden');
  document.getElementById('reportContent').classList.add('hidden');
@@ -406,7 +543,8 @@ function renderReport(){
  document.getElementById('emptyState').classList.add('hidden');
  document.getElementById('reportContent').classList.remove('hidden');
  const client=document.getElementById('clientFilter').value,areas=selectedValues('area-check'),services=selectedValues('service-check');
- document.getElementById('reportClient').textContent=client;
+ const clientLabel=client==='__ALL__'?'SEMUA CLIENT / PERUSAHAAN':client;
+ document.getElementById('reportClient').textContent=clientLabel;
  document.getElementById('reportScope').textContent=`Area: ${areas.join(', ')} · Service: ${services.join(', ')}`;
  document.getElementById('projectCount').textContent=rows.length;
  document.getElementById('kpiManpower').textContent=t.manpowerQty;
@@ -417,6 +555,7 @@ function renderReport(){
  document.getElementById('kpiChemicals').textContent=money(t.chemicals);
  document.getElementById('kpiOther').textContent=money(t.equipment+t.additional);
  document.getElementById('kpiTotalCost').textContent=money(t.totalCost);
+ renderProfitLoss();
 
  const comps=[
   ['Manpower',t.manpower],['Uniform',t.uniform],['Machinery',t.machinery],['Chemicals',t.chemicals],
@@ -470,7 +609,7 @@ function exportExcel(){
  if(!window.XLSX){alert('Library Excel belum tersedia.');return}
  const r=currentReport,t=r.totals,wb=XLSX.utils.book_new();
  const meta=[
-  ['RAB REPORT'],['Client',document.getElementById('clientFilter').value],
+  ['RAB REPORT'],['Client',document.getElementById('clientFilter').value==='__ALL__'?'SEMUA CLIENT / PERUSAHAAN':document.getElementById('clientFilter').value],
   ['Area',selectedValues('area-check').join(', ')],['Service',selectedValues('service-check').join(', ')],
   ['Jumlah Project',r.projects.length],['Total Manpower',t.manpowerQty],[],
   ['SUMMARY COST','TOTAL (Rp)'],['Manpower',t.manpower],['Uniform',t.uniform],['Machinery',t.machinery],
@@ -485,6 +624,15 @@ function exportExcel(){
  wsMp['!cols']=[{wch:22},{wch:28},{wch:24},{wch:34},{wch:10},{wch:18},{wch:20},{wch:20}];
  XLSX.utils.book_append_sheet(wb,wsMp,'Manpower Detail');
 
+ const period=getPnlPeriod(),mult=period.months,revenue=t.totalExc,cogs=t.totalCost,gp=revenue-cogs,gm=revenue?gp/revenue*100:0;
+ const pnlData=[
+  ['PROFIT & LOSS DESIGN RAB'],['Periode',period.label],['Durasi (Bulan)',mult],[],
+  ['Profit & Loss','Per Bulan (Rp)',period.label+' (Rp)'],
+  ...getPnlRows().map(x=>[x.label,x.monthly,x.monthly*mult]),
+  ['TOTAL COGS',cogs,cogs*mult],['GROSS PROFIT',gp,gp*mult],['GROSS MARGIN (%)',gm,gm]
+ ];
+ const wsPnl=XLSX.utils.aoa_to_sheet(pnlData);wsPnl['!cols']=[{wch:34},{wch:20},{wch:22}];XLSX.utils.book_append_sheet(wb,wsPnl,'P&L Design RAB');
+
  Object.entries(detailLabels).forEach(([k,label])=>{
   const data=[['Item','Qty','Unit','Total Cost (Rp)'],...(r.detail[k]||[]).map(x=>[x.name,x.qty,x.unit,x.total])];
   const ws=XLSX.utils.aoa_to_sheet(data);ws['!cols']=[{wch:35},{wch:12},{wch:12},{wch:20}];
@@ -498,7 +646,8 @@ function exportPDF(){
  const JsPDF=window.jspdf?.jsPDF;if(!JsPDF){alert('Library PDF belum tersedia.');return}
  const pdf=new JsPDF({orientation:'portrait',unit:'mm',format:'a4'}),r=currentReport,t=r.totals;
  const W=pdf.internal.pageSize.getWidth(),H=pdf.internal.pageSize.getHeight(),M=12,CONTENT=W-2*M;
- const client=document.getElementById('clientFilter').value;
+ const clientValue=document.getElementById('clientFilter').value;
+ const client=clientValue==='__ALL__'?'SEMUA CLIENT / PERUSAHAAN':clientValue;
  const areas=selectedValues('area-check'),services=selectedValues('service-check');
  const f=v=>'Rp '+new Intl.NumberFormat('id-ID').format(Math.round(n(v)));
  let pageNo=0,y=0,sectionNo=0;
@@ -592,7 +741,18 @@ function exportPDF(){
  pageHeader();
  infoBox();
 
- // I. Manpower - role then every salary component.
+ // Profit & Loss Design RAB
+ const pnlPeriod=getPnlPeriod(),pnlMult=pnlPeriod.months,pnlRevenue=t.totalExc,pnlCogs=t.totalCost,pnlGp=pnlRevenue-pnlCogs,pnlGm=pnlRevenue?pnlGp/pnlRevenue*100:0;
+ sectionBar('Profit & Loss Design RAB - '+pnlPeriod.label);
+ const pw=[100,42,43];
+ tableHeader(['Profit & Loss','Per Bulan',pnlPeriod.label],pw);
+ getPnlRows().forEach(x=>row([x.label,f(x.monthly),f(x.monthly*pnlMult)],pw,{bold:x.type==='revenue',fill:x.type==='revenue'?[239,246,255]:null,rightCols:[1,2],h:7.2}));
+ row(['TOTAL COGS',f(pnlCogs),f(pnlCogs*pnlMult)],pw,{bold:true,fill:[248,250,252],rightCols:[1,2],h:7.4});
+ row(['GROSS PROFIT',f(pnlGp),f(pnlGp*pnlMult)],pw,{bold:true,fill:[220,252,231],rightCols:[1,2],h:7.8});
+ row(['GROSS MARGIN',pnlGm.toLocaleString('id-ID',{minimumFractionDigits:1,maximumFractionDigits:2})+'%',pnlGm.toLocaleString('id-ID',{minimumFractionDigits:1,maximumFractionDigits:2})+'%'],pw,{bold:true,fill:[254,249,195],rightCols:[1,2],h:7.4});
+ y+=4;
+
+ // Manpower - role then every salary component.
  sectionBar('Manpower Component');
  const mw=[50,20,34,40,39];
  tableHeader(['Jabatan / Role','QTY','Acuan','Amount / Person','Total / Bln'],mw);
