@@ -266,18 +266,8 @@ input:focus,select:focus{box-shadow:0 0 0 2px rgba(37,99,235,.18)}
         <th class="p-3 text-left">Nama Client</th>
         <th class="p-3 text-left">Area</th>
         <th class="p-3 text-left">Service</th>
-        <th class="p-3">Manpower</th>
-        <th class="p-3">TOP</th>
-        <th class="p-3">Cost Manpower</th>
-        <th class="p-3">Cost Mesin</th>
-        <th class="p-3">Cost Consumable</th>
-        <th class="p-3">Cost Chemicals</th>
-        <th class="p-3">Mgmt Fee</th>
-        <th class="p-3">Mgmt Fee (Rp)</th>
-        <th class="p-3">Rounded</th>
-        <th class="p-3">Total Exc. PPN</th>
-        <th class="p-3">Total Inc. PPN</th>
-        <th class="p-3">Aksi</th>
+        <th class="p-3 text-left">Kode Project</th>
+        <th class="p-3 text-center">Aksi</th>
       </tr></thead>
       <tbody id="projectTableBody"></tbody>
       <tfoot>
@@ -285,17 +275,7 @@ input:focus,select:focus{box-shadow:0 0 0 2px rgba(37,99,235,.18)}
           <td class="p-3 text-left">TOTAL</td>
           <td class="p-3 text-left">-</td>
           <td class="p-3 text-left">-</td>
-          <td id="totalProjectManpower" class="p-3 text-center">0 person</td>
-          <td class="p-3 text-center">-</td>
-          <td id="totalProjectCostManpower" class="p-3 text-right">Rp 0</td>
-          <td id="totalProjectCostMachinery" class="p-3 text-right">Rp 0</td>
-          <td id="totalProjectCostConsumable" class="p-3 text-right">Rp 0</td>
-          <td id="totalProjectCostChemical" class="p-3 text-right">Rp 0</td>
-          <td class="p-3 text-center">-</td>
-          <td id="totalProjectMgmtFee" class="p-3 text-right">Rp 0</td>
-          <td id="totalProjectRounded" class="p-3 text-right text-emerald-700">Rp 0</td>
-          <td id="totalProjectExcPpn" class="p-3 text-right">Rp 0</td>
-          <td id="totalProjectIncPpn" class="p-3 text-right">Rp 0</td>
+          <td id="totalProjectCount" class="p-3 text-left">0 Project</td>
           <td class="p-3 text-center">-</td>
         </tr>
       </tfoot>
@@ -321,6 +301,74 @@ input:focus,select:focus{box-shadow:0 0 0 2px rgba(37,99,235,.18)}
     <div class="px-6 py-4 border-b flex justify-between items-center"><div><h3 id="modalProjectTitle" class="font-bold"></h3><p id="modalProjectSub" class="text-xs text-slate-500"></p></div><button onclick="closeModal()" class="text-slate-500 text-xl">×</button></div>
     <div id="modalContent" class="p-6 overflow-y-auto space-y-6"></div>
     <div class="bg-slate-100 px-6 py-3 flex justify-between"><div class="flex gap-2"><button id="btnExportModalExcel" class="px-3 py-1.5 bg-emerald-600 text-white rounded text-xs font-semibold">Download Excel</button><button id="btnExportModalPDF" class="px-3 py-1.5 bg-rose-600 text-white rounded text-xs font-semibold">Download PDF</button></div><button onclick="closeModal()" class="px-4 py-2 bg-slate-700 text-white rounded text-xs">Tutup Detail</button></div>
+  </div>
+</div>
+
+
+<!-- PROJECT CODE SETUP MODAL -->
+<div id="projectCodeSetupModal" class="hidden fixed inset-0 bg-slate-900/60 z-[120] p-4">
+  <div class="bg-white max-w-2xl mx-auto mt-10 rounded-xl shadow-2xl max-h-[90vh] flex flex-col">
+    <div class="px-6 py-4 border-b flex justify-between items-start gap-4">
+      <div>
+        <h3 class="font-bold text-slate-900">Project Code Setup</h3>
+        <p class="text-xs text-slate-500 mt-1">Daftarkan kode yang belum tersedia. Kode yang sudah resmi tidak dapat diubah dari panel ini.</p>
+      </div>
+      <button type="button" onclick="closeProjectCodeSetupModal()" class="text-slate-500 text-xl leading-none">×</button>
+    </div>
+
+    <div class="p-6 overflow-y-auto space-y-4">
+      <input type="hidden" id="pcsRabProjectId">
+
+      <div class="bg-blue-50 border border-blue-100 rounded-lg p-3 text-xs text-slate-700">
+        <div class="font-semibold">RAB Project ID</div>
+        <div id="pcsRabProjectLabel" class="mt-1 font-mono text-blue-800">-</div>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4">
+        <div class="border rounded-lg p-4">
+          <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">Client</label>
+          <div id="pcsClientName" class="text-sm font-semibold mt-1">-</div>
+          <div class="mt-3">
+            <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Client Code</label>
+            <input id="pcsClientCode" maxlength="10" autocomplete="off"
+                   class="w-full h-9 px-3 border border-slate-300 rounded-lg text-xs font-mono uppercase focus:ring-2 focus:ring-blue-500 outline-none"
+                   placeholder="Contoh: RSHK">
+            <div id="pcsClientHint" class="text-[10px] text-slate-500 mt-1"></div>
+          </div>
+        </div>
+
+        <div class="border rounded-lg p-4">
+          <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">Area</label>
+          <div id="pcsAreaName" class="text-sm font-semibold mt-1">-</div>
+          <div class="mt-3">
+            <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Area Code</label>
+            <input id="pcsAreaCode" maxlength="10" autocomplete="off"
+                   class="w-full h-9 px-3 border border-slate-300 rounded-lg text-xs font-mono uppercase focus:ring-2 focus:ring-blue-500 outline-none"
+                   placeholder="Contoh: PLM">
+            <div id="pcsAreaHint" class="text-[10px] text-slate-500 mt-1"></div>
+          </div>
+        </div>
+
+        <div class="border rounded-lg p-4">
+          <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">Service</label>
+          <div id="pcsServiceName" class="text-sm font-semibold mt-1">-</div>
+          <div class="mt-3">
+            <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Service Code</label>
+            <input id="pcsServiceCode" maxlength="10" autocomplete="off"
+                   class="w-full h-9 px-3 border border-slate-300 rounded-lg text-xs font-mono uppercase focus:ring-2 focus:ring-blue-500 outline-none"
+                   placeholder="Contoh: IFM">
+            <div id="pcsServiceHint" class="text-[10px] text-slate-500 mt-1"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="pcsError" class="hidden bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 text-xs"></div>
+    </div>
+
+    <div class="bg-slate-50 px-6 py-4 border-t flex justify-end gap-2">
+      <button type="button" onclick="closeProjectCodeSetupModal()" class="px-4 py-2 border border-slate-300 bg-white rounded-lg text-xs font-semibold text-slate-700">Batal</button>
+      <button type="button" id="pcsSaveButton" onclick="submitProjectCodeSetup()" class="px-4 py-2 bg-blue-700 text-white rounded-lg text-xs font-semibold">Simpan & Generate Project Code</button>
+    </div>
   </div>
 </div>
 
@@ -519,30 +567,254 @@ function calculateOverallTotals(){
 function extractItems(id){
  return [...document.querySelectorAll('#'+id+' .item-row')].map(r=>({name:r.querySelector('.item-name')?.value||'',vol:n(r.querySelector('.item-vol')?.value),unit:r.querySelector('.item-unit')?.value||'',status:r.querySelector('.item-status')?.value||'-',depreciation_months:Math.max(1,n(r.querySelector('.item-depr')?.value)),price:n(r.querySelector('.item-price')?.value),total_monthly:n(r.querySelector('.item-vol')?.value)*n(r.querySelector('.item-price')?.value)/Math.max(1,n(r.querySelector('.item-depr')?.value))}))
 }
+
+// PATCH UI Project Code Setup: newline, immediate registered-state refresh, button-state cleanup.
+let pendingProjectCodeSetupId=null;
+
+function sanitizeProjectCodeInput(v){
+ return String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,10);
+}
+
+function closeProjectCodeSetupModal(){
+ document.getElementById('projectCodeSetupModal').classList.add('hidden');
+ pendingProjectCodeSetupId=null;
+}
+
+function setProjectCodeField(inputId,hintId,name,code,isMissing){
+ const input=document.getElementById(inputId),hint=document.getElementById(hintId);
+ input.value=code||'';
+ input.disabled=!isMissing;
+ input.classList.toggle('bg-slate-100',!isMissing);
+ input.classList.toggle('text-slate-500',!isMissing);
+ if(isMissing){
+  hint.textContent='Belum terdaftar — isi kode 2-10 karakter (A-Z / 0-9).';
+  hint.className='text-[10px] text-amber-600 mt-1';
+ }else{
+  hint.textContent='Sudah terdaftar: '+code+' — kode dikunci.';
+  hint.className='text-[10px] text-emerald-600 mt-1';
+ }
+}
+
+async function openProjectCodeSetup(rabProjectId){
+ if(!supabaseClient){alert('Supabase belum terhubung.');return;}
+ pendingProjectCodeSetupId=rabProjectId;
+ const errBox=document.getElementById('pcsError');errBox.classList.add('hidden');errBox.textContent='';
+ try{
+  const res=await supabaseClient.rpc('get_project_code_setup',{p_rab_project_id:rabProjectId});
+  if(res.error)throw res.error;
+  const row=Array.isArray(res.data)?res.data[0]:res.data;
+  if(!row)throw new Error('Data setup Project Code tidak ditemukan.');
+
+  document.getElementById('pcsRabProjectId').value=rabProjectId;
+  document.getElementById('pcsRabProjectLabel').textContent=rabProjectId;
+  document.getElementById('pcsClientName').textContent=row.client_name||'-';
+  document.getElementById('pcsAreaName').textContent=row.area_name||'-';
+  document.getElementById('pcsServiceName').textContent=row.service_name||'-';
+
+  setProjectCodeField('pcsClientCode','pcsClientHint',row.client_name,row.client_code,row.client_code_missing);
+  setProjectCodeField('pcsAreaCode','pcsAreaHint',row.area_name,row.area_code,row.area_code_missing);
+  setProjectCodeField('pcsServiceCode','pcsServiceHint',row.service_name,row.service_code,row.service_code_missing);
+
+  ['pcsClientCode','pcsAreaCode','pcsServiceCode'].forEach(id=>{
+   const el=document.getElementById(id);
+   el.oninput=()=>{el.value=sanitizeProjectCodeInput(el.value)};
+  });
+
+  document.getElementById('projectCodeSetupModal').classList.remove('hidden');
+ }catch(err){
+  console.error('Project Code Setup Preview Error:',err);
+  alert('Gagal membuka Project Code Setup: '+err.message);
+ }
+}
+
+async function submitProjectCodeSetup(){
+ const rabProjectId=document.getElementById('pcsRabProjectId').value||pendingProjectCodeSetupId;
+ if(!rabProjectId)return;
+
+ const clientInput=document.getElementById('pcsClientCode');
+ const areaInput=document.getElementById('pcsAreaCode');
+ const serviceInput=document.getElementById('pcsServiceCode');
+ const errBox=document.getElementById('pcsError');
+ const btn=document.getElementById('pcsSaveButton');
+
+ const clientCode=clientInput.disabled?null:sanitizeProjectCodeInput(clientInput.value);
+ const areaCode=areaInput.disabled?null:sanitizeProjectCodeInput(areaInput.value);
+ const serviceCode=serviceInput.disabled?null:sanitizeProjectCodeInput(serviceInput.value);
+
+ if(!clientInput.disabled && clientCode.length<2){errBox.textContent='Client Code minimal 2 karakter.';errBox.classList.remove('hidden');return;}
+ if(!areaInput.disabled && areaCode.length<2){errBox.textContent='Area Code minimal 2 karakter.';errBox.classList.remove('hidden');return;}
+ if(!serviceInput.disabled && serviceCode.length<2){errBox.textContent='Service Code minimal 2 karakter.';errBox.classList.remove('hidden');return;}
+
+ errBox.classList.add('hidden');errBox.textContent='';
+ btn.disabled=true;btn.textContent='Memproses...';
+
+ try{
+  const res=await supabaseClient.rpc('register_project_code_setup',{
+   p_rab_project_id:rabProjectId,
+   p_client_code:clientCode,
+   p_area_code:areaCode,
+   p_service_code:serviceCode
+  });
+  if(res.error)throw res.error;
+  const row=Array.isArray(res.data)?res.data[0]:res.data;
+  if(!row)throw new Error('Respons Project Code Setup kosong.');
+
+  if(row.setup_status==='SUCCESS'){
+   // Refresh status kode di modal sebelum notifikasi ditampilkan.
+   // Dengan demikian kode yang baru didaftarkan langsung terlihat hijau/terkunci.
+   if(!clientInput.disabled){
+    setProjectCodeField('pcsClientCode','pcsClientHint','',clientCode,false);
+   }
+   if(!areaInput.disabled){
+    setProjectCodeField('pcsAreaCode','pcsAreaHint','',areaCode,false);
+   }
+   if(!serviceInput.disabled){
+    setProjectCodeField('pcsServiceCode','pcsServiceHint','',serviceCode,false);
+   }
+
+   btn.disabled=false;
+   btn.textContent='Simpan & Generate Project Code';
+   await fetchProjects();
+
+   // Gunakan escape newline JavaScript yang benar, bukan literal \n pada layar.
+   alert('Project Code berhasil dibuat / disinkronkan.\n\nOfficial Project Code: '+(row.official_project_code||'-'));
+   closeProjectCodeSetupModal();
+  }else{
+   errBox.textContent=row.message||('Project Code Setup gagal: '+row.setup_status);
+   errBox.classList.remove('hidden');
+  }
+ }catch(err){
+  console.error('Project Code Setup Error:',err);
+  errBox.textContent='Gagal menyimpan Project Code Setup: '+err.message;
+  errBox.classList.remove('hidden');
+ }finally{
+  btn.disabled=false;btn.textContent='Simpan & Generate Project Code';
+ }
+}
+
 async function handleFormSubmit(e){
  e.preventDefault();const calc=calculateOverallTotals(),editing=document.getElementById('editingProjectId').value,mp=getManpowerComponentsFromUI();
  if(!calc.selectedComponentsValid){alert('Pilih minimal satu komponen yang dikenakan Management Fee.');return;}
  const payload={project_id:editing||'PRJ-'+Date.now().toString().slice(-8),client_name:document.getElementById('clientName').value.trim(),client_location:document.getElementById('clientLocation').value.trim(),project_area:document.getElementById('projectArea').value.trim(),project_title:document.getElementById('projectTitle').value.trim(),top_days:parseInt(document.getElementById('topDays').value)||0,cost_project:calc.total,management_fee_percent:calc.feePct,management_fee_value:calc.fee,rounded_before_tax:calc.rounded,total_after_tax:calc.grand,cost_manpower:calc.mp,cost_machinery:calc.mac,cost_chemical:calc.chem,cost_consumable:calc.cons,details_json:{project_meta:{province:document.getElementById('clientProvince').value.trim(),management_fee_basis:calc.feeBasis,management_fee_mode:calc.feeMode,management_fee_components:calc.selectedFeeComponents,management_fee_manual_percent:calc.manualFeePct},manpower:mp,manpower_legacy:mp[0]||normalizeManpowerItem({}),machinery:extractItems('machineryTable'),chemicals:extractItems('chemicalsTable'),consumables:extractItems('consumablesTable'),uniform:extractItems('uniformTable'),equipment:extractItems('equipmentTable'),additional_cost:extractItems('additionalCostTable')},status:'APPROVED'};
- if(supabaseClient){try{const res=editing?await supabaseClient.from('projects').update(payload).eq('project_id',editing):await supabaseClient.from('projects').insert([payload]);if(res.error)throw res.error;alert(editing?'Pembaruan RAB Berhasil Disimpan!':'Project RAB Berhasil Disimpan ke Supabase!');resetForm();await fetchProjects()}catch(err){console.error(err);alert('Gagal menyimpan ke Supabase: '+err.message)}}else{const i=projectsData.findIndex(x=>x.project_id===payload.project_id);if(i>=0)projectsData[i]=payload;else projectsData.unshift(payload);renderTable();resetForm();alert('Project Berhasil Disimpan (Mode Lokal)!')}
+ if(supabaseClient){
+  try{
+   const res=editing?await supabaseClient.from('projects').update(payload).eq('project_id',editing):await supabaseClient.from('projects').insert([payload]);
+   if(res.error)throw res.error;
+
+   let syncMessage=editing?'Pembaruan RAB Berhasil Disimpan!':'Project RAB Berhasil Disimpan ke Supabase!';
+   try{
+    const syncRes=await supabaseClient.rpc('sync_project_master_from_rab',{p_rab_project_id:payload.project_id});
+    if(syncRes.error)throw syncRes.error;
+
+    const syncRow=Array.isArray(syncRes.data)?syncRes.data[0]:syncRes.data;
+    if(syncRow){
+     if(syncRow.sync_status==='CREATED'){
+      syncMessage+='\n\nOfficial Project Code: '+(syncRow.official_project_code||'-');
+     }else if(syncRow.sync_status==='UPDATED'){
+      syncMessage+='\n\nOfficial Project Code tetap: '+(syncRow.official_project_code||'-');
+     }else if(syncRow.sync_status==='NEED_CODE_SETUP'){
+      syncMessage+='\n\nProject Code belum dibuat.\n'+(syncRow.message||'Client / Area / Service memerlukan setup kode.');
+      pendingProjectCodeSetupId=payload.project_id;
+     }else if(syncRow.message){
+      syncMessage+='\n\n'+syncRow.message;
+     }
+    }
+   }catch(syncErr){
+    console.error('Project Master Sync Error:',syncErr);
+    syncMessage+='\n\nRAB sudah tersimpan, tetapi sinkronisasi Project Master gagal: '+syncErr.message;
+   }
+
+   alert(syncMessage);
+   const projectCodeSetupId=pendingProjectCodeSetupId;
+   resetForm();
+   await fetchProjects();
+   if(projectCodeSetupId){
+    await openProjectCodeSetup(projectCodeSetupId);
+   }
+  }catch(err){
+   console.error(err);
+   alert('Gagal menyimpan ke Supabase: '+err.message);
+  }
+ }else{
+  const i=projectsData.findIndex(x=>x.project_id===payload.project_id);
+  if(i>=0)projectsData[i]=payload;else projectsData.unshift(payload);
+  renderTable();resetForm();alert('Project Berhasil Disimpan (Mode Lokal)!');
+ }
 }
 async function fetchProjects(){
  if(!supabaseClient){renderDemoData();return}
- const {data,error}=await supabaseClient.from('projects').select('*').order('project_id',{ascending:false});
+ const {data,error}=await supabaseClient
+   .from('projects')
+   .select('*')
+   .neq('status','DELETED')
+   .order('project_id',{ascending:false});
  if(error){console.error(error);alert('Gagal membaca tabel projects: '+error.message);renderDemoData();return}
- projectsData=data||[];renderTable()
+
+ // Ambil Official Project Code untuk tampilan daftar. Jika lookup gagal,
+ // daftar RAB tetap dapat dipakai dan kolom kode akan menampilkan "Belum dibuat".
+ let codeMap={};
+ try{
+   const {data:masterRows,error:masterError}=await supabaseClient
+     .from('project_master')
+     .select('rab_project_id,project_code,status')
+     .eq('status','ACTIVE');
+   if(masterError) throw masterError;
+   (masterRows||[]).forEach(row=>{
+     if(row?.rab_project_id && row?.project_code) codeMap[row.rab_project_id]=row.project_code;
+   });
+ }catch(codeErr){
+   console.warn('Official Project Code lookup:',codeErr);
+ }
+
+ projectsData=(data||[]).map(p=>({...p,official_project_code:codeMap[p.project_id]||null}));
+ renderTable()
 }
 function renderDemoData(){projectsData=[];renderTable()}
 async function deleteProject(projectId){
  const project=projectsData.find(p=>p.project_id===projectId);
  const label=project ? (project.client_name || projectId) : projectId;
- if(!confirm('Hapus project "'+label+'"?\\n\\nData yang dihapus tidak dapat dikembalikan.')) return;
+ if(!confirm('Hapus RAB "'+label+'"?\n\nRAB akan dihapus dari daftar aktif. Official Project Code yang sudah pernah dibuat tetap disimpan sebagai histori dan tidak digunakan ulang.')) return;
  try{
    if(supabaseClient){
-     const {error}=await supabaseClient.from('projects').delete().eq('project_id',projectId);
-     if(error) throw error;
+     /*
+       DELETE LIFECYCLE V5.2.8
+       1) Official Project Code tidak dihapus; hanya dinonaktifkan agar histori & sequence tetap aman.
+       2) RAB memakai soft-delete (status=DELETED), sehingga tidak tampil di aplikasi tetapi jejak data tetap ada.
+       3) Jika langkah 1 gagal, proses berhenti sebelum RAB dihapus agar tidak membuat orphan.
+     */
+     const {data:masterRows,error:masterReadError}=await supabaseClient
+       .from('project_master')
+       .select('id,project_code,status')
+       .eq('rab_project_id',projectId);
+     if(masterReadError) throw new Error('Gagal memeriksa Official Project Code: '+masterReadError.message);
+
+     if(Array.isArray(masterRows) && masterRows.length){
+       const {error:masterUpdateError}=await supabaseClient
+         .from('project_master')
+         .update({status:'INACTIVE',updated_at:new Date().toISOString()})
+         .eq('rab_project_id',projectId);
+       if(masterUpdateError) throw new Error('Gagal menonaktifkan Official Project Code: '+masterUpdateError.message);
+     }
+
+     const {error:projectUpdateError}=await supabaseClient
+       .from('projects')
+       .update({status:'DELETED',updated_at:new Date().toISOString()})
+       .eq('project_id',projectId);
+     if(projectUpdateError){
+       /* Jika RAB gagal di-soft-delete, kembalikan Project Master ke ACTIVE agar state tetap konsisten. */
+       if(Array.isArray(masterRows) && masterRows.length){
+         const {error:rollbackError}=await supabaseClient
+           .from('project_master')
+           .update({status:'ACTIVE',updated_at:new Date().toISOString()})
+           .eq('rab_project_id',projectId);
+         if(rollbackError) console.error('Rollback Project Master gagal:',rollbackError);
+       }
+       throw new Error('Gagal menghapus RAB: '+projectUpdateError.message);
+     }
+
      projectsData=projectsData.filter(p=>p.project_id!==projectId);
      renderTable();
-     alert('Project berhasil dihapus.');
+     alert('RAB berhasil dihapus dari daftar aktif.\n\nOfficial Project Code tetap tersimpan sebagai histori.');
      await fetchProjects();
    }else{
      projectsData=projectsData.filter(p=>p.project_id!==projectId);
@@ -551,7 +823,7 @@ async function deleteProject(projectId){
    }
  }catch(err){
    console.error(err);
-   alert('Gagal menghapus project: '+err.message);
+   alert(err.message||('Gagal menghapus project: '+String(err)));
  }
 }
 
@@ -573,18 +845,8 @@ function getFilteredProjects(){
 }
 function renderProjectTotals(filtered){
  const rows=Array.isArray(filtered)?filtered:[];
- const sum=(field)=>rows.reduce((s,p)=>s+n(p?.[field]),0);
- const manpower=rows.reduce((s,p)=>s+getProjectManpowerQty(p),0);
- const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value};
- set('totalProjectManpower',`${manpower} person`);
- set('totalProjectCostManpower',formatRupiah(sum('cost_manpower')));
- set('totalProjectCostMachinery',formatRupiah(sum('cost_machinery')));
- set('totalProjectCostConsumable',formatRupiah(sum('cost_consumable')));
- set('totalProjectCostChemical',formatRupiah(sum('cost_chemical')));
- set('totalProjectMgmtFee',formatRupiah(sum('management_fee_value')));
- set('totalProjectRounded',formatRupiah(sum('rounded_before_tax')));
- set('totalProjectExcPpn',formatRupiah(sum('rounded_before_tax')));
- set('totalProjectIncPpn',formatRupiah(sum('total_after_tax')));
+ const el=document.getElementById('totalProjectCount');
+ if(el)el.textContent=`${rows.length} Project`;
 }
 function applyProjectListFilters(){projectListPage=1;renderTable()}
 function changeProjectPageSize(v){projectListPageSize=Math.max(1,parseInt(v)||10);projectListPage=1;renderTable()}
@@ -609,11 +871,15 @@ function renderTable(data){
  renderProjectTotals(filtered);
  if(projectListPage>totalPages)projectListPage=totalPages;
  renderProjectPagination(total,totalPages);
- if(!total){body.innerHTML='<tr><td colspan="15" class="p-8 text-center text-slate-400">Belum ada project yang sesuai.</td></tr>';return}
+ if(!total){body.innerHTML='<tr><td colspan="5" class="p-8 text-center text-slate-400">Belum ada project yang sesuai.</td></tr>';return}
  const start=(projectListPage-1)*projectListPageSize;
  filtered.slice(start,start+projectListPageSize).forEach(p=>{
   const tr=document.createElement('tr');tr.className='border-b hover:bg-slate-50';
-  tr.innerHTML=`<td class="p-3 font-semibold text-left min-w-44">${escapeHtml(p.client_name||'-')}</td><td class="p-3 text-left min-w-36">${escapeHtml(p.project_area||'-')}</td><td class="p-3 text-left min-w-40">${escapeHtml(p.project_title||'-')}</td><td class="p-3 text-center font-semibold">${getProjectManpowerQty(p)} person</td><td class="p-3">${p.top_days??'-'} Hari</td><td class="p-3 font-semibold">${formatRupiah(p.cost_manpower)}</td><td class="p-3">${formatRupiah(p.cost_machinery)}</td><td class="p-3">${formatRupiah(p.cost_consumable)}</td><td class="p-3">${formatRupiah(p.cost_chemical)}</td><td class="p-3">${n(p.management_fee_percent)}%</td><td class="p-3">${formatRupiah(p.management_fee_value)}</td><td class="p-3 text-emerald-700 font-semibold">${formatRupiah(p.rounded_before_tax)}</td><td class="p-3 font-semibold">${formatRupiah(p.rounded_before_tax)}</td><td class="p-3 font-bold">${formatRupiah(p.total_after_tax)}</td><td class="p-3 whitespace-nowrap"><button onclick="viewProjectDetail('${p.project_id}')" class="px-2 py-1 border rounded text-blue-600 mr-1">Lihat</button><button onclick="loadProjectToForm('${p.project_id}')" class="px-2 py-1 border rounded text-amber-600 mr-1">Edit</button><button onclick="exportSingleProjectPDF('${p.project_id}')" class="px-2 py-1 border rounded text-rose-600 mr-1">PDF</button><button onclick="exportSingleProjectExcel('${p.project_id}')" class="px-2 py-1 border rounded text-emerald-600 mr-1">XLS</button><button onclick="deleteProject('${p.project_id}')" class="px-2 py-1 border rounded text-red-600">Hapus</button></td>`;body.appendChild(tr)
+  const officialCode=p.official_project_code||'';
+  const codeHtml=officialCode
+    ? `<span class="inline-flex items-center px-2.5 py-1 rounded-md bg-blue-50 border border-blue-100 text-blue-800 font-mono font-semibold">${escapeHtml(officialCode)}</span>`
+    : '<span class="inline-flex items-center px-2.5 py-1 rounded-md bg-amber-50 border border-amber-200 text-amber-700 font-semibold">Belum dibuat</span>';
+  tr.innerHTML=`<td class="p-3 font-semibold text-left min-w-44">${escapeHtml(p.client_name||'-')}</td><td class="p-3 text-left min-w-36">${escapeHtml(p.project_area||'-')}</td><td class="p-3 text-left min-w-40">${escapeHtml(p.project_title||'-')}</td><td class="p-3 text-left min-w-56">${codeHtml}</td><td class="p-3 whitespace-nowrap text-center"><button onclick="viewProjectDetail('${p.project_id}')" class="px-2 py-1 border rounded text-blue-600 mr-1">Lihat</button><button onclick="loadProjectToForm('${p.project_id}')" class="px-2 py-1 border rounded text-amber-600 mr-1">Edit</button><button onclick="exportSingleProjectPDF('${p.project_id}')" class="px-2 py-1 border rounded text-rose-600 mr-1">PDF</button><button onclick="exportSingleProjectExcel('${p.project_id}')" class="px-2 py-1 border rounded text-emerald-600 mr-1">XLS</button><button onclick="deleteProject('${p.project_id}')" class="px-2 py-1 border rounded text-red-600">Hapus</button></td>`;body.appendChild(tr)
  })
 }
 function resetForm(){
@@ -628,12 +894,87 @@ function loadProjectToForm(id){
  [['uniformTable',d.uniform],['machineryTable',d.machinery],['chemicalsTable',d.chemicals],['consumablesTable',d.consumables],['equipmentTable',d.equipment],['additionalCostTable',d.additional_cost]].forEach(([id,arr])=>{document.querySelector('#'+id+' tbody').innerHTML='';(arr||[]).forEach(x=>addRow(id,x))});calculateManpower();calculateDynamicRows();document.getElementById('formSection').scrollIntoView({behavior:'smooth'})
 }
 function viewProjectDetail(id){
- const p=projectsData.find(x=>x.project_id===id);if(!p)return;document.getElementById('modalProjectTitle').textContent='Rincian Detail RAB - '+(p.client_name||'-');document.getElementById('modalProjectSub').textContent=`ID Project: ${p.project_id} | ${p.project_title||'-'} (${p.client_location||'-'})`;
- document.getElementById('btnExportModalExcel').onclick=()=>exportSingleProjectExcel(id);document.getElementById('btnExportModalPDF').onclick=()=>exportSingleProjectPDF(id);
- const d=p.details_json||{},ml=Array.isArray(d.manpower)?d.manpower:(d.manpower?[d.manpower]:[]);
- const mpHtml=ml.map((m,i)=>{const c=manpowerCalc(m);return `<div class="border rounded-lg p-3"><div class="flex justify-between font-bold"><span>${i+1}. ${escapeHtml(c.role)}</span><span>${formatRupiah(c.subtotalTotal)}</span></div><div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 text-[11px]"><div>Personel<br><b>${c.qty}</b></div><div>Basic<br><b>${formatRupiah(c.basic_salary)}</b></div><div>Per Person<br><b>${formatRupiah(c.subtotalPerPerson)}</b></div><div>Mode<br><b>${Object.values(c.salary_overrides).some(v=>v!==null)?'MANUAL':'AUTO'}</b></div></div></div>`}).join('');
- const itemRows=(arr)=>arr?.length?arr.map(x=>`<tr class="border-b"><td class="p-2">${escapeHtml(x.name)}</td><td class="p-2 text-center">${x.vol} ${escapeHtml(x.unit)}</td><td class="p-2 text-center">${x.depreciation_months}</td><td class="p-2 text-right">${formatRupiah(x.price)}</td><td class="p-2 text-right font-bold">${formatRupiah(x.total_monthly)}</td></tr>`).join(''):'<tr><td colspan="5" class="p-3 text-center text-slate-400">Tidak ada item</td></tr>';
- document.getElementById('modalContent').innerHTML=`<div class="bg-blue-50 p-4 rounded-xl"><div class="flex justify-between font-bold mb-3"><span>I. MANPOWER</span><span>${formatRupiah(p.cost_manpower)}</span></div>${mpHtml||'<p class="text-xs text-slate-400">Tidak ada manpower.</p>'}</div>${['uniform','machinery','chemicals','consumables','equipment','additional_cost'].map((k,i)=>`<div><h4 class="font-bold uppercase text-xs mb-2">${i+2}. ${k==='additional_cost'?'Additional Cost':k}</h4><table class="w-full text-xs"><thead class="bg-slate-100"><tr><th class="p-2 text-left">Item</th><th class="p-2">Vol</th><th class="p-2">Depr</th><th class="p-2 text-right">Harga</th><th class="p-2 text-right">Total</th></tr></thead><tbody>${itemRows(d[k]||[])}</tbody></table></div>`).join('')}<div class="bg-slate-900 text-white p-4 rounded-xl"><div class="flex justify-between"><span>Total Cost</span><b>${formatRupiah(p.cost_project)}</b></div><div class="flex justify-between"><span>Mgmt Fee</span><b>${formatRupiah(p.management_fee_value)}</b></div><div class="flex justify-between"><span>Grand Total Inc. PPN</span><b>${formatRupiah(p.total_after_tax)}</b></div></div>`;
+ const p=projectsData.find(x=>x.project_id===id);if(!p)return;
+ const d=p.details_json||{},meta=d.project_meta||{};
+ const ml=Array.isArray(d.manpower)?d.manpower:(d.manpower?[d.manpower]:[]);
+ const officialCode=p.official_project_code||'Belum dibuat';
+ const province=meta.province||'-';
+ const city=p.client_location||'-';
+ const totalManpower=getProjectManpowerQty(p);
+ const uniformTotal=(d.uniform||[]).reduce((s,x)=>s+n(x.total_monthly),0);
+ const equipmentTotal=(d.equipment||[]).reduce((s,x)=>s+n(x.total_monthly),0);
+ const additionalTotal=(d.additional_cost||[]).reduce((s,x)=>s+n(x.total_monthly),0);
+ const ppn=Math.max(0,n(p.total_after_tax)-n(p.rounded_before_tax));
+
+ document.getElementById('modalProjectTitle').textContent='Rincian RAB - '+(p.client_name||'-');
+ document.getElementById('modalProjectSub').textContent=`${p.project_area||'-'} • ${p.project_title||'-'} • RAB ID ${p.project_id}`;
+ document.getElementById('btnExportModalExcel').onclick=()=>exportSingleProjectExcel(id);
+ document.getElementById('btnExportModalPDF').onclick=()=>exportSingleProjectPDF(id);
+
+ const infoItem=(label,value,mono=false)=>`<div class="bg-slate-50 border rounded-lg px-3 py-2"><div class="text-[10px] uppercase tracking-wide font-bold text-slate-500">${label}</div><div class="mt-1 text-xs font-semibold text-slate-800 ${mono?'font-mono':''}">${escapeHtml(String(value??'-'))}</div></div>`;
+ const summaryRow=(label,value,strong=false)=>`<div class="flex items-center justify-between gap-4 py-2 border-b border-slate-100 last:border-0"><span class="text-xs text-slate-600">${label}</span><span class="text-xs ${strong?'font-bold text-slate-900':'font-semibold text-slate-800'}">${formatRupiah(value)}</span></div>`;
+
+ const mpDetail=ml.length?ml.map((m,i)=>{
+   const c=manpowerCalc(m);
+   const comps=[
+     ['Basic Salary',c.basic_salary],['Tunjangan',c.tunjangan],['Uang Makan',c.uang_makan],
+     ...Object.keys(SALARY_RULES).map(k=>[SALARY_RULES[k].label,c[k]]),
+     ['Uniform & Shoes',c.uniform],...(c.custom_components||[]).map(x=>[x.name,x.amount])
+   ];
+   return `<div class="border rounded-lg p-3 bg-white"><div class="flex flex-wrap items-center justify-between gap-2"><div><div class="font-bold text-xs">${i+1}. ${escapeHtml(c.role)}</div><div class="text-[10px] text-slate-500 mt-1">${c.qty} person • ${Object.values(c.salary_overrides).some(v=>v!==null)?'Ada komponen manual':'Auto/default'}</div></div><div class="text-xs font-bold text-blue-700">${formatRupiah(c.subtotalTotal)}</div></div><div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-x-6">${comps.map(([label,val])=>`<div class="flex justify-between gap-3 py-1.5 border-b border-dashed border-slate-100"><span class="text-[10px] text-slate-500">${escapeHtml(label)}</span><span class="text-[10px] font-semibold">${formatRupiah(val)}</span></div>`).join('')}</div></div>`;
+ }).join(''):'<p class="text-xs text-slate-400">Tidak ada manpower.</p>';
+
+ const detailLabels={uniform:'Uniform',machinery:'Machinery / Mesin',chemicals:'Chemicals',consumables:'Consumables',equipment:'Equipment',additional_cost:'Additional Cost'};
+ const detailSection=(key)=>{
+   const arr=d[key]||[];
+   const total=arr.reduce((s,x)=>s+n(x.total_monthly),0);
+   const rows=arr.length?arr.map(x=>`<tr class="border-b"><td class="p-2">${escapeHtml(x.name||'-')}</td><td class="p-2 text-center">${n(x.vol)} ${escapeHtml(x.unit||'')}</td><td class="p-2 text-center">${n(x.depreciation_months)}</td><td class="p-2 text-right">${formatRupiah(x.price)}</td><td class="p-2 text-right font-semibold">${formatRupiah(x.total_monthly)}</td></tr>`).join(''):'<tr><td colspan="5" class="p-3 text-center text-slate-400">Tidak ada item</td></tr>';
+   return `<details class="border rounded-xl bg-white"><summary class="cursor-pointer select-none px-4 py-3 flex items-center justify-between gap-4"><span class="font-bold text-xs text-slate-700">${detailLabels[key]}</span><span class="text-xs font-semibold text-slate-600">${formatRupiah(total)}</span></summary><div class="border-t overflow-x-auto"><table class="w-full text-xs"><thead class="bg-slate-50"><tr><th class="p-2 text-left">Item</th><th class="p-2">Vol</th><th class="p-2">Depr</th><th class="p-2 text-right">Harga</th><th class="p-2 text-right">Total/Bulan</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
+ };
+
+ document.getElementById('modalContent').innerHTML=`
+   <div>
+     <div class="flex items-center justify-between mb-3"><h4 class="font-bold text-sm text-slate-900">Summary Project</h4><span class="text-[10px] uppercase tracking-wide font-bold text-blue-700 bg-blue-50 border border-blue-100 rounded-full px-2.5 py-1">Ringkas</span></div>
+     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+       ${infoItem('Nama Client',p.client_name||'-')}
+       ${infoItem('Provinsi',province)}
+       ${infoItem('Kota',city)}
+       ${infoItem('Area',p.project_area||'-')}
+       ${infoItem('Service',p.project_title||'-')}
+       ${infoItem('TOP',(p.top_days??'-')+' Hari')}
+       ${infoItem('Total Manpower',totalManpower+' person')}
+       ${infoItem('Official Project Code',officialCode,true)}
+     </div>
+   </div>
+
+   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+     <div class="border rounded-xl p-4">
+       <h4 class="font-bold text-xs uppercase tracking-wide text-slate-600 mb-2">Cost Summary</h4>
+       ${summaryRow('Manpower',p.cost_manpower)}
+       ${summaryRow('Machinery / Mesin',p.cost_machinery)}
+       ${summaryRow('Consumables',p.cost_consumable)}
+       ${summaryRow('Chemicals',p.cost_chemical)}
+       ${summaryRow('Uniform',uniformTotal)}
+       ${summaryRow('Equipment',equipmentTotal)}
+       ${summaryRow('Additional Cost',additionalTotal)}
+       ${summaryRow('Total Cost',p.cost_project,true)}
+     </div>
+     <div class="border rounded-xl p-4 bg-slate-900 text-white">
+       <h4 class="font-bold text-xs uppercase tracking-wide text-slate-300 mb-2">Project Value</h4>
+       <div class="flex justify-between gap-4 py-2 border-b border-slate-700"><span class="text-xs text-slate-300">Management Fee (${n(p.management_fee_percent)}%)</span><span class="text-xs font-semibold">${formatRupiah(p.management_fee_value)}</span></div>
+       <div class="flex justify-between gap-4 py-2 border-b border-slate-700"><span class="text-xs text-slate-300">Total Exc. PPN</span><span class="text-xs font-semibold">${formatRupiah(p.rounded_before_tax)}</span></div>
+       <div class="flex justify-between gap-4 py-2 border-b border-slate-700"><span class="text-xs text-slate-300">PPN</span><span class="text-xs font-semibold">${formatRupiah(ppn)}</span></div>
+       <div class="flex justify-between gap-4 pt-3"><span class="text-sm font-bold">Total Inc. PPN</span><span class="text-base font-bold">${formatRupiah(p.total_after_tax)}</span></div>
+     </div>
+   </div>
+
+   <div>
+     <div class="mb-3"><h4 class="font-bold text-sm text-slate-900">Detail Komponen</h4><p class="text-[11px] text-slate-500 mt-1">Buka bagian yang diperlukan untuk melihat rincian. Detail lainnya tetap tertutup agar tampilan tidak bulky.</p></div>
+     <div class="space-y-2">
+       <details class="border rounded-xl bg-white"><summary class="cursor-pointer select-none px-4 py-3 flex items-center justify-between gap-4"><span class="font-bold text-xs text-slate-700">Manpower</span><span class="text-xs font-semibold text-slate-600">${formatRupiah(p.cost_manpower)}</span></summary><div class="border-t p-3 space-y-3 bg-slate-50">${mpDetail}</div></details>
+       ${['uniform','machinery','chemicals','consumables','equipment','additional_cost'].map(detailSection).join('')}
+     </div>
+   </div>`;
  document.getElementById('detailModal').classList.remove('hidden')
 }
 function closeModal(){document.getElementById('detailModal').classList.add('hidden')}
@@ -641,7 +982,7 @@ function closeModal(){document.getElementById('detailModal').classList.add('hidd
 function normalizedForExport(m){const c=manpowerCalc(m);return c}
 function exportAllProjectsExcel(){
  if(!projectsData.length){alert('Tidak ada data project untuk diekspor.');return}if(typeof XLSX==='undefined'){alert('Library Excel belum tersedia.');return}
- const data=projectsData.map(p=>({'ID Project':p.project_id,'Nama Client':p.client_name,'Lokasi':p.client_location||'-','Area':p.project_area||'-','Layanan / Service':p.project_title||'-','TOP (Hari)':p.top_days,'Cost Manpower (Rp)':p.cost_manpower||0,'Cost Mesin (Rp)':p.cost_machinery||0,'Cost Consumable (Rp)':p.cost_consumable||0,'Cost Chemical (Rp)':p.cost_chemical||0,'Total Cost Project (Rp)':p.cost_project||0,'Mgmt Fee (%)':p.management_fee_percent||0,'Mgmt Fee (Rp)':p.management_fee_value||0,'Total Before Tax (Rounded)':p.rounded_before_tax||0,'Total Inc. PPN 11% (Rp)':p.total_after_tax||0}));
+ const data=projectsData.map(p=>({'ID Project':p.project_id,'Nama Client':p.client_name,'Lokasi':p.client_location||'-','Area':p.project_area||'-','Layanan / Service':p.project_title||'-','Manpower':getProjectManpowerQty(p),'TOP (Hari)':p.top_days,'Cost Manpower (Rp)':p.cost_manpower||0,'Cost Mesin (Rp)':p.cost_machinery||0,'Cost Consumable (Rp)':p.cost_consumable||0,'Cost Chemical (Rp)':p.cost_chemical||0,'Total Cost Project (Rp)':p.cost_project||0,'Mgmt Fee (%)':p.management_fee_percent||0,'Mgmt Fee (Rp)':p.management_fee_value||0,'Total Before Tax (Rounded)':p.rounded_before_tax||0,'Total Inc. PPN 11% (Rp)':p.total_after_tax||0}));
  const wb=XLSX.utils.book_new(),ws=XLSX.utils.json_to_sheet(data);XLSX.utils.book_append_sheet(wb,ws,'Daftar RAB Project');XLSX.writeFile(wb,'Daftar_RAB_Project_V5_2.xlsx')
 }
 function exportSingleProjectExcel(id){
@@ -840,72 +1181,110 @@ async function exportSingleProjectPDF(id) {
                 }
 
                 const x = margin;
+                // Detailed manpower columns: Component | Reference/Mode | Qty | Amount/Person | Total/Month
                 const col = [
                     x,
-                    x + 63,
-                    x + 92,
-                    x + 125,
+                    x + 67,
+                    x + 105,
+                    x + 124,
+                    x + 157,
                     margin + contentWidth
                 ];
 
-                pdf.setFillColor(...LIGHT);
-                pdf.setDrawColor(...BORDER);
-                pdf.rect(x, y, contentWidth, 7, 'FD');
+                const drawDetailHeader = () => {
+                    pdf.setFillColor(...LIGHT);
+                    pdf.setDrawColor(...BORDER);
+                    pdf.rect(x, y, contentWidth, 7, 'FD');
+                    pdf.setTextColor(...TEXT);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(6.5);
+                    pdf.text('Komponen Salary & Benefit', col[0] + 2, y + 4.5);
+                    pdf.text('Acuan / Mode', col[1] + 2, y + 4.5);
+                    pdf.text('QTY', col[2] + 2, y + 4.5);
+                    pdf.text('Amount / Person', col[3] + 2, y + 4.5);
+                    pdf.text('Total / Month', col[5] - 2, y + 4.5, { align: 'right' });
+                    y += 7;
+                };
 
-                pdf.setTextColor(...TEXT);
-                pdf.setFont('helvetica', 'bold');
-                pdf.setFontSize(7);
-                pdf.text('Jabatan / Role', col[0] + 2, y + 4.5);
-                pdf.text('QTY', col[1] + 2, y + 4.5);
-                pdf.text('Basic Salary', col[2] + 2, y + 4.5);
-                pdf.text('Uang Makan', col[3] + 2, y + 4.5);
-                pdf.text('Total / Bln', col[4] - 2, y + 4.5, { align: 'right' });
+                const ensureManpowerSpace = (need, continuationTitle = false) => {
+                    if (y + need > pageHeight - margin) {
+                        pdf.addPage();
+                        y = margin;
+                        drawHeader(true);
+                        sectionTitle(continuationTitle ? 'I. MANPOWER COMPONENT - LANJUTAN' : 'I. MANPOWER COMPONENT');
+                        drawDetailHeader();
+                        return true;
+                    }
+                    return false;
+                };
 
-                y += 7;
+                drawDetailHeader();
 
                 mpItems.forEach((raw, index) => {
                     const m = manpowerCalc(raw);
-                    const rowH = 9;
+                    const roleBandH = 8;
 
-                    addPageIfNeeded(rowH + 2);
+                    ensureManpowerSpace(roleBandH + 13 * 7 + 10, true);
 
-                    pdf.setFont('helvetica', index === 0 ? 'bold' : 'normal');
-                    pdf.setFontSize(6.8);
-                    pdf.setTextColor(...TEXT);
-
-                    pdf.text(safe(m.role), col[0] + 2, y + 5);
-                    pdf.text(`${m.qty} org`, col[1] + 2, y + 5);
-                    pdf.text(money(m.basic_salary), col[2] + 2, y + 5);
-                    pdf.text(money(m.uang_makan), col[3] + 2, y + 5);
-
-                    pdf.setFont('helvetica', 'bold');
-                    pdf.text(
-                        money(m.subtotalTotal),
-                        col[4] - 2,
-                        y + 5,
-                        { align: 'right' }
-                    );
-
+                    // Role / position band
+                    pdf.setFillColor(231, 238, 252);
                     pdf.setDrawColor(...BORDER);
-                    pdf.line(x, y + rowH, x + contentWidth, y + rowH);
-                    y += rowH;
+                    pdf.rect(x, y, contentWidth, roleBandH, 'FD');
+                    pdf.setTextColor(...DARK);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(7);
+                    pdf.text(`${index + 1}. ${safe(m.role)}`, x + 2, y + 5.2);
+                    pdf.text(`${m.qty} person`, x + contentWidth - 2, y + 5.2, { align: 'right' });
+                    y += roleBandH;
 
-                    // Custom salary & benefit components
-                    if (m.custom_components.length) {
-                        m.custom_components.forEach(cc => {
-                            addPageIfNeeded(8);
-                            pdf.setFont('helvetica', 'normal');
-                            pdf.setFontSize(6.4);
-                            pdf.setTextColor(...MUTED);
-                            pdf.text('  + ' + safe(cc.name), col[0] + 4, y + 4.5);
-                            pdf.text('Per Person', col[1] + 2, y + 4.5);
-                            pdf.text(money(cc.amount), col[2] + 2, y + 4.5);
-                            pdf.text(money(cc.amount * m.qty), col[4] - 2, y + 4.5, { align: 'right' });
-                            pdf.setDrawColor(...BORDER);
-                            pdf.line(x, y + 8, x + contentWidth, y + 8);
-                            y += 8;
-                        });
-                    }
+                    const detailRows = [
+                        { label: 'BASIC SALARY', ref: 'Manual', amount: m.basic_salary },
+                        { label: 'TUNJANGAN', ref: 'Manual', amount: m.tunjangan },
+                        { label: 'UANG MAKAN', ref: 'Manual', amount: m.uang_makan },
+                        ...Object.keys(SALARY_RULES).map(k => ({
+                            label: SALARY_RULES[k].label,
+                            ref: `${SALARY_RULES[k].ref} / ${m.salary_overrides[k] === null ? 'AUTO' : 'MANUAL'}`,
+                            amount: m[k]
+                        })),
+                        { label: 'UNIFORM & SHOES', ref: 'Manual', amount: m.uniform },
+                        ...m.custom_components.map(cc => ({ label: cc.name, ref: 'Custom / Manual', amount: cc.amount }))
+                    ];
+
+                    detailRows.forEach((r) => {
+                        ensureManpowerSpace(7, true);
+                        const rowH = 7;
+                        const labelLines = pdf.splitTextToSize(safe(r.label), 62);
+                        const refLines = pdf.splitTextToSize(safe(r.ref), 34);
+                        const dynamicH = Math.max(rowH, Math.max(labelLines.length, refLines.length) * 3.1 + 2.5);
+                        ensureManpowerSpace(dynamicH, true);
+
+                        pdf.setFont('helvetica', 'normal');
+                        pdf.setFontSize(6.3);
+                        pdf.setTextColor(...TEXT);
+                        pdf.text(labelLines, col[0] + 2, y + 4.2);
+                        pdf.setTextColor(...MUTED);
+                        pdf.text(refLines, col[1] + 2, y + 4.2);
+                        pdf.setTextColor(...TEXT);
+                        pdf.text(String(m.qty), col[2] + 2, y + 4.2);
+                        pdf.text(money(r.amount), col[3] + 2, y + 4.2);
+                        pdf.setFont('helvetica', 'bold');
+                        pdf.text(money(r.amount * m.qty), col[5] - 2, y + 4.2, { align: 'right' });
+                        pdf.setDrawColor(...BORDER);
+                        pdf.line(x, y + dynamicH, x + contentWidth, y + dynamicH);
+                        y += dynamicH;
+                    });
+
+                    // Per-role subtotal
+                    ensureManpowerSpace(8, true);
+                    pdf.setFillColor(248, 250, 252);
+                    pdf.rect(x, y, contentWidth, 8, 'F');
+                    pdf.setTextColor(...DARK);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(6.6);
+                    pdf.text(`SUB TOTAL ${safe(m.role)}`, x + 2, y + 5.1);
+                    pdf.text(money(m.subtotalPerPerson) + ' / person', col[3] + 2, y + 5.1);
+                    pdf.text(money(m.subtotalTotal), col[5] - 2, y + 5.1, { align: 'right' });
+                    y += 10;
                 });
 
                 const totalMp = mpItems.reduce((sum, item) => sum + manpowerCalc(item).subtotalTotal, 0);
