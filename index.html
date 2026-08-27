@@ -1080,16 +1080,26 @@ function closeModal(){document.getElementById('detailModal').classList.add('hidd
 function normalizedForExport(m){const c=manpowerCalc(m);return c}
 function exportAllProjectsExcel(){
  if(!projectsData.length){alert('Tidak ada data project untuk diekspor.');return}if(typeof XLSX==='undefined'){alert('Library Excel belum tersedia.');return}
- const data=projectsData.map(p=>({'ID Project':p.project_id,'Nama Client':p.client_name,'Lokasi':p.client_location||'-','Area':p.project_area||'-','Layanan / Service':p.project_title||'-','Manpower':getProjectManpowerQty(p),'TOP (Hari)':p.top_days,'Cost Manpower (Rp)':p.cost_manpower||0,'Cost Mesin (Rp)':p.cost_machinery||0,'Cost Consumable (Rp)':p.cost_consumable||0,'Cost Chemical (Rp)':p.cost_chemical||0,'Total Cost Project (Rp)':p.cost_project||0,'Mgmt Fee (%)':p.management_fee_percent||0,'Mgmt Fee (Rp)':p.management_fee_value||0,'Total Before Tax (Rounded)':p.rounded_before_tax||0,'Basis PPN':getPpnBasisLabel(p.details_json?.project_meta?.ppn_basis||'total_before_tax',Array.isArray(p.details_json?.project_meta?.ppn_components)?p.details_json.project_meta.ppn_components:[]),'Tarif PPN (%)':n(p.details_json?.project_meta?.ppn_rate??11),'DPP PPN (Rp)':n(p.details_json?.project_meta?.ppn_base??p.rounded_before_tax),'PPN (Rp)':n(p.details_json?.project_meta?.ppn_value??Math.max(0,n(p.total_after_tax)-n(p.rounded_before_tax))),'Total Inc. PPN (Rp)':p.total_after_tax||0}));
+ const data=projectsData.map(p=>({'Official Project Code':p.official_project_code||'Belum dibuat','Nama Client':p.client_name,'Lokasi':p.client_location||'-','Area':p.project_area||'-','Layanan / Service':p.project_title||'-','Manpower':getProjectManpowerQty(p),'TOP (Hari)':p.top_days,'Cost Manpower (Rp)':p.cost_manpower||0,'Cost Mesin (Rp)':p.cost_machinery||0,'Cost Consumable (Rp)':p.cost_consumable||0,'Cost Chemical (Rp)':p.cost_chemical||0,'Total Cost Project (Rp)':p.cost_project||0,'Mgmt Fee (%)':p.management_fee_percent||0,'Mgmt Fee (Rp)':p.management_fee_value||0,'Total Before Tax (Rounded)':p.rounded_before_tax||0,'Basis PPN':getPpnBasisLabel(p.details_json?.project_meta?.ppn_basis||'total_before_tax',Array.isArray(p.details_json?.project_meta?.ppn_components)?p.details_json.project_meta.ppn_components:[]),'Tarif PPN (%)':n(p.details_json?.project_meta?.ppn_rate??11),'DPP PPN (Rp)':n(p.details_json?.project_meta?.ppn_base??p.rounded_before_tax),'PPN (Rp)':n(p.details_json?.project_meta?.ppn_value??Math.max(0,n(p.total_after_tax)-n(p.rounded_before_tax))),'Total Inc. PPN (Rp)':p.total_after_tax||0}));
  const wb=XLSX.utils.book_new(),ws=XLSX.utils.json_to_sheet(data);XLSX.utils.book_append_sheet(wb,ws,'Daftar RAB Project');XLSX.writeFile(wb,'Daftar_RAB_Project_V5_2.xlsx')
 }
 function exportSingleProjectExcel(id){
- const p=projectsData.find(x=>x.project_id===id);if(!p||!window.XLSX){alert('Data/library tidak tersedia.');return}const d=p.details_json||{},mp=Array.isArray(d.manpower)?d.manpower:(d.manpower?[d.manpower]:[]);
- const rows=[['PT NUSANTARA INTI SOLUSINDO'],['RINCIAN ANALISA RAB PROJECT'],[],['ID PROJECT',p.project_id,'CLIENT',p.client_name],['LOKASI',p.client_location||'-','AREA',p.project_area||'-'],['SERVICE / PROJECT',p.project_title||'-','TOP',(p.top_days||'-')+' Hari'],[],['I. MANPOWER'],['Role','QTY','Komponen','Mode','Amount/Person','Total/Month']];
+ const p=projectsData.find(x=>x.project_id===id);if(!p||!window.XLSX){alert('Data/library tidak tersedia.');return}
+ const d=p.details_json||{},mp=Array.isArray(d.manpower)?d.manpower:(d.manpower?[d.manpower]:[]),officialCode=p.official_project_code||'Belum dibuat';
+ const rows=[['PT NUSANTARA INTI SOLUSINDO'],['RINCIAN ANALISA RAB PROJECT'],[],['OFFICIAL PROJECT CODE',officialCode,'CLIENT',p.client_name],['LOKASI',p.client_location||'-','AREA',p.project_area||'-'],['SERVICE / PROJECT',p.project_title||'-','TOP',(p.top_days||'-')+' Hari'],[],['I. MANPOWER'],['Role','QTY','Komponen','Mode','Amount/Person','Total/Month']];
  mp.forEach(m=>{const c=manpowerCalc(m);rows.push([c.role,c.qty,'BASIC SALARY','MANUAL',c.basic_salary,c.basic_salary*c.qty]);rows.push(['',c.qty,'TUNJANGAN KEHADIRAN','MANUAL',c.tunjangan,c.tunjangan*c.qty]);rows.push(['',c.qty,'UANG MAKAN','MANUAL',c.uang_makan,c.uang_makan*c.qty]);Object.keys(SALARY_RULES).forEach(k=>rows.push(['',c.qty,SALARY_RULES[k].label,c.salary_overrides[k]===null?'AUTO':'MANUAL',c[k],c[k]*c.qty]));rows.push(['',c.qty,'UNIFORM & SHOES','MANUAL',c.uniform,c.uniform*c.qty]);c.custom_components.forEach(x=>rows.push(['',c.qty,x.name,'MANUAL',x.amount,x.amount*c.qty]));rows.push(['','',`SUB TOTAL ${c.role}`,'',c.subtotalPerPerson,c.subtotalTotal])});
- for(const [title,key] of [['II. UNIFORM','uniform'],['III. MACHINERY','machinery'],['IV. CHEMICALS','chemicals'],['V. CONSUMABLES','consumables'],['VI. EQUIPMENT','equipment'],['VII. ADDITIONAL COST','additional_cost']]){rows.push([], [title],['Item','Volume','Unit','Depresiasi','Harga/Unit','Total/Month']);(d[key]||[]).forEach(x=>rows.push([x.name,x.vol,x.unit,x.depreciation_months,x.price,x.total_monthly]))}
+ rows.push(['','','TOTAL MANPOWER COST','','',n(p.cost_manpower)]);
+ for(const [title,key] of [['II. UNIFORM','uniform'],['III. MACHINERY','machinery'],['IV. CHEMICALS','chemicals'],['V. CONSUMABLES','consumables'],['VI. EQUIPMENT','equipment'],['VII. ADDITIONAL COST','additional_cost']]){
+   const items=Array.isArray(d[key])?d[key]:[];
+   const sectionTotal=items.reduce((s,x)=>s+n(x.total_monthly),0);
+   rows.push([], [title],['Item','Volume','Unit','Depresiasi','Harga/Unit','Total/Month']);
+   items.forEach(x=>rows.push([x.name,x.vol,x.unit,x.depreciation_months,x.price,x.total_monthly]));
+   rows.push([`TOTAL ${title.replace(/^\w+\.\s*/, '')}`,'','','','',sectionTotal]);
+ }
  rows.push([],['COST SUMMARY'],['Cost Manpower',p.cost_manpower],['Cost Mesin',p.cost_machinery],['Cost Chemicals',p.cost_chemical],['Cost Consumables',p.cost_consumable],['Cost Uniform',(d.uniform||[]).reduce((s,x)=>s+n(x.total_monthly),0)],['Cost Equipment',(d.equipment||[]).reduce((s,x)=>s+n(x.total_monthly),0)],['Additional Cost',(d.additional_cost||[]).reduce((s,x)=>s+n(x.total_monthly),0)],['Management Fee',p.management_fee_value],['TOTAL BEFORE TAX (ROUNDED)',p.rounded_before_tax],['BASIS PPN',getPpnBasisLabel(d.project_meta?.ppn_basis||'total_before_tax',Array.isArray(d.project_meta?.ppn_components)?d.project_meta.ppn_components:[])],['DPP PPN',n(d.project_meta?.ppn_base??p.rounded_before_tax)],['PPN (%)',n(d.project_meta?.ppn_rate??11)],['PPN',n(d.project_meta?.ppn_value??Math.max(0,n(p.total_after_tax)-n(p.rounded_before_tax)))],['TOTAL INC. PPN',p.total_after_tax]);
- const wb=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=[{wch:30},{wch:14},{wch:34},{wch:14},{wch:18},{wch:20}];XLSX.utils.book_append_sheet(wb,ws,'RAB Detail');XLSX.writeFile(wb,`RAB_V5_2_${p.project_id}.xlsx`)
+ const wb=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=[{wch:30},{wch:14},{wch:34},{wch:14},{wch:18},{wch:20}];XLSX.utils.book_append_sheet(wb,ws,'RAB Detail');
+ const safeCode=String(officialCode==='Belum dibuat'?p.project_id:officialCode).replace(/[^a-zA-Z0-9_-]/g,'_');
+ XLSX.writeFile(wb,`RAB_${safeCode}.xlsx`)
 }
 async function exportSingleProjectPDF(id) {
             const prj = projectsData.find(p => p.project_id === id);
@@ -1233,10 +1243,12 @@ async function exportSingleProjectPDF(id) {
                 pdf.setFontSize(7.5);
 
                 const leftX = margin + 4;
+                const leftValueX = margin + 50; // ruang lebih lebar untuk label Official Project Code
                 const rightX = margin + contentWidth / 2 + 2;
+                const rightValueX = rightX + 25;
 
                 const rowsLeft = [
-                    ['ID Project', safe(prj.project_id)],
+                    ['Official Project Code', safe(prj.official_project_code || 'Belum dibuat')],
                     ['Client', safe(prj.client_name)],
                     ['Lokasi / Area', `${safe(prj.client_location)} / ${safe(prj.project_area)}`]
                 ];
@@ -1252,7 +1264,7 @@ async function exportSingleProjectPDF(id) {
                     pdf.setFont('helvetica', 'bold');
                     pdf.text(r[0] + ':', leftX, yy);
                     pdf.setFont('helvetica', 'normal');
-                    pdf.text(r[1], leftX + 25, yy);
+                    pdf.text(r[1], leftValueX, yy);
                 });
 
                 rowsRight.forEach((r, i) => {
@@ -1260,7 +1272,7 @@ async function exportSingleProjectPDF(id) {
                     pdf.setFont('helvetica', 'bold');
                     pdf.text(r[0] + ':', rightX, yy);
                     pdf.setFont('helvetica', 'normal');
-                    pdf.text(r[1], rightX + 25, yy);
+                    pdf.text(r[1], rightValueX, yy);
                 });
 
                 y += boxH + 5;
@@ -1437,7 +1449,6 @@ async function exportSingleProjectPDF(id) {
                     pdf.setTextColor(...MUTED);
                     pdf.text('Tidak ada item', x + 2, y + 5);
                     y += 9;
-                    return;
                 }
 
                 items.forEach(item => {
@@ -1507,7 +1518,16 @@ async function exportSingleProjectPDF(id) {
                     y += rowH;
                 });
 
-                y += 3;
+                const sectionTotal = items.reduce((sum, item) => sum + n(item?.total_monthly), 0);
+                addPageIfNeeded(9);
+                pdf.setFillColor(245, 190, 50);
+                pdf.rect(x, y, contentWidth, 8, 'F');
+                pdf.setTextColor(...DARK);
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(7);
+                pdf.text('TOTAL ' + title.replace(/^\w+\.\s*/, ''), x + 2, y + 5.2);
+                pdf.text(money(sectionTotal), x + contentWidth - 2, y + 5.2, { align: 'right' });
+                y += 12;
             }
 
             function drawSummary() {
@@ -1574,7 +1594,7 @@ async function exportSingleProjectPDF(id) {
                     pdf.setFontSize(6.5);
                     pdf.setTextColor(...MUTED);
                     pdf.text(
-                        `RAB ${safe(prj.project_id)}  |  Halaman ${p} / ${totalPages}`,
+                        `RAB ${safe(prj.official_project_code || 'Belum dibuat')}  |  Halaman ${p} / ${totalPages}`,
                         pageWidth - margin,
                         pageHeight - 5,
                         { align: 'right' }
@@ -1595,7 +1615,7 @@ async function exportSingleProjectPDF(id) {
                 drawSummary();
                 addPageNumbers();
 
-                const safeProject = safe(prj.project_id).replace(/[^a-zA-Z0-9_-]/g, '_');
+                const safeProject = safe(prj.official_project_code || prj.project_id).replace(/[^a-zA-Z0-9_-]/g, '_');
                 const safeClient = safe(prj.client_name, 'Project').replace(/[^a-zA-Z0-9_-]/g, '_');
 
                 pdf.save(`RAB_${safeProject}_${safeClient}.pdf`);
