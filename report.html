@@ -681,22 +681,40 @@ function renderDetail(key){
  document.getElementById('detailFoot').innerHTML=`<tr class="bg-slate-100 font-bold"><td class="compact-cell">TOTAL ${detailLabels[key].toUpperCase()}</td><td class="compact-cell text-center">${qty}</td><td></td><td class="compact-cell text-right">${money(total)}</td></tr>`;
 }
 
-function exportExcel(){
+async function getOfficialProjectCodeMap(projects=[]){
+ const map={};
+ if(!supabaseClient||!projects.length)return map;
+ const ids=unique(projects.map(p=>p?.project_id).filter(Boolean));
+ if(!ids.length)return map;
+ try{
+  const {data,error}=await supabaseClient.from('project_master').select('rab_project_id,project_code,status').in('rab_project_id',ids).eq('status','ACTIVE');
+  if(error)throw error;
+  (data||[]).forEach(x=>{if(x?.rab_project_id&&x?.project_code)map[x.rab_project_id]=x.project_code});
+ }catch(err){console.warn('Official Project Code lookup saat export:',err)}
+ return map;
+}
+
+async function exportExcel(){
  if(!currentReport){alert('Tampilkan laporan terlebih dahulu.');return}
  if(!window.XLSX){alert('Library Excel belum tersedia.');return}
  const r=currentReport,t=r.totals,wb=XLSX.utils.book_new();
+ const codeMap=await getOfficialProjectCodeMap(r.projects);
+ const officialCodes=unique(r.projects.map(p=>codeMap[p.project_id]).filter(Boolean));
  const meta=[
   ['RAB REPORT'],['Client',document.getElementById('clientFilter').value==='__ALL__'?'SEMUA CLIENT / PERUSAHAAN':document.getElementById('clientFilter').value],
   ['Area',selectedValues('area-check').join(', ')],['Service',selectedValues('service-check').join(', ')],
-  ['Jumlah Project',r.projects.length],['Total Manpower',t.manpowerQty],[],
+  ['Jumlah Project',r.projects.length],['Official Project Code',officialCodes.length?officialCodes.join(', '):'Belum dibuat'],['Total Manpower',t.manpowerQty],[],
   ['SUMMARY COST','TOTAL (Rp)'],['Manpower',t.manpower],['Uniform',t.uniform],['Machinery',t.machinery],
   ['Chemicals',t.chemicals],['Consumables',t.consumables],['Equipment',t.equipment],['Additional Cost',t.additional],
   ['Total Cost Project',t.totalCost],['Management Fee',t.managementFee],['Total Exc. PPN',t.totalExc],['Total Inc. PPN',t.totalInc]
  ];
  const wsSummary=XLSX.utils.aoa_to_sheet(meta);wsSummary['!cols']=[{wch:28},{wch:55}];XLSX.utils.book_append_sheet(wb,wsSummary,'Summary');
+ const projectList=[['Official Project Code','Client','Area','Service'],...r.projects.map(p=>[codeMap[p.project_id]||'Belum dibuat',p.client_name||'-',p.project_area||'-',p.project_title||'-'])];
+ const wsProjects=XLSX.utils.aoa_to_sheet(projectList);wsProjects['!cols']=[{wch:28},{wch:32},{wch:24},{wch:30}];XLSX.utils.book_append_sheet(wb,wsProjects,'Project List');
 
  const mp=[['Area','Service','Role','Komponen Salary & Benefit','Qty','Acuan','Amount / Person','Total / Month'],
- ...(r.salaryRows||[]).map(x=>[x.area,x.service,x.role,x.component,x.qty,x.acuan,x.amount,x.total])];
+ ...(r.salaryRows||[]).map(x=>[x.area,x.service,x.role,x.component,x.qty,x.acuan,x.amount,x.total]),
+  ['TOTAL MANPOWER','','','','','','',t.manpower]];
  const wsMp=XLSX.utils.aoa_to_sheet(mp);
  wsMp['!cols']=[{wch:22},{wch:28},{wch:24},{wch:34},{wch:10},{wch:18},{wch:20},{wch:20}];
  XLSX.utils.book_append_sheet(wb,wsMp,'Manpower Detail');
@@ -711,17 +729,21 @@ function exportExcel(){
  const wsPnl=XLSX.utils.aoa_to_sheet(pnlData);wsPnl['!cols']=[{wch:34},{wch:20},{wch:22}];XLSX.utils.book_append_sheet(wb,wsPnl,'P&L Design RAB');
 
  Object.entries(detailLabels).forEach(([k,label])=>{
-  const data=[['Item','Qty','Unit','Total Cost (Rp)'],...(r.detail[k]||[]).map(x=>[x.name,x.qty,x.unit,x.total])];
+  const detailRows=r.detail[k]||[],detailTotal=detailRows.reduce((s,x)=>s+n(x.total),0);
+  const data=[['Item','Qty','Unit','Total Cost (Rp)'],...detailRows.map(x=>[x.name,x.qty,x.unit,x.total]),[`TOTAL ${label.toUpperCase()}`,'','',detailTotal]];
   const ws=XLSX.utils.aoa_to_sheet(data);ws['!cols']=[{wch:35},{wch:12},{wch:12},{wch:20}];
   XLSX.utils.book_append_sheet(wb,ws,label.slice(0,31));
  });
  XLSX.writeFile(wb,'RAB_Report.xlsx');
 }
 
-function exportPDF(){
+async function exportPDF(){
  if(!currentReport){alert('Tampilkan laporan terlebih dahulu.');return}
  const JsPDF=window.jspdf?.jsPDF;if(!JsPDF){alert('Library PDF belum tersedia.');return}
  const pdf=new JsPDF({orientation:'portrait',unit:'mm',format:'a4'}),r=currentReport,t=r.totals;
+ const codeMap=await getOfficialProjectCodeMap(r.projects);
+ const officialCodes=unique(r.projects.map(p=>codeMap[p.project_id]).filter(Boolean));
+ const officialCodeText=officialCodes.length?officialCodes.join(', '):'Belum dibuat';
  const W=pdf.internal.pageSize.getWidth(),H=pdf.internal.pageSize.getHeight(),M=12,CONTENT=W-2*M;
  const clientValue=document.getElementById('clientFilter').value;
  const client=clientValue==='__ALL__'?'SEMUA CLIENT / PERUSAHAAN':clientValue;
@@ -752,17 +774,18 @@ function exportPDF(){
   if(y+h>H-14)newPage();
  }
  function infoBox(){
-  const boxY=y,boxH=39;
+  const boxY=y,boxH=49;
   pdf.setFillColor(248,250,252);pdf.setDrawColor(203,213,225);pdf.roundedRect(M,boxY,CONTENT,boxH,2,2,'FD');
-  const lx=M+4,lval=M+31,rx=M+100,rval=M+127;
+  const lx=M+4,lval=M+38,rx=M+100,rval=M+127;
   pdf.setFontSize(7.3);pdf.setTextColor(30,41,59);
   const rows=[
    ['Client:',fit(client,34),'Service:',fit(services.join(', '),30)],
    ['Area:',fit(areas.join(', '),34),'Project:',String(r.projects.length)],
-   ['Manpower:',`${t.manpowerQty} person`,'Total Cost:',f(t.totalCost)]
+   ['Kode Project:',fit(officialCodeText,34),'Manpower:',`${t.manpowerQty} person`],
+   ['Total Cost:',f(t.totalCost),'','']
   ];
   rows.forEach((row,i)=>{
-   const yy=boxY+9+i*10;
+   const yy=boxY+8+i*9.5;
    pdf.setFont('helvetica','bold');pdf.text(row[0],lx,yy);pdf.text(row[2],rx,yy);
    pdf.setFont('helvetica','normal');pdf.text(row[1],lval,yy);pdf.text(row[3],rval,yy);
   });
@@ -817,6 +840,12 @@ function exportPDF(){
 
  pageHeader();
  infoBox();
+
+ sectionBar('Official Project Code');
+ const pcw=[48,48,44,45];
+ tableHeader(['Kode Project','Client','Area','Service'],pcw);
+ r.projects.forEach(p=>row([codeMap[p.project_id]||'Belum dibuat',p.client_name||'-',p.project_area||'-',p.project_title||'-'],pcw,{fontSize:6.2}));
+ y+=4;
 
  // Profit & Loss Design RAB
  const pnlPeriod=getPnlPeriod(),pnlMult=pnlPeriod.months,pnlRevenue=t.totalExc,pnlCogs=t.totalCost,pnlGp=pnlRevenue-pnlCogs,pnlGm=pnlRevenue?pnlGp/pnlRevenue*100:0;
