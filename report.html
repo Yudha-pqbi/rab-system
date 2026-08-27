@@ -250,8 +250,34 @@ table thead {
 
     <section class="bg-white rounded-2xl border shadow-sm overflow-hidden">
       <div class="px-4 py-3 border-b bg-slate-50">
-        <h3 class="section-title font-bold">Detail Manpower & Salary Benefit</h3>
-        <p class="text-xs text-slate-500 mt-1">Setiap komponen salary & benefit ditampilkan per role, termasuk custom benefit secara rinci.</p>
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h3 class="section-title font-bold">Detail Manpower & Salary Benefit</h3>
+            <p class="text-xs text-slate-500 mt-1">Setiap komponen salary & benefit ditampilkan per role, termasuk custom benefit secara rinci.</p>
+          </div>
+          <div class="flex flex-wrap items-end gap-2 no-print">
+            <div>
+              <label class="block label-xs font-bold uppercase text-slate-400 mb-1">Area</label>
+              <select id="salaryAreaFilter" onchange="onSalaryAreaFilterChange()" class="h-9 min-w-40 border border-slate-300 rounded-lg px-3 body-sm bg-white">
+                <option value="__ALL__">Semua Area</option>
+              </select>
+            </div>
+            <div>
+              <label class="block label-xs font-bold uppercase text-slate-400 mb-1">Service</label>
+              <select id="salaryServiceFilter" onchange="onSalaryServiceFilterChange()" class="h-9 min-w-44 border border-slate-300 rounded-lg px-3 body-sm bg-white">
+                <option value="__ALL__">Semua Service</option>
+              </select>
+            </div>
+            <div>
+              <label class="block label-xs font-bold uppercase text-slate-400 mb-1">Role</label>
+              <select id="salaryRoleFilter" onchange="renderSalaryDetail()" class="h-9 min-w-40 border border-slate-300 rounded-lg px-3 body-sm bg-white">
+                <option value="__ALL__">Semua Role</option>
+              </select>
+            </div>
+            <button type="button" onclick="resetSalaryDetailFilters()" class="h-9 px-3 rounded-lg border border-slate-300 bg-white text-slate-600 body-sm font-semibold hover:bg-slate-100">Reset Filter</button>
+          </div>
+        </div>
+        <div id="salaryDetailFilterInfo" class="text-[10px] text-slate-400 mt-2">Menampilkan seluruh detail salary benefit.</div>
       </div>
       <div class="overflow-x-auto max-h-[620px]">
         <table class="min-w-[1150px] w-full table-sm">
@@ -574,7 +600,55 @@ function renderReport(){
  document.getElementById('manpowerBody').innerHTML=r.mpRows.length?r.mpRows.map(x=>`<tr class="border-b"><td class="compact-cell">${esc(x.role)}</td><td class="compact-cell text-center">${x.qty}</td><td class="compact-cell text-right">${money(x.total)}</td></tr>`).join(''):'<tr><td colspan="3" class="p-6 text-center text-slate-400">Tidak ada data manpower.</td></tr>';
  document.getElementById('manpowerFoot').innerHTML=`<tr class="bg-slate-100 font-bold"><td class="compact-cell">TOTAL</td><td class="compact-cell text-center">${t.manpowerQty}</td><td class="compact-cell text-right">${money(t.manpower)}</td></tr>`;
 
- const sal=r.salaryRows||[];
+ initSalaryDetailFilters();
+ renderSalaryDetail();
+
+ renderTabs();
+ renderDetail(activeDetail);
+}
+
+/* Detail Manpower & Salary Benefit local filters.
+   Scope: hanya tabel salary detail; tidak mengubah KPI, P&L, Summary Cost, PDF, atau Excel. */
+function fillSalaryFilterSelect(id,items,label,preferred='__ALL__'){
+ const el=document.getElementById(id);if(!el)return;
+ el.innerHTML=`<option value="__ALL__">Semua ${label}</option>`+items.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');
+ el.value=items.includes(preferred)?preferred:'__ALL__';
+}
+function initSalaryDetailFilters(){
+ if(!currentReport)return;
+ const rows=currentReport.salaryRows||[];
+ fillSalaryFilterSelect('salaryAreaFilter',unique(rows.map(x=>x.area)),'Area','__ALL__');
+ fillSalaryFilterSelect('salaryServiceFilter',unique(rows.map(x=>x.service)),'Service','__ALL__');
+ fillSalaryFilterSelect('salaryRoleFilter',unique(rows.map(x=>x.role)),'Role','__ALL__');
+}
+function onSalaryAreaFilterChange(){
+ if(!currentReport)return;
+ const rows=currentReport.salaryRows||[],area=document.getElementById('salaryAreaFilter')?.value||'__ALL__';
+ const scoped=area==='__ALL__'?rows:rows.filter(x=>x.area===area);
+ fillSalaryFilterSelect('salaryServiceFilter',unique(scoped.map(x=>x.service)),'Service','__ALL__');
+ fillSalaryFilterSelect('salaryRoleFilter',unique(scoped.map(x=>x.role)),'Role','__ALL__');
+ renderSalaryDetail();
+}
+function onSalaryServiceFilterChange(){
+ if(!currentReport)return;
+ const rows=currentReport.salaryRows||[],area=document.getElementById('salaryAreaFilter')?.value||'__ALL__',service=document.getElementById('salaryServiceFilter')?.value||'__ALL__';
+ const scoped=rows.filter(x=>(area==='__ALL__'||x.area===area)&&(service==='__ALL__'||x.service===service));
+ fillSalaryFilterSelect('salaryRoleFilter',unique(scoped.map(x=>x.role)),'Role','__ALL__');
+ renderSalaryDetail();
+}
+function resetSalaryDetailFilters(){
+ initSalaryDetailFilters();renderSalaryDetail();
+}
+function getFilteredSalaryRows(){
+ if(!currentReport)return [];
+ const area=document.getElementById('salaryAreaFilter')?.value||'__ALL__';
+ const service=document.getElementById('salaryServiceFilter')?.value||'__ALL__';
+ const role=document.getElementById('salaryRoleFilter')?.value||'__ALL__';
+ return (currentReport.salaryRows||[]).filter(x=>(area==='__ALL__'||x.area===area)&&(service==='__ALL__'||x.service===service)&&(role==='__ALL__'||x.role===role));
+}
+function renderSalaryDetail(){
+ if(!currentReport)return;
+ const all=currentReport.salaryRows||[],sal=getFilteredSalaryRows();
  document.getElementById('salaryDetailBody').innerHTML=sal.length?sal.map((x,i)=>`<tr class="border-b ${i%2?'bg-slate-50/60':''}">
   <td class="compact-cell">${esc(x.area)}</td>
   <td class="compact-cell">${esc(x.service)}</td>
@@ -584,14 +658,14 @@ function renderReport(){
   <td class="compact-cell text-center text-slate-500">${esc(x.acuan)}</td>
   <td class="compact-cell text-right">${money(x.amount)}</td>
   <td class="compact-cell text-right font-semibold">${money(x.total)}</td>
- </tr>`).join(''):'<tr><td colspan="8" class="p-8 text-center text-slate-400">Tidak ada detail salary benefit.</td></tr>';
+ </tr>`).join(''):'<tr><td colspan="8" class="p-8 text-center text-slate-400">Tidak ada detail salary benefit untuk filter yang dipilih.</td></tr>';
+ const filteredTotal=sal.reduce((s,x)=>s+n(x.total),0);
  document.getElementById('salaryDetailFoot').innerHTML=`<tr class="bg-amber-100 font-bold">
-  <td colspan="7" class="compact-cell">TOTAL MANPOWER & SALARY BENEFIT</td>
-  <td class="compact-cell text-right">${money(t.manpower)}</td>
+  <td colspan="7" class="compact-cell">TOTAL MANPOWER & SALARY BENEFIT — HASIL FILTER</td>
+  <td class="compact-cell text-right">${money(filteredTotal)}</td>
  </tr>`;
-
- renderTabs();
- renderDetail(activeDetail);
+ const info=document.getElementById('salaryDetailFilterInfo');
+ if(info)info.textContent=`Menampilkan ${sal.length} dari ${all.length} baris detail salary benefit.`;
 }
 
 const detailLabels={machinery:'Machinery',consumables:'Consumables',uniform:'Uniform',chemicals:'Chemicals',equipment:'Equipment',additional_cost:'Additional Cost'};
