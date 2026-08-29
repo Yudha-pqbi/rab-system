@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- RAB V5.2.9.2 - SAVE FAILSAFE PATCH: frontend validation + visible save errors; database/resolver architecture unchanged -->
+<!-- RAB V5.2.9.4 - PPN OPTIONS: Basis PPN limited to Pilih Komponen / Tidak Dikenakan PPN; database/resolver unchanged -->
 <html lang="id">
 <head>
 <meta charset="UTF-8">
@@ -186,16 +186,13 @@ input:focus,select:focus{box-shadow:0 0 0 2px rgba(37,99,235,.18)}
         <div>
           <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">Basis PPN *</label>
           <select id="ppnBasis" required onchange="updatePpnControls();calculateOverallTotals()" class="w-full h-9 px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
-            <option value="total_before_tax" selected>Total Cost + Management Fee</option>
-            <option value="total_cost">Total Cost Saja</option>
-            <option value="management_fee">Management Fee Saja</option>
-            <option value="selected_components">Pilih Komponen</option>
+            <option value="selected_components" selected>Pilih Komponen</option>
             <option value="no_ppn">Tidak Dikenakan PPN</option>
           </select>
         </div>
         <div class="flex items-end">
           <div class="w-full text-xs text-slate-600 bg-white border rounded-lg px-3 py-2">
-            PPN dihitung berdasarkan <b id="ppnBasisLabel">Total Cost + Management Fee</b>.
+            PPN dihitung berdasarkan <b id="ppnBasisLabel">Pilih Komponen</b>.
           </div>
         </div>
       </div>
@@ -286,7 +283,7 @@ input:focus,select:focus{box-shadow:0 0 0 2px rgba(37,99,235,.18)}
     </div>
 
     <div class="bg-slate-900 text-white rounded-xl p-4">
-      <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-10 gap-3 text-xs">
+      <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-11 gap-3 text-xs">
         <div><span class="text-slate-400 block">Manpower</span><b id="sumMp">Rp 0</b></div>
         <div><span class="text-slate-400 block">Uniform</span><b id="sumUniform">Rp 0</b></div>
         <div><span class="text-slate-400 block">Mesin</span><b id="sumMac">Rp 0</b></div>
@@ -295,6 +292,7 @@ input:focus,select:focus{box-shadow:0 0 0 2px rgba(37,99,235,.18)}
         <div><span class="text-slate-400 block">Equipment</span><b id="sumEquipment">Rp 0</b></div>
         <div><span class="text-slate-400 block">Additional Cost</span><b id="sumAdditional">Rp 0</b></div>
         <div><span class="text-slate-400 block">Mgmt Fee</span><b id="sumFee">Rp 0</b></div>
+        <div><span class="text-slate-400 block">Exc. PPN</span><b id="sumExcPpn">Rp 0</b></div>
         <div><span class="text-slate-400 block">PPN</span><b id="sumPpn">Rp 0</b></div>
         <div><span class="text-slate-400 block">Inc. PPN</span><b id="sumGrand">Rp 0</b></div>
       </div>
@@ -657,7 +655,7 @@ function calculateOverallTotals(){
  const ppnValuePreview=document.getElementById('ppnValuePreview');if(ppnValuePreview)ppnValuePreview.textContent=formatRupiah(ppn);
 
  document.getElementById('statCostMp').textContent=formatRupiah(mp);document.getElementById('statCostMachinery').textContent=formatRupiah(mac);document.getElementById('statCostChemical').textContent=formatRupiah(chem);document.getElementById('statCostConsumable').textContent=formatRupiah(cons);document.getElementById('statTotalCost').textContent=formatRupiah(total);
- document.getElementById('sumMp').textContent=formatRupiah(mp);document.getElementById('sumUniform').textContent=formatRupiah(uniform);document.getElementById('sumMac').textContent=formatRupiah(mac);document.getElementById('sumChem').textContent=formatRupiah(chem);document.getElementById('sumCons').textContent=formatRupiah(cons);document.getElementById('sumEquipment').textContent=formatRupiah(equipment);document.getElementById('sumAdditional').textContent=formatRupiah(additional);document.getElementById('sumFee').textContent=formatRupiah(fee);const sumPpn=document.getElementById('sumPpn');if(sumPpn)sumPpn.textContent=formatRupiah(ppn);document.getElementById('sumGrand').textContent=formatRupiah(grand);
+ document.getElementById('sumMp').textContent=formatRupiah(mp);document.getElementById('sumUniform').textContent=formatRupiah(uniform);document.getElementById('sumMac').textContent=formatRupiah(mac);document.getElementById('sumChem').textContent=formatRupiah(chem);document.getElementById('sumCons').textContent=formatRupiah(cons);document.getElementById('sumEquipment').textContent=formatRupiah(equipment);document.getElementById('sumAdditional').textContent=formatRupiah(additional);document.getElementById('sumFee').textContent=formatRupiah(fee);const sumExcPpn=document.getElementById('sumExcPpn');if(sumExcPpn)sumExcPpn.textContent=formatRupiah(beforeTaxRaw);const sumPpn=document.getElementById('sumPpn');if(sumPpn)sumPpn.textContent=formatRupiah(ppn);document.getElementById('sumGrand').textContent=formatRupiah(grand);
  return {mp,mac,chem,cons,uniform,equipment,additional,basicSalaryTotal,total,fee,beforeTaxRaw,rounded,ppn,grand,feePct,autoFeePct,feeBasis,feeBase,feeMode,manualFeePct,selectedFeeComponents,selectedComponentsValid,ppnBasis,ppnBase,ppnMode,ppnPct,autoPpnPct,manualPpnPct,selectedPpnComponents,selectedPpnComponentsValid}
 }
 function extractItems(id){
@@ -1104,7 +1102,7 @@ function renderTable(data){
  })
 }
 function resetForm(){
- document.getElementById('editingProjectId').value='';document.getElementById('formTitle').textContent='Form Analytical Costing & Detail Input Component';document.getElementById('editingBadge').textContent='Input Baru';document.getElementById('btnSaveText').textContent='Simpan Hasil Analisa Ke Supabase';document.getElementById('rabForm').reset();document.getElementById('managementFeeBasis').value='total_cost';document.querySelector('input[name="managementFeeMode"][value="auto"]').checked=true;document.getElementById('managementFeeManualValue').value=0;document.querySelectorAll('.mgmt-fee-component').forEach(x=>x.checked=false);updateManagementFeeControls();document.getElementById('ppnBasis').value='total_before_tax';document.querySelector('input[name="ppnMode"][value="auto"]').checked=true;document.getElementById('ppnManualValue').value=11;document.querySelectorAll('.ppn-component').forEach(x=>x.checked=false);updatePpnControls();
+ document.getElementById('editingProjectId').value='';document.getElementById('formTitle').textContent='Form Analytical Costing & Detail Input Component';document.getElementById('editingBadge').textContent='Input Baru';document.getElementById('btnSaveText').textContent='Simpan Hasil Analisa Ke Supabase';document.getElementById('rabForm').reset();document.getElementById('managementFeeBasis').value='total_cost';document.querySelector('input[name="managementFeeMode"][value="auto"]').checked=true;document.getElementById('managementFeeManualValue').value=0;document.querySelectorAll('.mgmt-fee-component').forEach(x=>x.checked=false);updateManagementFeeControls();document.getElementById('ppnBasis').value='selected_components';document.querySelector('input[name="ppnMode"][value="auto"]').checked=true;document.getElementById('ppnManualValue').value=11;document.querySelectorAll('.ppn-component').forEach(x=>x.checked=false);updatePpnControls();
  manpowerComponents=[normalizeManpowerItem({role:'HOUSEKEEPING',qty:2,basic_salary:5938885,tunjangan:0,uang_makan:330000,uniform:175000})];renderManpowerComponents(manpowerComponents);
  ['machineryTable','chemicalsTable','consumablesTable','uniformTable','equipmentTable','additionalCostTable'].forEach(id=>document.querySelector('#'+id+' tbody').innerHTML='');calculateDynamicRows()
 }
