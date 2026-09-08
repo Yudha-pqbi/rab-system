@@ -367,7 +367,9 @@ async function init(){
  initPnlPeriodControls();
  try{
   supabaseClient=window.supabase.createClient(SB_URL,SB_KEY);
-  const {data,error}=await supabaseClient.from('projects').select('*').order('client_name',{ascending:true});
+  // GOVERNANCE: samakan active population RAB Report dengan RAB utama.
+  // Record projects berstatus DELETED tetap disimpan untuk audit/historical, tetapi tidak boleh masuk report aktif.
+  const {data,error}=await supabaseClient.from('projects').select('*').neq('status','DELETED').order('client_name',{ascending:true});
   if(error)throw error;
   projectsData=data||[];
   document.getElementById('dbStatus').textContent='● Supabase Connected';
