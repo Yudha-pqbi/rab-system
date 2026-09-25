@@ -336,8 +336,29 @@ function annualSourceValue(p,key,fallbackMonthly=0){
  const raw=Number(projectMeta(p)?.[key]);
  return Number.isFinite(raw)?raw:n(fallbackMonthly)*12;
 }
-function periodValue(monthly,annual,period){
- return period?.type==='year'&&Number.isFinite(Number(annual))?Number(annual):n(monthly)*(period?.months||1);
+function periodMonths(period){
+ const type=period?.type||'month',v=Number(period?.value)||1;
+ if(type==='month')return [v];
+ if(type==='quarter')return [1+(v-1)*3,2+(v-1)*3,3+(v-1)*3];
+ if(type==='semester')return v===1?[1,2,3,4,5,6]:[7,8,9,10,11,12];
+ return [1,2,3,4,5,6,7,8,9,10,11,12];
+}
+function scheduledPeriodValue(scheduleKey,period){
+ const schedule=currentReport?.totals?.schedule;
+ if(!schedule||!scheduleKey)return null;
+ const months=periodMonths(period);
+ let found=false,total=0;
+ months.forEach(m=>{
+  const raw=Number(schedule?.[m]?.[scheduleKey]);
+  if(Number.isFinite(raw)){found=true;total+=raw}
+ });
+ return found?total:null;
+}
+function periodValue(monthly,annual,period,scheduleKey=null){
+ if(period?.type==='year'&&Number.isFinite(Number(annual)))return Number(annual);
+ const scheduled=scheduledPeriodValue(scheduleKey,period);
+ if(scheduled!==null)return scheduled;
+ return n(monthly)*(period?.months||1);
 }
 
 function manpowerCalc(x={}){
@@ -505,6 +526,37 @@ function buildReport(projects){
   totalExc:projects.reduce((s,p)=>s+annualSourceValue(p,'source_total_exc_ppn_annual',p?.rounded_before_tax),0),
   totalInc:projects.reduce((s,p)=>s+annualSourceValue(p,'source_total_inc_ppn_annual',p?.total_after_tax),0)
  };
+ const scheduleKeys=['manpower','uniform','machinery','chemicals','consumables','equipment','additional','sourceAdjustment','managementFee','totalCost','totalExc','totalInc'];
+ const schedule={};
+ for(let month=1;month<=12;month++){
+  schedule[month]={};scheduleKeys.forEach(k=>schedule[month][k]=0);
+ }
+ projects.forEach(p=>{
+  const meta=projectMeta(p),src=meta?.source_monthly_schedule||{};
+  const base={
+   manpower:n(p?.cost_manpower),
+   uniform:sumDetails(p?.details_json?.uniform||[]),
+   machinery:n(p?.cost_machinery),
+   chemicals:n(p?.cost_chemical),
+   consumables:n(p?.cost_consumable),
+   equipment:sumDetails(p?.details_json?.equipment||[]),
+   additional:sumDetails(p?.details_json?.additional_cost||[]),
+   sourceAdjustment:signed(meta?.source_adjustment_monthly),
+   managementFee:n(p?.management_fee_value),
+   totalCost:n(p?.cost_project),
+   totalExc:n(p?.rounded_before_tax),
+   totalInc:n(p?.total_after_tax)
+  };
+  for(let month=1;month<=12;month++){
+   const row=src?.[String(month)]||src?.[month]||null;
+   scheduleKeys.forEach(key=>{
+    const raw=Number(row?.[key]);
+    schedule[month][key]+=Number.isFinite(raw)?raw:base[key];
+   });
+  }
+ });
+ totals.schedule=schedule;
+ totals.hasMonthlySchedule=projects.some(p=>projectMeta(p)?.source_monthly_schedule&&Object.keys(projectMeta(p).source_monthly_schedule).length);
  totals.hasAnnualSource=projects.some(p=>String(projectMeta(p)?.calculation_basis||'').toLowerCase()==='annual_source');
  return {projects,mpRows,salaryRows,detail,totals}
 }
@@ -555,17 +607,17 @@ function getPnlRows(){
  if(!currentReport)return [];
  const t=currentReport.totals,a=t.annual||{};
  const rows=[
-  {label:'PENDAPATAN RAB (EXC. PPN)',monthly:t.totalExc,annual:a.totalExc,type:'revenue'},
-  {label:'COGS - Manpower',monthly:t.manpower,annual:a.manpower,type:'cost'},
-  {label:'COGS - Uniform',monthly:t.uniform,annual:a.uniform,type:'cost'},
-  {label:'COGS - Machinery',monthly:t.machinery,annual:a.machinery,type:'cost'},
-  {label:'COGS - Chemicals',monthly:t.chemicals,annual:a.chemicals,type:'cost'},
-  {label:'COGS - Consumables',monthly:t.consumables,annual:a.consumables,type:'cost'},
-  {label:'COGS - Equipment',monthly:t.equipment,annual:a.equipment,type:'cost'},
-  {label:'COGS - Additional Cost',monthly:t.additional,annual:a.additional,type:'cost'}
+  {label:'PENDAPATAN RAB (EXC. PPN)',monthly:t.totalExc,annual:a.totalExc,scheduleKey:'totalExc',type:'revenue'},
+  {label:'COGS - Manpower',monthly:t.manpower,annual:a.manpower,scheduleKey:'manpower',type:'cost'},
+  {label:'COGS - Uniform',monthly:t.uniform,annual:a.uniform,scheduleKey:'uniform',type:'cost'},
+  {label:'COGS - Machinery',monthly:t.machinery,annual:a.machinery,scheduleKey:'machinery',type:'cost'},
+  {label:'COGS - Chemicals',monthly:t.chemicals,annual:a.chemicals,scheduleKey:'chemicals',type:'cost'},
+  {label:'COGS - Consumables',monthly:t.consumables,annual:a.consumables,scheduleKey:'consumables',type:'cost'},
+  {label:'COGS - Equipment',monthly:t.equipment,annual:a.equipment,scheduleKey:'equipment',type:'cost'},
+  {label:'COGS - Additional Cost',monthly:t.additional,annual:a.additional,scheduleKey:'additional',type:'cost'}
  ];
  if(Math.abs(signed(t.sourceAdjustment))>0.000001){
-  rows.push({label:'COGS - RAB Source Adjustment',monthly:t.sourceAdjustment,annual:a.sourceAdjustment,type:'adjustment'});
+  rows.push({label:'COGS - RAB Source Adjustment',monthly:t.sourceAdjustment,annual:a.sourceAdjustment,scheduleKey:'sourceAdjustment',type:'adjustment'});
  }
  return rows;
 }
@@ -574,8 +626,8 @@ function renderProfitLoss(){
  if(!currentReport)return;
  const period=getPnlPeriod(),rows=getPnlRows(),mult=period.months,t=currentReport.totals,a=t.annual||{};
  const revenue=t.totalExc,cogs=t.totalCost;
- const revenuePeriod=periodValue(revenue,a.totalExc,period);
- const cogsPeriod=periodValue(cogs,a.totalCost,period);
+ const revenuePeriod=periodValue(revenue,a.totalExc,period,'totalExc');
+ const cogsPeriod=periodValue(cogs,a.totalCost,period,'totalCost');
  const gp=revenue-cogs;
  const gpPeriod=revenuePeriod-cogsPeriod;
  const margin=revenuePeriod?gpPeriod/revenuePeriod*100:0;
@@ -585,7 +637,7 @@ function renderProfitLoss(){
  document.getElementById('pnlGrossProfitKpi').textContent=money(gpPeriod);
  document.getElementById('pnlGrossMarginKpi').textContent=margin.toLocaleString('id-ID',{minimumFractionDigits:1,maximumFractionDigits:2})+'%';
  document.getElementById('pnlBody').innerHTML=rows.map((x,i)=>{
-  const isAdj=x.type==='adjustment',periodAmount=periodValue(x.monthly,x.annual,period);
+  const isAdj=x.type==='adjustment',periodAmount=periodValue(x.monthly,x.annual,period,x.scheduleKey);
   return `<tr class="border-b ${x.type==='revenue'?'font-bold bg-blue-50/50':isAdj?'font-semibold bg-amber-50/60':''}"><td class="compact-cell">${x.label}</td><td class="compact-cell text-right">${isAdj?moneySigned(x.monthly):money(x.monthly)}</td><td class="compact-cell text-right">${isAdj?moneySigned(periodAmount):money(periodAmount)}</td></tr>`;
  }).join('');
  document.getElementById('pnlFoot').innerHTML=`
@@ -595,7 +647,8 @@ function renderProfitLoss(){
  const selectedClient=document.getElementById('clientFilter').value;
  const scopeNote=selectedClient==='__ALL__'?'Gross Margin Perusahaan dihitung dari total Gross Profit seluruh client ÷ total Pendapatan seluruh client, bukan rata-rata margin per client. ':'';
  const annualNote=t.hasAnnualSource?' Project annual-source menggunakan nilai control tahunan source RAB; nilai bulanan adalah annual ÷ 12 dan source adjustment ditampilkan terpisah.':'';
- document.getElementById('pnlNote').textContent=`${scopeNote}Design P&L ${period.label}.${annualNote} Pendapatan menggunakan Total Exc. PPN. Belum termasuk OPEX korporat dan pajak penghasilan.`;
+ const scheduleNote=t.hasMonthlySchedule?' Project dengan tanggal kontrak berbeda menggunakan source monthly schedule per bulan; role yang belum aktif tidak dihitung pada periode tersebut.':'';
+ document.getElementById('pnlNote').textContent=`${scopeNote}Design P&L ${period.label}.${annualNote}${scheduleNote} Pendapatan menggunakan Total Exc. PPN. Belum termasuk OPEX korporat dan pajak penghasilan.`;
 }
 
 function showEmpty(){
@@ -763,11 +816,11 @@ async function exportExcel(){
  XLSX.utils.book_append_sheet(wb,wsMp,'Manpower Detail');
 
  const period=getPnlPeriod(),mult=period.months,revenue=t.totalExc,cogs=t.totalCost,a=t.annual||{};
- const revenuePeriod=periodValue(revenue,a.totalExc,period),cogsPeriod=periodValue(cogs,a.totalCost,period),gp=revenue-cogs,gpPeriod=revenuePeriod-cogsPeriod,gm=revenuePeriod?gpPeriod/revenuePeriod*100:0;
+ const revenuePeriod=periodValue(revenue,a.totalExc,period,'totalExc'),cogsPeriod=periodValue(cogs,a.totalCost,period,'totalCost'),gp=revenue-cogs,gpPeriod=revenuePeriod-cogsPeriod,gm=revenuePeriod?gpPeriod/revenuePeriod*100:0;
  const pnlData=[
   ['PROFIT & LOSS DESIGN RAB'],['Periode',period.label],['Durasi (Bulan)',mult],[],
   ['Profit & Loss','Per Bulan (Rp)',period.label+' (Rp)'],
-  ...getPnlRows().map(x=>[x.label,x.monthly,periodValue(x.monthly,x.annual,period)]),
+  ...getPnlRows().map(x=>[x.label,x.monthly,periodValue(x.monthly,x.annual,period,x.scheduleKey)]),
   ['TOTAL COGS',cogs,cogsPeriod],['GROSS PROFIT',gp,gpPeriod],['GROSS MARGIN (%)',gm,gm]
  ];
  const wsPnl=XLSX.utils.aoa_to_sheet(pnlData);wsPnl['!cols']=[{wch:34},{wch:20},{wch:22}];XLSX.utils.book_append_sheet(wb,wsPnl,'P&L Design RAB');
@@ -893,13 +946,13 @@ async function exportPDF(){
 
  // Profit & Loss Design RAB
  const pnlPeriod=getPnlPeriod(),pnlMult=pnlPeriod.months,pnlRevenue=t.totalExc,pnlCogs=t.totalCost,pnlAnnual=t.annual||{};
- const pnlRevenuePeriod=periodValue(pnlRevenue,pnlAnnual.totalExc,pnlPeriod),pnlCogsPeriod=periodValue(pnlCogs,pnlAnnual.totalCost,pnlPeriod),pnlGp=pnlRevenue-pnlCogs,pnlGpPeriod=pnlRevenuePeriod-pnlCogsPeriod,pnlGm=pnlRevenuePeriod?pnlGpPeriod/pnlRevenuePeriod*100:0;
+ const pnlRevenuePeriod=periodValue(pnlRevenue,pnlAnnual.totalExc,pnlPeriod,'totalExc'),pnlCogsPeriod=periodValue(pnlCogs,pnlAnnual.totalCost,pnlPeriod,'totalCost'),pnlGp=pnlRevenue-pnlCogs,pnlGpPeriod=pnlRevenuePeriod-pnlCogsPeriod,pnlGm=pnlRevenuePeriod?pnlGpPeriod/pnlRevenuePeriod*100:0;
  sectionBar('Profit & Loss Design RAB - '+pnlPeriod.label);
  const pw=[100,42,43];
  tableHeader(['Profit & Loss','Per Bulan',pnlPeriod.label],pw);
  getPnlRows().forEach(x=>{
   const isAdj=x.type==='adjustment';
-  row([x.label,isAdj?moneySigned(x.monthly):f(x.monthly),isAdj?moneySigned(periodValue(x.monthly,x.annual,pnlPeriod)):f(periodValue(x.monthly,x.annual,pnlPeriod))],pw,{bold:x.type==='revenue'||isAdj,fill:x.type==='revenue'?[239,246,255]:isAdj?[255,247,237]:null,rightCols:[1,2],h:7.2});
+  row([x.label,isAdj?moneySigned(x.monthly):f(x.monthly),isAdj?moneySigned(periodValue(x.monthly,x.annual,pnlPeriod,x.scheduleKey)):f(periodValue(x.monthly,x.annual,pnlPeriod,x.scheduleKey))],pw,{bold:x.type==='revenue'||isAdj,fill:x.type==='revenue'?[239,246,255]:isAdj?[255,247,237]:null,rightCols:[1,2],h:7.2});
  });
  row(['TOTAL COGS',f(pnlCogs),f(pnlCogsPeriod)],pw,{bold:true,fill:[248,250,252],rightCols:[1,2],h:7.4});
  row(['GROSS PROFIT',f(pnlGp),f(pnlGpPeriod)],pw,{bold:true,fill:[220,252,231],rightCols:[1,2],h:7.8});
