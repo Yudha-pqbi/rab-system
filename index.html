@@ -490,6 +490,13 @@ function normalizeManpowerItem(x={}){
  const o=x.salary_overrides||{};
  return {
   role:x.role||'STAFF',qty:Math.max(1,parseInt(x.qty)||1),basic_salary:n(x.basic_salary),
+  source_ref_no:String(x.source_ref_no||'').trim(),
+  grade:String(x.grade||'').trim(),
+  contract_start:String(x.contract_start||'').trim(),
+  contract_end:String(x.contract_end||'').trim(),
+  source_quote_monthly:(x.source_quote_monthly===null||x.source_quote_monthly===undefined||x.source_quote_monthly==='')?null:n(x.source_quote_monthly),
+  source_fee_monthly:(x.source_fee_monthly===null||x.source_fee_monthly===undefined||x.source_fee_monthly==='')?null:n(x.source_fee_monthly),
+  source_contract_total:(x.source_contract_total===null||x.source_contract_total===undefined||x.source_contract_total==='')?null:n(x.source_contract_total),
   tunjangan:n(x.tunjangan),uang_makan:n(x.uang_makan),uniform:n(x.uniform),
   salary_overrides:{
    thr:o.thr===null||o.thr===undefined?null:n(o.thr),
@@ -523,7 +530,15 @@ function getManpowerComponentsFromUI(){
   });
   return normalizeManpowerItem({
    role:card.querySelector('.mp-role')?.value,qty:card.querySelector('.mp-qty')?.value,
-   basic_salary:card.querySelector('.mp-basic')?.value,tunjangan:card.querySelector('.mp-tunjangan')?.value,
+   basic_salary:card.querySelector('.mp-basic')?.value,
+   source_ref_no:card.querySelector('.mp-source-ref')?.value,
+   grade:card.querySelector('.mp-grade')?.value,
+   contract_start:card.querySelector('.mp-contract-start')?.value,
+   contract_end:card.querySelector('.mp-contract-end')?.value,
+   source_quote_monthly:card.querySelector('.mp-source-quote')?.value,
+   source_fee_monthly:card.querySelector('.mp-source-fee')?.value,
+   source_contract_total:card.querySelector('.mp-contract-total')?.value,
+   tunjangan:card.querySelector('.mp-tunjangan')?.value,
    uang_makan:card.querySelector('.mp-uang-makan')?.value,uniform:card.querySelector('.mp-uniform')?.value,
    salary_overrides:overrides,
    custom_components:[...card.querySelectorAll('.mp-custom-row')].map(r=>({name:r.querySelector('.mp-custom-name')?.value,amount:r.querySelector('.mp-custom-amount')?.value}))
@@ -544,6 +559,21 @@ function createManpowerCard(item,idx){
  c.innerHTML=`<div class="p-3 bg-blue-50/70 border-b flex flex-col md:flex-row justify-between gap-3">
  <div class="grid grid-cols-1 md:grid-cols-2 gap-3 flex-1"><div><label class="block text-[10px] font-semibold mb-1">Jabatan / Role</label><input class="mp-role w-full px-2.5 py-2 text-xs border rounded font-semibold" value="${escapeHtml(m.role)}" oninput="calculateManpower()"></div><div><label class="block text-[10px] font-semibold mb-1">UMK / Basic Salary (Rp)</label><input type="number" min="0" class="mp-basic w-full px-2.5 py-2 text-xs border rounded font-bold" value="${m.basic_salary}" oninput="resetAutoSalaryBecauseBasicChanged(this);calculateManpower()"></div></div>
  <div class="flex items-end gap-2"><div><label class="block text-[10px] font-semibold mb-1">Jumlah Personel</label><input type="number" min="1" class="mp-qty w-24 px-2.5 py-2 text-xs border rounded font-bold text-center" value="${m.qty}" oninput="calculateManpower()"></div><button type="button" onclick="removeManpower(this)" class="h-9 px-3 rounded-lg bg-rose-50 text-rose-600 border font-bold text-xs">Hapus</button></div></div>
+ <div class="px-3 py-3 border-b bg-indigo-50/60">
+  <div class="flex flex-wrap items-center justify-between gap-2">
+   <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-800">Periode Kontrak (Opsional)</span>
+   <span class="text-[9px] text-slate-500">Kosong = perilaku baseline bulanan tanpa pembatas periode.</span>
+  </div>
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 mt-2">
+   <div><label class="block text-[9px] font-semibold text-slate-500 mb-1">Ref. Source</label><input class="mp-source-ref w-full px-2 py-1.5 border rounded text-xs bg-white" value="${escapeHtml(m.source_ref_no)}" placeholder="Opsional"></div>
+   <div><label class="block text-[9px] font-semibold text-slate-500 mb-1">Grade</label><input class="mp-grade w-full px-2 py-1.5 border rounded text-xs bg-white" value="${escapeHtml(m.grade)}" placeholder="Opsional"></div>
+   <div><label class="block text-[9px] font-semibold text-slate-500 mb-1">Start Contract</label><input type="date" class="mp-contract-start w-full px-2 py-1.5 border rounded text-xs bg-white" value="${escapeHtml(m.contract_start)}"></div>
+   <div><label class="block text-[9px] font-semibold text-slate-500 mb-1">End Contract</label><input type="date" class="mp-contract-end w-full px-2 py-1.5 border rounded text-xs bg-white" value="${escapeHtml(m.contract_end)}"></div>
+   <div><label class="block text-[9px] font-semibold text-slate-500 mb-1">Quoted / Month (Rp)</label><input type="number" min="0" step="any" class="mp-source-quote w-full px-2 py-1.5 border rounded text-xs bg-white text-right" value="${m.source_quote_monthly??''}" placeholder="Opsional"></div>
+   <div><label class="block text-[9px] font-semibold text-slate-500 mb-1">Source Fee / Month (Rp)</label><input type="number" min="0" step="any" class="mp-source-fee w-full px-2 py-1.5 border rounded text-xs bg-white text-right" value="${m.source_fee_monthly??''}" placeholder="Opsional"></div>
+   <div><label class="block text-[9px] font-semibold text-slate-500 mb-1">Contract Total (Rp)</label><input type="number" min="0" step="any" class="mp-contract-total w-full px-2 py-1.5 border rounded text-xs bg-white text-right" value="${m.source_contract_total??''}" placeholder="Opsional"></div>
+  </div>
+ </div>
  <div class="overflow-x-auto"><table class="w-full text-left text-xs"><thead><tr class="bg-slate-800 text-white uppercase"><th class="p-2.5">Komponen Salary & Benefit</th><th class="p-2.5">Acuan / QTY</th><th class="p-2.5 text-right">Amount / Person</th><th class="p-2.5 text-right">Total / Month</th></tr></thead><tbody>
  <tr><td class="p-2.5">BASIC SALARY</td><td class="p-2.5 text-center mp-basic-ref">${m.qty} person</td><td class="p-2.5"><input type="number" value="${m.basic_salary}" class="mp-basic-copy w-28 text-right px-2 py-1.5 border rounded" oninput="this.closest('.manpower-card').querySelector('.mp-basic').value=this.value;resetAutoSalaryBecauseBasicChanged(this);calculateManpower()"></td><td class="p-2.5 text-right font-bold mp-basic-total">${formatRupiah(m.basic_salary*m.qty)}</td></tr>
  <tr><td class="p-2.5">TUNJANGAN KEHADIRAN</td><td class="p-2.5 text-center">-</td><td class="p-2.5"><input type="number" value="${m.tunjangan}" min="0" class="mp-tunjangan w-28 text-right px-2 py-1.5 border rounded" oninput="calculateManpower()"></td><td class="p-2.5 text-right font-bold mp-tunjangan-total">${formatRupiah(m.tunjangan*m.qty)}</td></tr>
@@ -829,6 +859,16 @@ async function handleFormSubmit(e){
    const calc=calculateOverallTotals();
    const editing=document.getElementById('editingProjectId').value;
    const mp=getManpowerComponentsFromUI();
+
+   mp.forEach((m,i)=>{
+     const hasStart=!!m.contract_start,hasEnd=!!m.contract_end;
+     if(hasStart!==hasEnd){
+       throw new Error('Manpower card '+(i+1)+' ('+m.role+'): Start Contract dan End Contract harus diisi berpasangan, atau keduanya dikosongkan.');
+     }
+     if(hasStart && m.contract_end<m.contract_start){
+       throw new Error('Manpower card '+(i+1)+' ('+m.role+'): End Contract tidak boleh lebih awal dari Start Contract.');
+     }
+   });
 
    if(!calc.selectedComponentsValid){
      throw new Error('Pilih minimal satu komponen yang dikenakan Management Fee.');

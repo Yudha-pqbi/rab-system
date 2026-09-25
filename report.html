@@ -373,6 +373,29 @@ function manpowerItems(p){
  const d=p?.details_json||{};
  return Array.isArray(d.manpower)?d.manpower:(d.manpower?[d.manpower]:(d.manpower_legacy?[d.manpower_legacy]:[]))
 }
+function hasCardContract(m){
+ return /^\d{4}-\d{2}-\d{2}$/.test(String(m?.contract_start||'')) && /^\d{4}-\d{2}-\d{2}$/.test(String(m?.contract_end||''));
+}
+function cardActiveInMonth(m,year,month){
+ if(!hasCardContract(m))return true;
+ const start=String(m.contract_start),end=String(m.contract_end);
+ const monthStart=`${year}-${String(month).padStart(2,'0')}-01`;
+ const lastDay=new Date(year,month,0).getDate();
+ const monthEnd=`${year}-${String(month).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+ return start<=monthEnd && end>=monthStart;
+}
+function cardQuotedMonthly(m){
+ const raw=Number(m?.source_quote_monthly);
+ return Number.isFinite(raw)?raw:null;
+}
+function cardFeeMonthly(m){
+ const raw=Number(m?.source_fee_monthly);
+ return Number.isFinite(raw)?raw:null;
+}
+function cardContractTotal(m){
+ const raw=Number(m?.source_contract_total);
+ return Number.isFinite(raw)?raw:null;
+}
 
 const SALARY_LABELS={
  basic:'BASIC SALARY',
@@ -510,7 +533,12 @@ function buildReport(projects){
   totalInc:sum('total_after_tax')
  };
  totals.annual={
-  manpower:projects.reduce((s,p)=>s+annualSourceValue(p,'source_manpower_annual',p?.cost_manpower),0),
+  manpower:projects.reduce((s,p)=>{
+   const items=manpowerItems(p),has=items.some(hasCardContract);
+   if(!has)return s+annualSourceValue(p,'source_manpower_annual',p?.cost_manpower);
+   let total=0;for(let month=1;month<=12;month++)items.forEach(m=>{if(cardActiveInMonth(m,Number(document.getElementById('pnlYear')?.value)||new Date().getFullYear(),month))total+=manpowerCalc(m).total});
+   return s+total;
+  },0),
   uniform:projects.reduce((s,p)=>s+annualSourceValue(p,'source_uniform_annual',sumDetails(p?.details_json?.uniform||[])),0),
   machinery:projects.reduce((s,p)=>s+annualSourceValue(p,'source_machinery_annual',p?.cost_machinery),0),
   chemicals:projects.reduce((s,p)=>s+annualSourceValue(p,'source_chemicals_annual',p?.cost_chemical),0),
@@ -531,32 +559,55 @@ function buildReport(projects){
  for(let month=1;month<=12;month++){
   schedule[month]={};scheduleKeys.forEach(k=>schedule[month][k]=0);
  }
+ let hasCardContracts=false;
  projects.forEach(p=>{
-  const meta=projectMeta(p),src=meta?.source_monthly_schedule||{};
-  const base={
-   manpower:n(p?.cost_manpower),
+  const meta=projectMeta(p),items=manpowerItems(p),hasContracts=items.some(hasCardContract);
+  hasCardContracts=hasCardContracts||hasContracts;
+  const nonMp={
    uniform:sumDetails(p?.details_json?.uniform||[]),
    machinery:n(p?.cost_machinery),
    chemicals:n(p?.cost_chemical),
    consumables:n(p?.cost_consumable),
    equipment:sumDetails(p?.details_json?.equipment||[]),
    additional:sumDetails(p?.details_json?.additional_cost||[]),
-   sourceAdjustment:signed(meta?.source_adjustment_monthly),
-   managementFee:n(p?.management_fee_value),
-   totalCost:n(p?.cost_project),
-   totalExc:n(p?.rounded_before_tax),
-   totalInc:n(p?.total_after_tax)
+   sourceAdjustment:signed(meta?.source_adjustment_monthly)
   };
   for(let month=1;month<=12;month++){
-   const row=src?.[String(month)]||src?.[month]||null;
-   scheduleKeys.forEach(key=>{
-    const raw=Number(row?.[key]);
-    schedule[month][key]+=Number.isFinite(raw)?raw:base[key];
-   });
+   let mp=n(p?.cost_manpower),fee=n(p?.management_fee_value),totalCost=n(p?.cost_project),totalExc=n(p?.rounded_before_tax),totalInc=n(p?.total_after_tax);
+   if(hasContracts){
+     mp=0;fee=0;let quoted=0,quotedFound=false,feeFound=false;
+     items.forEach(m=>{
+       if(!cardActiveInMonth(m,Number(document.getElementById('pnlYear')?.value)||new Date().getFullYear(),month))return;
+       const calc=manpowerCalc(m);mp+=calc.total;
+       const q=cardQuotedMonthly(m);if(q!==null){quoted+=q;quotedFound=true}
+       const f=cardFeeMonthly(m);if(f!==null){fee+=f;feeFound=true}
+     });
+     totalCost=mp+nonMp.uniform+nonMp.machinery+nonMp.chemicals+nonMp.consumables+nonMp.equipment+nonMp.additional+nonMp.sourceAdjustment;
+     if(!feeFound){
+       const pct=n(p?.management_fee_percent);
+       fee=totalCost*pct/100;
+     }
+     totalExc=quotedFound?quoted:(totalCost+fee);
+     const ppn=totalExc>0?Math.max(0,n(p?.total_after_tax)-n(p?.rounded_before_tax)):0;
+     totalInc=totalExc+ppn;
+   }
+   schedule[month].manpower+=mp;
+   schedule[month].uniform+=nonMp.uniform;
+   schedule[month].machinery+=nonMp.machinery;
+   schedule[month].chemicals+=nonMp.chemicals;
+   schedule[month].consumables+=nonMp.consumables;
+   schedule[month].equipment+=nonMp.equipment;
+   schedule[month].additional+=nonMp.additional;
+   schedule[month].sourceAdjustment+=nonMp.sourceAdjustment;
+   schedule[month].managementFee+=fee;
+   schedule[month].totalCost+=totalCost;
+   schedule[month].totalExc+=totalExc;
+   schedule[month].totalInc+=totalInc;
   }
  });
  totals.schedule=schedule;
- totals.hasMonthlySchedule=projects.some(p=>projectMeta(p)?.source_monthly_schedule&&Object.keys(projectMeta(p).source_monthly_schedule).length);
+ totals.hasCardContracts=hasCardContracts;
+ totals.hasMonthlySchedule=hasCardContracts;
  totals.hasAnnualSource=projects.some(p=>String(projectMeta(p)?.calculation_basis||'').toLowerCase()==='annual_source');
  return {projects,mpRows,salaryRows,detail,totals}
 }
@@ -647,7 +698,7 @@ function renderProfitLoss(){
  const selectedClient=document.getElementById('clientFilter').value;
  const scopeNote=selectedClient==='__ALL__'?'Gross Margin Perusahaan dihitung dari total Gross Profit seluruh client ÷ total Pendapatan seluruh client, bukan rata-rata margin per client. ':'';
  const annualNote=t.hasAnnualSource?' Project annual-source menggunakan nilai control tahunan source RAB; nilai bulanan adalah annual ÷ 12 dan source adjustment ditampilkan terpisah.':'';
- const scheduleNote=t.hasMonthlySchedule?' Project dengan tanggal kontrak berbeda menggunakan source monthly schedule per bulan; role yang belum aktif tidak dihitung pada periode tersebut.':'';
+ const scheduleNote=t.hasCardContracts?' Project dengan tanggal kontrak pada manpower card dihitung berdasarkan Start/End Contract; card tanpa periode tetap mengikuti baseline bulanan.':'';
  document.getElementById('pnlNote').textContent=`${scopeNote}Design P&L ${period.label}.${annualNote}${scheduleNote} Pendapatan menggunakan Total Exc. PPN. Belum termasuk OPEX korporat dan pajak penghasilan.`;
 }
 
