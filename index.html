@@ -75,6 +75,53 @@ input:focus,select:focus{box-shadow:0 0 0 2px rgba(37,99,235,.18)}
 
   <form id="rabForm" novalidate onsubmit="handleFormSubmit(event)" class="p-6 space-y-6">
     <input type="hidden" id="editingProjectId">
+
+    <!-- CANONICAL PROJECT IDENTITY CANDIDATE V1 — simulation/read-only -->
+    <section id="canonicalIdentityCandidate" class="rounded-xl border border-emerald-200 bg-emerald-50/60 p-5 space-y-4">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div class="text-[10px] uppercase tracking-[.16em] font-extrabold text-emerald-700">Candidate V1 · Shadow Simulation</div>
+          <h3 class="text-sm font-bold text-slate-900 mt-1">Project Identity</h3>
+          <p class="text-[11px] text-slate-600 mt-1">Kode project pendek diterbitkan sistem. Area tetap milik RAB dan tidak membentuk kode. Pilihan di panel ini belum menulis ke canonical database maupun mengubah Project Code existing.</p>
+        </div>
+        <span class="text-[10px] px-2.5 py-1 rounded-full bg-white border border-emerald-200 text-emerald-800 font-bold">READ ONLY</span>
+      </div>
+      <div class="flex flex-wrap gap-4 text-xs">
+        <label class="inline-flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="canonicalIdentityMode" value="existing" checked onchange="setCanonicalIdentityMode('existing')">
+          <span class="font-semibold">Gunakan Project Existing</span>
+        </label>
+        <label class="inline-flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="canonicalIdentityMode" value="new" onchange="setCanonicalIdentityMode('new')">
+          <span class="font-semibold">Simulasi Project Baru</span>
+        </label>
+      </div>
+      <div id="canonicalExistingPanel" class="grid grid-cols-1 lg:grid-cols-[minmax(260px,1fr)_2fr] gap-4 items-end">
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">Canonical Project Existing</label>
+          <select id="canonicalProjectSelect" onchange="updateCanonicalCandidatePreview()" class="w-full h-10 px-3 border border-emerald-200 rounded-lg text-xs bg-white focus:ring-2 focus:ring-emerald-500">
+            <option value="">Pilih project identity...</option>
+          </select>
+        </div>
+        <div id="canonicalExistingInfo" class="min-h-10 rounded-lg border border-emerald-100 bg-white px-3 py-2 text-xs text-slate-600">
+          Belum ada Project Identity dipilih.
+        </div>
+      </div>
+      <div id="canonicalNewPanel" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-4 items-end">
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">Preview Project Code Baru</label>
+          <input id="canonicalNextCode" type="text" readonly class="w-full h-10 px-3 border border-slate-200 rounded-lg text-sm font-mono font-extrabold bg-slate-100 text-slate-800" value="1002">
+        </div>
+        <div class="lg:col-span-2">
+          <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">Nama Business Project</label>
+          <input id="canonicalNewProjectName" type="text" oninput="updateCanonicalCandidatePreview()" placeholder="Contoh: Djarum Security" class="w-full h-10 px-3 border border-emerald-200 rounded-lg text-xs bg-white focus:ring-2 focus:ring-emerald-500">
+        </div>
+      </div>
+      <div id="canonicalCandidateStatus" class="rounded-lg border border-emerald-100 bg-white px-3 py-2 text-[11px] text-slate-600">
+        Phase 2 hanya mensimulasikan pemilihan identity. Save RAB tetap memakai alur production existing.
+      </div>
+    </section>
+
     <!-- GENERAL PROJECT INFORMATION — V5.1 BASELINE LAYOUT -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4 p-5 rounded-xl bg-slate-50 border border-slate-200">
       <div class="flex flex-col justify-end">
@@ -439,7 +486,7 @@ input:focus,select:focus{box-shadow:0 0 0 2px rgba(37,99,235,.18)}
 <footer class="bg-white border-t py-4 mt-auto"><div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">© 2026 PT Nusantara Inti Solusindo — RAB V5.2.9.1</div></footer>
 
 <script>
-let supabaseClient=null, projectsData=[];
+let supabaseClient=null, projectsData=[], canonicalProjectsCandidate=[];
 let manpowerComponents=[{
  role:'HOUSEKEEPING',qty:2,basic_salary:5938885,tunjangan:0,uang_makan:330000,uniform:175000,
  salary_overrides:{thr:null,bpjsKes:null,bpjsJht:null,bpjsJkm:null,bpjsJkk:null,bpjsJp:null,pkwt:null},
@@ -479,6 +526,65 @@ function initSupabase(){
   try{supabaseClient=window.supabase.createClient(url,key);setDbStatus(true);fetchProjects();return}catch(e){console.error(e)}
  }
  supabaseClient=null;setDbStatus(false);renderDemoData();
+}
+function canonicalNorm(v){
+ return String(v??'').trim().toLowerCase().replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();
+}
+function canonicalNextCodePreview(){
+ const nums=canonicalProjectsCandidate.map(x=>Number(String(x.project_code||'').replace(/\D/g,''))).filter(Number.isFinite);
+ return String((nums.length?Math.max(...nums):1000)+1);
+}
+function renderCanonicalProjectOptions(selectedCode=''){
+ const sel=document.getElementById('canonicalProjectSelect');if(!sel)return;
+ const current=String(selectedCode||sel.value||'');
+ sel.innerHTML='<option value="">Pilih project identity...</option>'+
+   canonicalProjectsCandidate.slice().sort((a,b)=>String(a.project_code).localeCompare(String(b.project_code),'id',{numeric:true}))
+   .map(p=>'<option value="'+escapeHtml(p.project_code)+'">'+escapeHtml(p.project_code+' · '+p.project_name+' · '+p.client_name)+'</option>').join('');
+ if(current&&canonicalProjectsCandidate.some(x=>String(x.project_code)===current))sel.value=current;
+ const next=document.getElementById('canonicalNextCode');if(next)next.value=canonicalNextCodePreview();
+ updateCanonicalCandidatePreview();
+}
+function setCanonicalIdentityMode(mode){
+ const isNew=mode==='new';
+ document.getElementById('canonicalExistingPanel')?.classList.toggle('hidden',isNew);
+ document.getElementById('canonicalNewPanel')?.classList.toggle('hidden',!isNew);
+ const r=document.querySelector('input[name="canonicalIdentityMode"][value="'+(isNew?'new':'existing')+'"]');if(r)r.checked=true;
+ updateCanonicalCandidatePreview();
+}
+function updateCanonicalCandidatePreview(){
+ const mode=document.querySelector('input[name="canonicalIdentityMode"]:checked')?.value||'existing';
+ const client=(document.getElementById('clientName')?.value||'').trim();
+ const service=(document.getElementById('projectTitle')?.value||'').trim();
+ const status=document.getElementById('canonicalCandidateStatus');
+ const info=document.getElementById('canonicalExistingInfo');
+ if(mode==='existing'){
+   const code=document.getElementById('canonicalProjectSelect')?.value||'';
+   const p=canonicalProjectsCandidate.find(x=>String(x.project_code)===String(code));
+   if(info)info.innerHTML=p
+     ? '<b class="font-mono text-emerald-800">'+escapeHtml(p.project_code)+'</b> · <b>'+escapeHtml(p.project_name)+'</b><br><span class="text-[10px]">Client: '+escapeHtml(p.client_name)+' · Service: '+escapeHtml(p.primary_service||'-')+' · '+Number(p.active_rab_count||0)+' RAB aktif</span>'
+     : 'Belum ada Project Identity dipilih.';
+   if(status){
+     if(!p){status.className='rounded-lg border border-emerald-100 bg-white px-3 py-2 text-[11px] text-slate-600';status.textContent='Pilih Project Existing. Phase 2 belum menulis relasi baru ke database.';}
+     else{
+       const clientMismatch=client&&canonicalNorm(client)!==canonicalNorm(p.client_name);
+       const serviceMismatch=service&&p.primary_service&&canonicalNorm(service)!==canonicalNorm(p.primary_service);
+       status.className='rounded-lg border px-3 py-2 text-[11px] '+((clientMismatch||serviceMismatch)?'border-amber-200 bg-amber-50 text-amber-800':'border-emerald-100 bg-white text-slate-600');
+       status.textContent=(clientMismatch||serviceMismatch)
+         ? 'REVIEW — Project Existing dipilih, tetapi Client/Service pada form belum sama dengan master candidate. Ini hanya warning; tidak ada data yang diubah.'
+         : 'SIMULASI — RAB ini akan berada di bawah '+p.project_code+' · '+p.project_name+'. Area tetap tersimpan pada RAB. Belum ada canonical write.';
+     }
+   }
+   return;
+ }
+ const name=(document.getElementById('canonicalNewProjectName')?.value||'').trim();
+ const next=canonicalNextCodePreview();
+ const dup=canonicalProjectsCandidate.find(p=>client&&name&&canonicalNorm(p.client_name)===canonicalNorm(client)&&canonicalNorm(p.project_name)===canonicalNorm(name));
+ if(status){
+   status.className='rounded-lg border px-3 py-2 text-[11px] '+(dup?'border-amber-300 bg-amber-50 text-amber-900':'border-sky-200 bg-sky-50 text-sky-900');
+   status.innerHTML=dup
+     ? '<b>DUPLICATE CANDIDATE:</b> '+escapeHtml(dup.project_code+' · '+dup.project_name)+' sudah ada. Gunakan Project Existing; project baru tidak boleh diterbitkan.'
+     : '<b>SIMULASI:</b> '+escapeHtml(next)+' akan menjadi kode berikutnya jika business project benar-benar baru. Client: '+escapeHtml(client||'-')+' · Service: '+escapeHtml(service||'-')+'. Tidak disimpan pada Phase 2.';
+ }
 }
 function setDbStatus(ok){
  const b=document.getElementById('dbStatusBadge');
@@ -994,21 +1100,23 @@ async function fetchProjects(){
  // Candidate-only shadow identity. Read-only: tidak memengaruhi save/edit/delete RAB.
  let canonicalMap={};
  try{
-   const {data:canonicalRows,error:canonicalError}=await supabaseClient
-     .from('v_canonical_project_rab_candidate_v1')
-     .select('rab_project_id,project_code,project_name,canonical_status,link_status')
-     .eq('link_status','ACTIVE');
+   const [{data:canonicalRows,error:canonicalError},{data:canonicalSummary,error:canonicalSummaryError}]=await Promise.all([
+     supabaseClient.from('v_canonical_project_rab_candidate_v1')
+       .select('rab_project_id,project_code,project_name,canonical_status,link_status').eq('link_status','ACTIVE'),
+     supabaseClient.from('v_canonical_project_summary_candidate_v1')
+       .select('project_code,project_name,client_name,primary_service,status,active_rab_count,approved_rab_count').eq('status','ACTIVE')
+   ]);
    if(canonicalError) throw canonicalError;
+   if(canonicalSummaryError) throw canonicalSummaryError;
+   canonicalProjectsCandidate=canonicalSummary||[];
    (canonicalRows||[]).forEach(row=>{
      if(row?.rab_project_id && row?.project_code){
-       canonicalMap[row.rab_project_id]={
-         project_code:row.project_code,
-         project_name:row.project_name,
-         status:row.canonical_status
-       };
+       canonicalMap[row.rab_project_id]={project_code:row.project_code,project_name:row.project_name,status:row.canonical_status};
      }
    });
+   renderCanonicalProjectOptions();
  }catch(canonicalErr){
+   canonicalProjectsCandidate=[];renderCanonicalProjectOptions();
    console.warn('Canonical Project Candidate lookup:',canonicalErr);
  }
 
@@ -1141,12 +1249,12 @@ function renderTable(data){
  })
 }
 function resetForm(){
- document.getElementById('editingProjectId').value='';document.getElementById('formTitle').textContent='Form Analytical Costing & Detail Input Component';document.getElementById('editingBadge').textContent='Input Baru';document.getElementById('btnSaveText').textContent='Simpan Hasil Analisa Ke Supabase';document.getElementById('rabForm').reset();document.getElementById('managementFeeBasis').value='total_cost';document.querySelector('input[name="managementFeeMode"][value="auto"]').checked=true;document.getElementById('managementFeeManualValue').value=0;document.querySelectorAll('.mgmt-fee-component').forEach(x=>x.checked=false);updateManagementFeeControls();document.getElementById('ppnBasis').value='selected_components';document.querySelector('input[name="ppnMode"][value="auto"]').checked=true;document.getElementById('ppnManualValue').value=11;document.querySelectorAll('.ppn-component').forEach(x=>x.checked=false);updatePpnControls();
+ document.getElementById('editingProjectId').value='';document.getElementById('formTitle').textContent='Form Analytical Costing & Detail Input Component';document.getElementById('editingBadge').textContent='Input Baru';document.getElementById('btnSaveText').textContent='Simpan Hasil Analisa Ke Supabase';document.getElementById('rabForm').reset();setCanonicalIdentityMode('existing');document.getElementById('canonicalProjectSelect').value='';document.getElementById('canonicalNewProjectName').value='';document.getElementById('managementFeeBasis').value='total_cost';document.querySelector('input[name="managementFeeMode"][value="auto"]').checked=true;document.getElementById('managementFeeManualValue').value=0;document.querySelectorAll('.mgmt-fee-component').forEach(x=>x.checked=false);updateManagementFeeControls();document.getElementById('ppnBasis').value='selected_components';document.querySelector('input[name="ppnMode"][value="auto"]').checked=true;document.getElementById('ppnManualValue').value=11;document.querySelectorAll('.ppn-component').forEach(x=>x.checked=false);updatePpnControls();
  manpowerComponents=[normalizeManpowerItem({role:'HOUSEKEEPING',qty:2,basic_salary:5938885,tunjangan:0,uang_makan:330000,uniform:175000})];renderManpowerComponents(manpowerComponents);
  ['machineryTable','chemicalsTable','consumablesTable','uniformTable','equipmentTable','additionalCostTable'].forEach(id=>document.querySelector('#'+id+' tbody').innerHTML='');calculateDynamicRows()
 }
 function loadProjectToForm(id){
- const p=projectsData.find(x=>x.project_id===id);if(!p)return;document.getElementById('editingProjectId').value=p.project_id;document.getElementById('formTitle').textContent='Edit / Analisa RAB ('+p.project_id+')';document.getElementById('editingBadge').textContent='Editing: '+p.project_id;document.getElementById('btnSaveText').textContent='Simpan Perubahan RAB';
+ const p=projectsData.find(x=>x.project_id===id);if(!p)return;setCanonicalIdentityMode('existing');renderCanonicalProjectOptions(p.canonical_project_code||'');document.getElementById('editingProjectId').value=p.project_id;document.getElementById('formTitle').textContent='Edit / Analisa RAB ('+p.project_id+')';document.getElementById('editingBadge').textContent='Editing: '+p.project_id;document.getElementById('btnSaveText').textContent='Simpan Perubahan RAB';
  document.getElementById('clientName').value=p.client_name||'';document.getElementById('clientLocation').value=p.client_location||'';document.getElementById('projectArea').value=p.project_area||'';document.getElementById('projectTitle').value=p.project_title||'';document.getElementById('topDays').value=p.top_days||30;document.getElementById('managementFeePercent').value=p.management_fee_percent||7.5;
  const d=p.details_json||{},meta=d.project_meta||{};document.getElementById('clientProvince').value=meta.province||'';document.getElementById('managementFeeBasis').value=meta.management_fee_basis||'total_cost';const feeMode=meta.management_fee_mode||'auto';const feeModeEl=document.querySelector('input[name="managementFeeMode"][value="'+feeMode+'"]');if(feeModeEl)feeModeEl.checked=true;document.getElementById('managementFeeManualValue').value=n(meta.management_fee_manual_percent??meta.management_fee_manual_value??p.management_fee_percent);const feeComponents=Array.isArray(meta.management_fee_components)?meta.management_fee_components:[];document.querySelectorAll('.mgmt-fee-component').forEach(x=>x.checked=feeComponents.includes(x.value));updateManagementFeeControls();document.getElementById('ppnBasis').value=meta.ppn_basis||'total_before_tax';const ppnMode=meta.ppn_mode||'auto';const ppnModeEl=document.querySelector('input[name="ppnMode"][value="'+ppnMode+'"]');if(ppnModeEl)ppnModeEl.checked=true;document.getElementById('ppnManualValue').value=n(meta.ppn_manual_percent??meta.ppn_rate??11);const ppnComponents=Array.isArray(meta.ppn_components)?meta.ppn_components:[];document.querySelectorAll('.ppn-component').forEach(x=>x.checked=ppnComponents.includes(x.value));updatePpnControls();const saved=Array.isArray(d.manpower)?d.manpower:(d.manpower?[d.manpower]:d.manpower_legacy?[d.manpower_legacy]:[]);renderManpowerComponents(saved.length?saved:[normalizeManpowerItem({})]);
  [['uniformTable',d.uniform],['machineryTable',d.machinery],['chemicalsTable',d.chemicals],['consumablesTable',d.consumables],['equipmentTable',d.equipment],['additionalCostTable',d.additional_cost]].forEach(([id,arr])=>{document.querySelector('#'+id+' tbody').innerHTML='';(arr||[]).forEach(x=>addRow(id,x))});calculateManpower();calculateDynamicRows();document.getElementById('formSection').scrollIntoView({behavior:'smooth'})
@@ -1796,6 +1904,8 @@ async function exportSingleProjectPDF(id) {
         }
 document.addEventListener('DOMContentLoaded',()=>{
  initSupabase();renderManpowerComponents(manpowerComponents);updateManagementFeeControls();updatePpnControls();
+ ['clientName','projectTitle'].forEach(id=>document.getElementById(id)?.addEventListener('input',updateCanonicalCandidatePreview));
+ renderCanonicalProjectOptions();
  addRow('uniformTable');addRow('machineryTable');addRow('chemicalsTable');addRow('consumablesTable');addRow('equipmentTable');addRow('additionalCostTable');calculateDynamicRows();
 });
 </script>
