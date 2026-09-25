@@ -549,30 +549,10 @@ function buildReport(projects){
    const meta=projectMeta(p),raw=Number(meta?.source_adjustment_annual);
    return s+(Number.isFinite(raw)?raw:signed(meta?.source_adjustment_monthly)*12);
   },0),
-  managementFee:projects.reduce((s,p)=>{
-   const items=manpowerItems(p),has=items.some(hasCardContract);
-   if(!has)return s+annualSourceValue(p,'source_management_fee_annual',p?.management_fee_value);
-   return s+items.reduce((a,m)=>{
-     const fee=cardFeeMonthly(m);if(fee===null||!hasCardContract(m))return a;
-     const start=new Date(m.contract_start+'T00:00:00'),end=new Date(m.contract_end+'T00:00:00');
-     let months=0;for(let mo=1;mo<=12;mo++)if(cardActiveInMonth(m,start.getFullYear(),mo))months++;
-     return a+fee*months;
-   },0);
-  },0),
-  totalCost:projects.reduce((s,p)=>{
-   const items=manpowerItems(p),has=items.some(hasCardContract);
-   if(!has)return s+annualSourceValue(p,'source_total_cost_annual',p?.cost_project);
-   let total=0;for(let month=1;month<=12;month++){const y=Number(document.getElementById('pnlYear')?.value)||new Date().getFullYear();total+=schedule[month].totalCost}
-   return s+total;
-  },0),
-  totalExc:projects.reduce((s,p)=>{
-   const items=manpowerItems(p),vals=items.map(cardContractTotal).filter(v=>v!==null);
-   return s+(vals.length?vals.reduce((a,v)=>a+v,0):annualSourceValue(p,'source_total_exc_ppn_annual',p?.rounded_before_tax));
-  },0),
-  totalInc:projects.reduce((s,p)=>{
-   const items=manpowerItems(p),vals=items.map(cardContractTotal).filter(v=>v!==null);
-   return s+(vals.length?vals.reduce((a,v)=>a+v,0):annualSourceValue(p,'source_total_inc_ppn_annual',p?.total_after_tax));
-  },0)
+  managementFee:projects.reduce((s,p)=>s+annualSourceValue(p,'source_management_fee_annual',p?.management_fee_value),0),
+  totalCost:projects.reduce((s,p)=>s+annualSourceValue(p,'source_total_cost_annual',p?.cost_project),0),
+  totalExc:projects.reduce((s,p)=>s+annualSourceValue(p,'source_total_exc_ppn_annual',p?.rounded_before_tax),0),
+  totalInc:projects.reduce((s,p)=>s+annualSourceValue(p,'source_total_inc_ppn_annual',p?.total_after_tax),0)
  };
  const scheduleKeys=['manpower','uniform','machinery','chemicals','consumables','equipment','additional','sourceAdjustment','managementFee','totalCost','totalExc','totalInc'];
  const schedule={};
