@@ -635,7 +635,7 @@ function calculateOverallTotals(){
  const selectedComponentsValid=feeBasis!=='selected_components'||selectedFeeComponents.length>0;
  const componentValidation=document.getElementById('managementFeeComponentValidation');if(componentValidation)componentValidation.classList.toggle('hidden',selectedComponentsValid);
  const manualFeePct=n(document.getElementById('managementFeeManualValue')?.value),feePct=feeMode==='manual'?manualFeePct:autoFeePct,fee=selectedComponentsValid?feeBase*feePct/100:0;
- const beforeTaxRaw=total+fee,rounded=exactSource?beforeTaxRaw:Math.round(beforeTaxRaw/1000)*1000;
+ const beforeTaxRaw=total+fee,sourceBeforeTax=Number(editingProjectMeta?.source_monthly_before_tax),rounded=exactSource&&Number.isFinite(sourceBeforeTax)?sourceBeforeTax:(exactSource?beforeTaxRaw:Math.round(beforeTaxRaw/1000)*1000);
 
  const ppnBasis=document.getElementById('ppnBasis')?.value||'total_before_tax',ppnMode=getPpnMode(),selectedPpnComponents=getSelectedPpnComponents();
  const ppnComponentValues={...componentValues,management_fee:fee};
@@ -647,7 +647,8 @@ function calculateOverallTotals(){
  else if(ppnBasis==='total_cost')ppnBase=total;
  else if(ppnBasis==='management_fee')ppnBase=fee;
  else if(ppnBasis==='selected_components')ppnBase=selectedPpnComponents.reduce((s,k)=>s+n(ppnComponentValues[k]),0)+(annualSource?sourceAdjustment:0);
- const ppn=selectedPpnComponentsValid?ppnBase*ppnPct/100:0,grand=beforeTaxRaw+ppn;
+ const sourcePpnBase=Number(editingProjectMeta?.source_ppn_base_monthly);if(exactSource&&Number.isFinite(sourcePpnBase))ppnBase=sourcePpnBase;
+ const ppn=selectedPpnComponentsValid?ppnBase*ppnPct/100:0,grand=(exactSource?rounded:beforeTaxRaw)+ppn;
 
  const basisLabel=document.getElementById('managementFeeBasisLabel');if(basisLabel)basisLabel.textContent=feeBasis==='basic_salary'?'Basic Salary':feeBasis==='selected_components'?(selectedFeeComponents.length?selectedFeeComponents.map(x=>({manpower:'Manpower',uniform:'Uniform',machinery:'Machinery',chemicals:'Chemicals',consumables:'Consumables',equipment:'Equipment',additional:'Additional Cost'}[x]||x)).join(' + '):'Pilih Komponen'):'Total Cost';
  const ppnBasisLabel=document.getElementById('ppnBasisLabel');if(ppnBasisLabel)ppnBasisLabel.textContent=getPpnBasisLabel(ppnBasis,selectedPpnComponents);
