@@ -433,7 +433,7 @@ input:focus,select:focus{box-shadow:0 0 0 2px rgba(37,99,235,.18)}
 <footer class="bg-white border-t py-4 mt-auto"><div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">© 2026 PT Nusantara Inti Solusindo — RAB V5.2.9.1</div></footer>
 
 <script>
-let supabaseClient=null, projectsData=[];
+let supabaseClient=null, projectsData=[], editingProjectMeta={};
 let manpowerComponents=[{
  role:'HOUSEKEEPING',qty:2,basic_salary:5938885,tunjangan:0,uang_makan:330000,uniform:175000,
  salary_overrides:{thr:null,bpjsKes:null,bpjsJht:null,bpjsJkm:null,bpjsJkk:null,bpjsJp:null,pkwt:null},
@@ -451,6 +451,7 @@ const SALARY_RULES={
 };
 
 function n(v){return Math.max(0,parseFloat(v)||0)}
+function signed(v){const x=Number(v);return Number.isFinite(x)?x:0}
 function formatRupiah(v){return new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(Number(v)||0)}
 function escapeHtml(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
 function toggleConfig(){document.getElementById('configBody').classList.toggle('hidden')}
@@ -530,8 +531,8 @@ function getManpowerComponentsFromUI(){
  })
 }
 function salaryInput(key,val,mode,qty){
- const rule=SALARY_RULES[key], cls=mode==='manual'?'mode-manual':'mode-auto';
- return `<div class="flex items-center gap-1 justify-end"><input type="number" min="0" value="${Math.round(val)}" data-mode="${mode}" class="mp-${key} w-28 text-right px-2 py-1.5 border rounded text-xs ${cls}" oninput="setSalaryManual(this);calculateManpower()"><button type="button" class="text-[9px] px-1.5 py-1 rounded ${cls}" onclick="setSalaryAuto(this)">AUTO</button></div>`
+ const rule=SALARY_RULES[key], cls=mode==='manual'?'mode-manual':'mode-auto',displayVal=mode==='manual'?Number(val):Math.round(val);
+ return `<div class="flex items-center gap-1 justify-end"><input type="number" min="0" step="any" value="${displayVal}" data-mode="${mode}" class="mp-${key} w-28 text-right px-2 py-1.5 border rounded text-xs ${cls}" oninput="setSalaryManual(this);calculateManpower()"><button type="button" class="text-[9px] px-1.5 py-1 rounded ${cls}" onclick="setSalaryAuto(this)">AUTO</button></div>`
 }
 function createManpowerCard(item,idx){
  const m=manpowerCalc(item), c=document.createElement('div');c.className='manpower-card border rounded-xl overflow-hidden';c.dataset.index=idx;
@@ -558,7 +559,7 @@ function updateManpowerCard(card,m){
  card.querySelector('.mp-basic-copy').value=m.basic_salary;card.querySelector('.mp-basic-total').textContent=formatRupiah(m.basic_salary*m.qty);
  card.querySelector('.mp-tunjangan-total').textContent=formatRupiah(m.tunjangan*m.qty);card.querySelector('.mp-uang-makan-total').textContent=formatRupiah(m.uang_makan*m.qty);card.querySelector('.mp-uniform-total').textContent=formatRupiah(m.uniform*m.qty);
  card.querySelector('.mp-qty-label').textContent=m.qty;const basicRef=card.querySelector('.mp-basic-ref');if(basicRef)basicRef.textContent=m.qty+' person';card.querySelector('.mp-subtotal-unit').textContent=formatRupiah(m.subtotalPerPerson);card.querySelector('.mp-subtotal-total').textContent=formatRupiah(m.subtotalTotal);
- Object.keys(SALARY_RULES).forEach(k=>{const el=card.querySelector('.mp-'+k);if(el){el.value=Math.round(m[k]);el.classList.toggle('mode-manual',m.salary_overrides[k]!==null);el.classList.toggle('mode-auto',m.salary_overrides[k]===null);const b=el.nextElementSibling;b.className='text-[9px] px-1.5 py-1 rounded '+(m.salary_overrides[k]===null?'mode-auto':'mode-manual');card.querySelector('.mp-'+k+'-total').textContent=formatRupiah(m[k]*m.qty)}})
+ Object.keys(SALARY_RULES).forEach(k=>{const el=card.querySelector('.mp-'+k);if(el){el.value=m.salary_overrides[k]===null?Math.round(m[k]):m[k];el.classList.toggle('mode-manual',m.salary_overrides[k]!==null);el.classList.toggle('mode-auto',m.salary_overrides[k]===null);const b=el.nextElementSibling;b.className='text-[9px] px-1.5 py-1 rounded '+(m.salary_overrides[k]===null?'mode-auto':'mode-manual');card.querySelector('.mp-'+k+'-total').textContent=formatRupiah(m[k]*m.qty)}})
  card.querySelectorAll('.mp-custom-row').forEach(r=>{const a=n(r.querySelector('.mp-custom-amount')?.value);r.querySelector('.mp-custom-total').textContent=formatRupiah(a*m.qty)})
 }
 function renderManpowerComponents(items=manpowerComponents){
@@ -628,13 +629,13 @@ function calculateDynamicRows(){
 function calculateOverallTotals(){
  manpowerComponents=getManpowerComponentsFromUI();
  const mp=manpowerComponents.reduce((s,x)=>s+manpowerCalc(x).subtotalTotal,0),basicSalaryTotal=manpowerComponents.reduce((s,x)=>{const m=normalizeManpowerItem(x);return s+(m.basic_salary*m.qty)},0),mac=tableSubtotal('machineryTable'),chem=tableSubtotal('chemicalsTable'),cons=tableSubtotal('consumablesTable'),uniform=tableSubtotal('uniformTable'),equipment=tableSubtotal('equipmentTable'),additional=tableSubtotal('additionalCostTable');
- const total=mp+uniform+mac+chem+cons+equipment+additional,autoFeePct=n(document.getElementById('managementFeePercent').value),feeBasis=document.getElementById('managementFeeBasis')?.value||'total_cost',feeMode=getManagementFeeMode(),selectedFeeComponents=getSelectedManagementFeeComponents();
+ const rawTotal=mp+uniform+mac+chem+cons+equipment+additional,annualSource=String(editingProjectMeta?.calculation_basis||'').toLowerCase()==='annual_source',sourceAdjustment=annualSource?signed(editingProjectMeta?.source_adjustment_monthly):0,total=rawTotal+sourceAdjustment,autoFeePct=n(document.getElementById('managementFeePercent').value),feeBasis=document.getElementById('managementFeeBasis')?.value||'total_cost',feeMode=getManagementFeeMode(),selectedFeeComponents=getSelectedManagementFeeComponents();
  const componentValues={manpower:mp,uniform:uniform,machinery:mac,chemicals:chem,consumables:cons,equipment:equipment,additional:additional};
  let feeBase=feeBasis==='basic_salary'?basicSalaryTotal:(feeBasis==='selected_components'?selectedFeeComponents.reduce((s,k)=>s+n(componentValues[k]),0):total);
  const selectedComponentsValid=feeBasis!=='selected_components'||selectedFeeComponents.length>0;
  const componentValidation=document.getElementById('managementFeeComponentValidation');if(componentValidation)componentValidation.classList.toggle('hidden',selectedComponentsValid);
  const manualFeePct=n(document.getElementById('managementFeeManualValue')?.value),feePct=feeMode==='manual'?manualFeePct:autoFeePct,fee=selectedComponentsValid?feeBase*feePct/100:0;
- const beforeTaxRaw=total+fee,rounded=Math.round(beforeTaxRaw/1000)*1000;
+ const beforeTaxRaw=total+fee,rounded=annualSource?beforeTaxRaw:Math.round(beforeTaxRaw/1000)*1000;
 
  const ppnBasis=document.getElementById('ppnBasis')?.value||'total_before_tax',ppnMode=getPpnMode(),selectedPpnComponents=getSelectedPpnComponents();
  const ppnComponentValues={...componentValues,management_fee:fee};
@@ -645,18 +646,18 @@ function calculateOverallTotals(){
  if(ppnBasis==='total_before_tax')ppnBase=rounded;
  else if(ppnBasis==='total_cost')ppnBase=total;
  else if(ppnBasis==='management_fee')ppnBase=fee;
- else if(ppnBasis==='selected_components')ppnBase=selectedPpnComponents.reduce((s,k)=>s+n(ppnComponentValues[k]),0);
+ else if(ppnBasis==='selected_components')ppnBase=selectedPpnComponents.reduce((s,k)=>s+n(ppnComponentValues[k]),0)+(annualSource?sourceAdjustment:0);
  const ppn=selectedPpnComponentsValid?ppnBase*ppnPct/100:0,grand=beforeTaxRaw+ppn;
 
  const basisLabel=document.getElementById('managementFeeBasisLabel');if(basisLabel)basisLabel.textContent=feeBasis==='basic_salary'?'Basic Salary':feeBasis==='selected_components'?(selectedFeeComponents.length?selectedFeeComponents.map(x=>({manpower:'Manpower',uniform:'Uniform',machinery:'Machinery',chemicals:'Chemicals',consumables:'Consumables',equipment:'Equipment',additional:'Additional Cost'}[x]||x)).join(' + '):'Pilih Komponen'):'Total Cost';
  const ppnBasisLabel=document.getElementById('ppnBasisLabel');if(ppnBasisLabel)ppnBasisLabel.textContent=getPpnBasisLabel(ppnBasis,selectedPpnComponents);
  const ppnBasePreview=document.getElementById('ppnBasePreview');if(ppnBasePreview)ppnBasePreview.textContent=formatRupiah(ppnBase);
- const ppnRatePreview=document.getElementById('ppnRatePreview');if(ppnRatePreview)ppnRatePreview.textContent=(Number(ppnPct)||0).toLocaleString('id-ID',{maximumFractionDigits:2})+'%';
+ const ppnRatePreview=document.getElementById('ppnRatePreview');if(ppnRatePreview)ppnRatePreview.textContent=(Number(ppnPct)||0).toLocaleString('id-ID',{maximumFractionDigits:3})+'%';
  const ppnValuePreview=document.getElementById('ppnValuePreview');if(ppnValuePreview)ppnValuePreview.textContent=formatRupiah(ppn);
 
  document.getElementById('statCostMp').textContent=formatRupiah(mp);document.getElementById('statCostMachinery').textContent=formatRupiah(mac);document.getElementById('statCostChemical').textContent=formatRupiah(chem);document.getElementById('statCostConsumable').textContent=formatRupiah(cons);document.getElementById('statTotalCost').textContent=formatRupiah(total);
  document.getElementById('sumMp').textContent=formatRupiah(mp);document.getElementById('sumUniform').textContent=formatRupiah(uniform);document.getElementById('sumMac').textContent=formatRupiah(mac);document.getElementById('sumChem').textContent=formatRupiah(chem);document.getElementById('sumCons').textContent=formatRupiah(cons);document.getElementById('sumEquipment').textContent=formatRupiah(equipment);document.getElementById('sumAdditional').textContent=formatRupiah(additional);document.getElementById('sumFee').textContent=formatRupiah(fee);const sumExcPpn=document.getElementById('sumExcPpn');if(sumExcPpn)sumExcPpn.textContent=formatRupiah(beforeTaxRaw);const sumPpn=document.getElementById('sumPpn');if(sumPpn)sumPpn.textContent=formatRupiah(ppn);document.getElementById('sumGrand').textContent=formatRupiah(grand);
- return {mp,mac,chem,cons,uniform,equipment,additional,basicSalaryTotal,total,fee,beforeTaxRaw,rounded,ppn,grand,feePct,autoFeePct,feeBasis,feeBase,feeMode,manualFeePct,selectedFeeComponents,selectedComponentsValid,ppnBasis,ppnBase,ppnMode,ppnPct,autoPpnPct,manualPpnPct,selectedPpnComponents,selectedPpnComponentsValid}
+ return {mp,mac,chem,cons,uniform,equipment,additional,basicSalaryTotal,rawTotal,sourceAdjustment,annualSource,total,fee,beforeTaxRaw,rounded,ppn,grand,feePct,autoFeePct,feeBasis,feeBase,feeMode,manualFeePct,selectedFeeComponents,selectedComponentsValid,ppnBasis,ppnBase,ppnMode,ppnPct,autoPpnPct,manualPpnPct,selectedPpnComponents,selectedPpnComponentsValid}
 }
 function extractItems(id){
  return [...document.querySelectorAll('#'+id+' .item-row')].map(r=>({name:r.querySelector('.item-name')?.value||'',vol:n(r.querySelector('.item-vol')?.value),unit:r.querySelector('.item-unit')?.value||'',status:r.querySelector('.item-status')?.value||'-',depreciation_months:Math.max(1,n(r.querySelector('.item-depr')?.value)),price:n(r.querySelector('.item-price')?.value),total_monthly:n(r.querySelector('.item-vol')?.value)*n(r.querySelector('.item-price')?.value)/Math.max(1,n(r.querySelector('.item-depr')?.value))}))
@@ -853,6 +854,7 @@ async function handleFormSubmit(e){
      cost_consumable:calc.cons,
      details_json:{
        project_meta:{
+         ...(editingProjectMeta||{}),
          province:document.getElementById('clientProvince').value.trim(),
          management_fee_basis:calc.feeBasis,
          management_fee_mode:calc.feeMode,
@@ -1102,6 +1104,7 @@ function renderTable(data){
  })
 }
 function resetForm(){
+ editingProjectMeta={};
  document.getElementById('editingProjectId').value='';document.getElementById('formTitle').textContent='Form Analytical Costing & Detail Input Component';document.getElementById('editingBadge').textContent='Input Baru';document.getElementById('btnSaveText').textContent='Simpan Hasil Analisa Ke Supabase';document.getElementById('rabForm').reset();document.getElementById('managementFeeBasis').value='total_cost';document.querySelector('input[name="managementFeeMode"][value="auto"]').checked=true;document.getElementById('managementFeeManualValue').value=0;document.querySelectorAll('.mgmt-fee-component').forEach(x=>x.checked=false);updateManagementFeeControls();document.getElementById('ppnBasis').value='selected_components';document.querySelector('input[name="ppnMode"][value="auto"]').checked=true;document.getElementById('ppnManualValue').value=11;document.querySelectorAll('.ppn-component').forEach(x=>x.checked=false);updatePpnControls();
  manpowerComponents=[normalizeManpowerItem({role:'HOUSEKEEPING',qty:2,basic_salary:5938885,tunjangan:0,uang_makan:330000,uniform:175000})];renderManpowerComponents(manpowerComponents);
  ['machineryTable','chemicalsTable','consumablesTable','uniformTable','equipmentTable','additionalCostTable'].forEach(id=>document.querySelector('#'+id+' tbody').innerHTML='');calculateDynamicRows()
@@ -1109,7 +1112,7 @@ function resetForm(){
 function loadProjectToForm(id){
  const p=projectsData.find(x=>x.project_id===id);if(!p)return;document.getElementById('editingProjectId').value=p.project_id;document.getElementById('formTitle').textContent='Edit / Analisa RAB ('+p.project_id+')';document.getElementById('editingBadge').textContent='Editing: '+p.project_id;document.getElementById('btnSaveText').textContent='Simpan Perubahan RAB';
  document.getElementById('clientName').value=p.client_name||'';document.getElementById('clientLocation').value=p.client_location||'';document.getElementById('projectArea').value=p.project_area||'';document.getElementById('projectTitle').value=p.project_title||'';document.getElementById('topDays').value=p.top_days||30;document.getElementById('managementFeePercent').value=p.management_fee_percent||7.5;
- const d=p.details_json||{},meta=d.project_meta||{};document.getElementById('clientProvince').value=meta.province||'';document.getElementById('managementFeeBasis').value=meta.management_fee_basis||'total_cost';const feeMode=meta.management_fee_mode||'auto';const feeModeEl=document.querySelector('input[name="managementFeeMode"][value="'+feeMode+'"]');if(feeModeEl)feeModeEl.checked=true;document.getElementById('managementFeeManualValue').value=n(meta.management_fee_manual_percent??meta.management_fee_manual_value??p.management_fee_percent);const feeComponents=Array.isArray(meta.management_fee_components)?meta.management_fee_components:[];document.querySelectorAll('.mgmt-fee-component').forEach(x=>x.checked=feeComponents.includes(x.value));updateManagementFeeControls();document.getElementById('ppnBasis').value=meta.ppn_basis||'total_before_tax';const ppnMode=meta.ppn_mode||'auto';const ppnModeEl=document.querySelector('input[name="ppnMode"][value="'+ppnMode+'"]');if(ppnModeEl)ppnModeEl.checked=true;document.getElementById('ppnManualValue').value=n(meta.ppn_manual_percent??meta.ppn_rate??11);const ppnComponents=Array.isArray(meta.ppn_components)?meta.ppn_components:[];document.querySelectorAll('.ppn-component').forEach(x=>x.checked=ppnComponents.includes(x.value));updatePpnControls();const saved=Array.isArray(d.manpower)?d.manpower:(d.manpower?[d.manpower]:d.manpower_legacy?[d.manpower_legacy]:[]);renderManpowerComponents(saved.length?saved:[normalizeManpowerItem({})]);
+ const d=p.details_json||{},meta=d.project_meta||{};editingProjectMeta={...meta};document.getElementById('clientProvince').value=meta.province||'';document.getElementById('managementFeeBasis').value=meta.management_fee_basis||'total_cost';const feeMode=meta.management_fee_mode||'auto';const feeModeEl=document.querySelector('input[name="managementFeeMode"][value="'+feeMode+'"]');if(feeModeEl)feeModeEl.checked=true;document.getElementById('managementFeeManualValue').value=n(meta.management_fee_manual_percent??meta.management_fee_manual_value??p.management_fee_percent);const feeComponents=Array.isArray(meta.management_fee_components)?meta.management_fee_components:[];document.querySelectorAll('.mgmt-fee-component').forEach(x=>x.checked=feeComponents.includes(x.value));updateManagementFeeControls();document.getElementById('ppnBasis').value=meta.ppn_basis||'total_before_tax';const ppnMode=meta.ppn_mode||'auto';const ppnModeEl=document.querySelector('input[name="ppnMode"][value="'+ppnMode+'"]');if(ppnModeEl)ppnModeEl.checked=true;document.getElementById('ppnManualValue').value=n(meta.ppn_manual_percent??meta.ppn_rate??11);const ppnComponents=Array.isArray(meta.ppn_components)?meta.ppn_components:[];document.querySelectorAll('.ppn-component').forEach(x=>x.checked=ppnComponents.includes(x.value));updatePpnControls();const saved=Array.isArray(d.manpower)?d.manpower:(d.manpower?[d.manpower]:d.manpower_legacy?[d.manpower_legacy]:[]);renderManpowerComponents(saved.length?saved:[normalizeManpowerItem({})]);
  [['uniformTable',d.uniform],['machineryTable',d.machinery],['chemicalsTable',d.chemicals],['consumablesTable',d.consumables],['equipmentTable',d.equipment],['additionalCostTable',d.additional_cost]].forEach(([id,arr])=>{document.querySelector('#'+id+' tbody').innerHTML='';(arr||[]).forEach(x=>addRow(id,x))});calculateManpower();calculateDynamicRows();document.getElementById('formSection').scrollIntoView({behavior:'smooth'})
 }
 function viewProjectDetail(id){
