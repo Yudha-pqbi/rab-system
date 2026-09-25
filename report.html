@@ -182,7 +182,7 @@ table thead {
       <div class="px-4 py-3 border-b bg-slate-50 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h3 class="section-title font-bold">Profit & Loss Design RAB</h3>
-          <p class="text-xs text-slate-500 mt-1">Pendapatan = nilai RAB sebelum PPN (Total Cost + Management Fee). Nilai periode dihitung dari design bulanan RAB.</p>
+          <p class="text-xs text-slate-500 mt-1">Pendapatan = nilai RAB sebelum PPN (Total Cost + Management Fee). Nilai periode mengikuti basis project: monthly design atau annual-source.</p>
         </div>
         <div class="flex flex-wrap gap-2 no-print">
           <div>
@@ -748,6 +748,7 @@ async function exportExcel(){
   ['Jumlah Project',r.projects.length],['Official Project Code',officialCodes.length?officialCodes.join(', '):'Belum dibuat'],['Total Manpower',t.manpowerQty],[],
   ['SUMMARY COST','TOTAL (Rp)'],['Manpower',t.manpower],['Uniform',t.uniform],['Machinery',t.machinery],
   ['Chemicals',t.chemicals],['Consumables',t.consumables],['Equipment',t.equipment],['Additional Cost',t.additional],
+  ...(Math.abs(signed(t.sourceAdjustment))>0.000001?[['RAB Source Adjustment',t.sourceAdjustment]]:[]),
   ['Total Cost Project',t.totalCost],['Management Fee',t.managementFee],['Total Exc. PPN',t.totalExc],['Total Inc. PPN',t.totalInc]
  ];
  const wsSummary=XLSX.utils.aoa_to_sheet(meta);wsSummary['!cols']=[{wch:28},{wch:55}];XLSX.utils.book_append_sheet(wb,wsSummary,'Summary');
