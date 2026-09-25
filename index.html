@@ -318,13 +318,18 @@ input:focus,select:focus{box-shadow:0 0 0 2px rgba(37,99,235,.18)}
       <button onclick="fetchProjects()" class="text-xs text-blue-600 font-semibold">↻ Refresh Database</button>
     </div>
   </div>
+  <div class="px-6 py-3 bg-emerald-50 border-b border-emerald-100 text-[11px] text-emerald-900">
+    <b>CANONICAL PROJECT IDENTITY CANDIDATE V1 · SHADOW READ ONLY</b>
+    <span class="ml-2">Kode existing tetap aktif untuk engine RAB production. Candidate hanya menampilkan parent Project Identity pendek; save/edit/delete RAB tidak berubah.</span>
+  </div>
   <div class="overflow-x-auto">
     <table class="w-full text-xs">
       <thead><tr class="bg-slate-100 text-slate-600">
         <th class="p-3 text-left">Nama Client</th>
         <th class="p-3 text-left">Area</th>
         <th class="p-3 text-left">Service</th>
-        <th class="p-3 text-left">Kode Project</th>
+        <th class="p-3 text-left">Kode Project Existing</th>
+        <th class="p-3 text-left">Canonical Project (Candidate)</th>
         <th class="p-3 text-center">Aksi</th>
       </tr></thead>
       <tbody id="projectTableBody"></tbody>
@@ -334,6 +339,7 @@ input:focus,select:focus{box-shadow:0 0 0 2px rgba(37,99,235,.18)}
           <td class="p-3 text-left">-</td>
           <td class="p-3 text-left">-</td>
           <td id="totalProjectCount" class="p-3 text-left">0 Project</td>
+          <td class="p-3 text-left">-</td>
           <td class="p-3 text-center">-</td>
         </tr>
       </tfoot>
@@ -985,7 +991,37 @@ async function fetchProjects(){
    console.warn('Official Project Code lookup:',codeErr);
  }
 
- projectsData=(data||[]).map(p=>({...p,official_project_code:codeMap[p.project_id]||null}));
+ // Candidate-only shadow identity. Read-only: tidak memengaruhi save/edit/delete RAB.
+ let canonicalMap={};
+ try{
+   const {data:canonicalRows,error:canonicalError}=await supabaseClient
+     .from('v_canonical_project_rab_candidate_v1')
+     .select('rab_project_id,project_code,project_name,canonical_status,link_status')
+     .eq('link_status','ACTIVE');
+   if(canonicalError) throw canonicalError;
+   (canonicalRows||[]).forEach(row=>{
+     if(row?.rab_project_id && row?.project_code){
+       canonicalMap[row.rab_project_id]={
+         project_code:row.project_code,
+         project_name:row.project_name,
+         status:row.canonical_status
+       };
+     }
+   });
+ }catch(canonicalErr){
+   console.warn('Canonical Project Candidate lookup:',canonicalErr);
+ }
+
+ projectsData=(data||[]).map(p=>{
+   const c=canonicalMap[p.project_id]||null;
+   return {
+     ...p,
+     official_project_code:codeMap[p.project_id]||null,
+     canonical_project_code:c?.project_code||null,
+     canonical_project_name:c?.project_name||null,
+     canonical_project_status:c?.status||null
+   };
+ });
  renderTable()
 }
 function renderDemoData(){projectsData=[];renderTable()}
@@ -1090,7 +1126,7 @@ function renderTable(data){
  renderProjectTotals(filtered);
  if(projectListPage>totalPages)projectListPage=totalPages;
  renderProjectPagination(total,totalPages);
- if(!total){body.innerHTML='<tr><td colspan="5" class="p-8 text-center text-slate-400">Belum ada project yang sesuai.</td></tr>';return}
+ if(!total){body.innerHTML='<tr><td colspan="6" class="p-8 text-center text-slate-400">Belum ada project yang sesuai.</td></tr>';return}
  const start=(projectListPage-1)*projectListPageSize;
  filtered.slice(start,start+projectListPageSize).forEach(p=>{
   const tr=document.createElement('tr');tr.className='border-b hover:bg-slate-50';
@@ -1098,7 +1134,10 @@ function renderTable(data){
   const codeHtml=officialCode
     ? `<span class="inline-flex items-center px-2.5 py-1 rounded-md bg-blue-50 border border-blue-100 text-blue-800 font-mono font-semibold">${escapeHtml(officialCode)}</span>`
     : '<span class="inline-flex items-center px-2.5 py-1 rounded-md bg-amber-50 border border-amber-200 text-amber-700 font-semibold">Belum dibuat</span>';
-  tr.innerHTML=`<td class="p-3 font-semibold text-left min-w-44">${escapeHtml(p.client_name||'-')}</td><td class="p-3 text-left min-w-36">${escapeHtml(p.project_area||'-')}</td><td class="p-3 text-left min-w-40">${escapeHtml(p.project_title||'-')}</td><td class="p-3 text-left min-w-56">${codeHtml}</td><td class="p-3 whitespace-nowrap text-center"><button onclick="viewProjectDetail('${p.project_id}')" class="px-2 py-1 border rounded text-blue-600 mr-1">Lihat</button><button onclick="loadProjectToForm('${p.project_id}')" class="px-2 py-1 border rounded text-amber-600 mr-1">Edit</button><button onclick="exportSingleProjectPDF('${p.project_id}')" class="px-2 py-1 border rounded text-rose-600 mr-1">PDF</button><button onclick="exportSingleProjectExcel('${p.project_id}')" class="px-2 py-1 border rounded text-emerald-600 mr-1">XLS</button><button onclick="deleteProject('${p.project_id}')" class="px-2 py-1 border rounded text-red-600">Hapus</button></td>`;body.appendChild(tr)
+  const canonicalHtml=p.canonical_project_code
+    ? `<span class="inline-flex items-center px-2.5 py-1 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 font-mono font-bold">${escapeHtml(p.canonical_project_code)}</span><div class="mt-1 text-[10px] font-semibold text-slate-600">${escapeHtml(p.canonical_project_name||'')}</div><div class="text-[9px] uppercase tracking-wide text-emerald-700">shadow read-only</div>`
+    : '<span class="inline-flex items-center px-2.5 py-1 rounded-md bg-slate-50 border border-slate-200 text-slate-500 font-semibold">Belum terhubung</span>';
+  tr.innerHTML=`<td class="p-3 font-semibold text-left min-w-44">${escapeHtml(p.client_name||'-')}</td><td class="p-3 text-left min-w-36">${escapeHtml(p.project_area||'-')}</td><td class="p-3 text-left min-w-40">${escapeHtml(p.project_title||'-')}</td><td class="p-3 text-left min-w-56">${codeHtml}</td><td class="p-3 text-left min-w-48">${canonicalHtml}</td><td class="p-3 whitespace-nowrap text-center"><button onclick="viewProjectDetail('${p.project_id}')" class="px-2 py-1 border rounded text-blue-600 mr-1">Lihat</button><button onclick="loadProjectToForm('${p.project_id}')" class="px-2 py-1 border rounded text-amber-600 mr-1">Edit</button><button onclick="exportSingleProjectPDF('${p.project_id}')" class="px-2 py-1 border rounded text-rose-600 mr-1">PDF</button><button onclick="exportSingleProjectExcel('${p.project_id}')" class="px-2 py-1 border rounded text-emerald-600 mr-1">XLS</button><button onclick="deleteProject('${p.project_id}')" class="px-2 py-1 border rounded text-red-600">Hapus</button></td>`;body.appendChild(tr)
  })
 }
 function resetForm(){
@@ -1162,7 +1201,8 @@ function viewProjectDetail(id){
        ${infoItem('Service',p.project_title||'-')}
        ${infoItem('TOP',(p.top_days??'-')+' Hari')}
        ${infoItem('Total Manpower',totalManpower+' person')}
-       ${infoItem('Official Project Code',officialCode,true)}
+       ${infoItem('Official Project Code Existing',officialCode,true)}
+       ${infoItem('Canonical Project (Candidate)',p.canonical_project_code ? (p.canonical_project_code+' · '+(p.canonical_project_name||'')) : 'Belum terhubung',true)}
      </div>
    </div>
 
