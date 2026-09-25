@@ -620,6 +620,20 @@ function buildReport(projects){
  totals.schedule=schedule;
  totals.hasCardContracts=hasCardContracts;
  totals.hasMonthlySchedule=hasCardContracts;
+ if(hasCardContracts){
+   totals.annual.manpower=Object.values(schedule).reduce((s,row)=>s+n(row.manpower),0);
+   totals.annual.uniform=Object.values(schedule).reduce((s,row)=>s+n(row.uniform),0);
+   totals.annual.machinery=Object.values(schedule).reduce((s,row)=>s+n(row.machinery),0);
+   totals.annual.chemicals=Object.values(schedule).reduce((s,row)=>s+n(row.chemicals),0);
+   totals.annual.consumables=Object.values(schedule).reduce((s,row)=>s+n(row.consumables),0);
+   totals.annual.equipment=Object.values(schedule).reduce((s,row)=>s+n(row.equipment),0);
+   totals.annual.additional=Object.values(schedule).reduce((s,row)=>s+n(row.additional),0);
+   totals.annual.sourceAdjustment=Object.values(schedule).reduce((s,row)=>s+signed(row.sourceAdjustment),0);
+   totals.annual.managementFee=Object.values(schedule).reduce((s,row)=>s+n(row.managementFee),0);
+   totals.annual.totalCost=Object.values(schedule).reduce((s,row)=>s+n(row.totalCost),0);
+   totals.annual.totalExc=Object.values(schedule).reduce((s,row)=>s+n(row.totalExc),0);
+   totals.annual.totalInc=Object.values(schedule).reduce((s,row)=>s+n(row.totalInc),0);
+ }
  totals.hasAnnualSource=projects.some(p=>String(projectMeta(p)?.calculation_basis||'').toLowerCase()==='annual_source');
  return {projects,mpRows,salaryRows,detail,totals}
 }
