@@ -494,9 +494,6 @@ function normalizeManpowerItem(x={}){
   grade:String(x.grade||'').trim(),
   contract_start:String(x.contract_start||'').trim(),
   contract_end:String(x.contract_end||'').trim(),
-  source_quote_monthly:(x.source_quote_monthly===null||x.source_quote_monthly===undefined||x.source_quote_monthly==='')?null:n(x.source_quote_monthly),
-  source_fee_monthly:(x.source_fee_monthly===null||x.source_fee_monthly===undefined||x.source_fee_monthly==='')?null:n(x.source_fee_monthly),
-  source_contract_total:(x.source_contract_total===null||x.source_contract_total===undefined||x.source_contract_total==='')?null:n(x.source_contract_total),
   tunjangan:n(x.tunjangan),uang_makan:n(x.uang_makan),uniform:n(x.uniform),
   salary_overrides:{
    thr:o.thr===null||o.thr===undefined?null:n(o.thr),
@@ -535,9 +532,6 @@ function getManpowerComponentsFromUI(){
    grade:card.querySelector('.mp-grade')?.value,
    contract_start:card.querySelector('.mp-contract-start')?.value,
    contract_end:card.querySelector('.mp-contract-end')?.value,
-   source_quote_monthly:card.querySelector('.mp-source-quote')?.value,
-   source_fee_monthly:card.querySelector('.mp-source-fee')?.value,
-   source_contract_total:card.querySelector('.mp-contract-total')?.value,
    tunjangan:card.querySelector('.mp-tunjangan')?.value,
    uang_makan:card.querySelector('.mp-uang-makan')?.value,uniform:card.querySelector('.mp-uniform')?.value,
    salary_overrides:overrides,
@@ -569,9 +563,6 @@ function createManpowerCard(item,idx){
    <div><label class="block text-[9px] font-semibold text-slate-500 mb-1">Grade</label><input class="mp-grade w-full px-2 py-1.5 border rounded text-xs bg-white" value="${escapeHtml(m.grade)}" placeholder="Opsional"></div>
    <div><label class="block text-[9px] font-semibold text-slate-500 mb-1">Start Contract</label><input type="date" class="mp-contract-start w-full px-2 py-1.5 border rounded text-xs bg-white" value="${escapeHtml(m.contract_start)}"></div>
    <div><label class="block text-[9px] font-semibold text-slate-500 mb-1">End Contract</label><input type="date" class="mp-contract-end w-full px-2 py-1.5 border rounded text-xs bg-white" value="${escapeHtml(m.contract_end)}"></div>
-   <div><label class="block text-[9px] font-semibold text-slate-500 mb-1">Quoted / Month (Rp)</label><input type="number" min="0" step="any" class="mp-source-quote w-full px-2 py-1.5 border rounded text-xs bg-white text-right" value="${m.source_quote_monthly??''}" placeholder="Opsional"></div>
-   <div><label class="block text-[9px] font-semibold text-slate-500 mb-1">Source Fee / Month (Rp)</label><input type="number" min="0" step="any" class="mp-source-fee w-full px-2 py-1.5 border rounded text-xs bg-white text-right" value="${m.source_fee_monthly??''}" placeholder="Opsional"></div>
-   <div><label class="block text-[9px] font-semibold text-slate-500 mb-1">Contract Total (Rp)</label><input type="number" min="0" step="any" class="mp-contract-total w-full px-2 py-1.5 border rounded text-xs bg-white text-right" value="${m.source_contract_total??''}" placeholder="Opsional"></div>
   </div>
  </div>
  <div class="overflow-x-auto"><table class="w-full text-left text-xs"><thead><tr class="bg-slate-800 text-white uppercase"><th class="p-2.5">Komponen Salary & Benefit</th><th class="p-2.5">Acuan / QTY</th><th class="p-2.5 text-right">Amount / Person</th><th class="p-2.5 text-right">Total / Month</th></tr></thead><tbody>
@@ -659,13 +650,13 @@ function calculateDynamicRows(){
 function calculateOverallTotals(){
  manpowerComponents=getManpowerComponentsFromUI();
  const mp=manpowerComponents.reduce((s,x)=>s+manpowerCalc(x).subtotalTotal,0),basicSalaryTotal=manpowerComponents.reduce((s,x)=>{const m=normalizeManpowerItem(x);return s+(m.basic_salary*m.qty)},0),mac=tableSubtotal('machineryTable'),chem=tableSubtotal('chemicalsTable'),cons=tableSubtotal('consumablesTable'),uniform=tableSubtotal('uniformTable'),equipment=tableSubtotal('equipmentTable'),additional=tableSubtotal('additionalCostTable');
- const rawTotal=mp+uniform+mac+chem+cons+equipment+additional,calculationBasis=String(editingProjectMeta?.calculation_basis||'').toLowerCase(),annualSource=calculationBasis==='annual_source',exactSource=annualSource||calculationBasis==='monthly_source',sourceAdjustment=annualSource?signed(editingProjectMeta?.source_adjustment_monthly):0,total=rawTotal+sourceAdjustment,autoFeePct=n(document.getElementById('managementFeePercent').value),feeBasis=document.getElementById('managementFeeBasis')?.value||'total_cost',feeMode=getManagementFeeMode(),selectedFeeComponents=getSelectedManagementFeeComponents();
+ const rawTotal=mp+uniform+mac+chem+cons+equipment+additional,calculationBasis=String(editingProjectMeta?.calculation_basis||'').toLowerCase(),annualSource=calculationBasis==='annual_source',sourceAdjustment=annualSource?signed(editingProjectMeta?.source_adjustment_monthly):0,total=rawTotal+sourceAdjustment,autoFeePct=n(document.getElementById('managementFeePercent').value),feeBasis=document.getElementById('managementFeeBasis')?.value||'total_cost',feeMode=getManagementFeeMode(),selectedFeeComponents=getSelectedManagementFeeComponents();
  const componentValues={manpower:mp,uniform:uniform,machinery:mac,chemicals:chem,consumables:cons,equipment:equipment,additional:additional};
  let feeBase=feeBasis==='basic_salary'?basicSalaryTotal:(feeBasis==='selected_components'?selectedFeeComponents.reduce((s,k)=>s+n(componentValues[k]),0):total);
  const selectedComponentsValid=feeBasis!=='selected_components'||selectedFeeComponents.length>0;
  const componentValidation=document.getElementById('managementFeeComponentValidation');if(componentValidation)componentValidation.classList.toggle('hidden',selectedComponentsValid);
  const manualFeePct=n(document.getElementById('managementFeeManualValue')?.value),feePct=feeMode==='manual'?manualFeePct:autoFeePct,fee=selectedComponentsValid?feeBase*feePct/100:0;
- const beforeTaxRaw=total+fee,sourceBeforeTax=Number(editingProjectMeta?.source_monthly_before_tax),rounded=exactSource&&Number.isFinite(sourceBeforeTax)?sourceBeforeTax:(exactSource?beforeTaxRaw:Math.round(beforeTaxRaw/1000)*1000);
+ const beforeTaxRaw=total+fee,rounded=annualSource?beforeTaxRaw:Math.round(beforeTaxRaw/1000)*1000;
 
  const ppnBasis=document.getElementById('ppnBasis')?.value||'total_before_tax',ppnMode=getPpnMode(),selectedPpnComponents=getSelectedPpnComponents();
  const ppnComponentValues={...componentValues,management_fee:fee};
@@ -677,8 +668,7 @@ function calculateOverallTotals(){
  else if(ppnBasis==='total_cost')ppnBase=total;
  else if(ppnBasis==='management_fee')ppnBase=fee;
  else if(ppnBasis==='selected_components')ppnBase=selectedPpnComponents.reduce((s,k)=>s+n(ppnComponentValues[k]),0)+(annualSource?sourceAdjustment:0);
- const sourcePpnBase=Number(editingProjectMeta?.source_ppn_base_monthly);if(exactSource&&Number.isFinite(sourcePpnBase))ppnBase=sourcePpnBase;
- const ppn=selectedPpnComponentsValid?ppnBase*ppnPct/100:0,grand=(exactSource?rounded:beforeTaxRaw)+ppn;
+ const ppn=selectedPpnComponentsValid?ppnBase*ppnPct/100:0,grand=(annualSource?rounded:beforeTaxRaw)+ppn;
 
  const basisLabel=document.getElementById('managementFeeBasisLabel');if(basisLabel)basisLabel.textContent=feeBasis==='basic_salary'?'Basic Salary':feeBasis==='selected_components'?(selectedFeeComponents.length?selectedFeeComponents.map(x=>({manpower:'Manpower',uniform:'Uniform',machinery:'Machinery',chemicals:'Chemicals',consumables:'Consumables',equipment:'Equipment',additional:'Additional Cost'}[x]||x)).join(' + '):'Pilih Komponen'):'Total Cost';
  const ppnBasisLabel=document.getElementById('ppnBasisLabel');if(ppnBasisLabel)ppnBasisLabel.textContent=getPpnBasisLabel(ppnBasis,selectedPpnComponents);
@@ -688,7 +678,7 @@ function calculateOverallTotals(){
 
  document.getElementById('statCostMp').textContent=formatRupiah(mp);document.getElementById('statCostMachinery').textContent=formatRupiah(mac);document.getElementById('statCostChemical').textContent=formatRupiah(chem);document.getElementById('statCostConsumable').textContent=formatRupiah(cons);document.getElementById('statTotalCost').textContent=formatRupiah(total);
  document.getElementById('sumMp').textContent=formatRupiah(mp);document.getElementById('sumUniform').textContent=formatRupiah(uniform);document.getElementById('sumMac').textContent=formatRupiah(mac);document.getElementById('sumChem').textContent=formatRupiah(chem);document.getElementById('sumCons').textContent=formatRupiah(cons);document.getElementById('sumEquipment').textContent=formatRupiah(equipment);document.getElementById('sumAdditional').textContent=formatRupiah(additional);document.getElementById('sumFee').textContent=formatRupiah(fee);const sumExcPpn=document.getElementById('sumExcPpn');if(sumExcPpn)sumExcPpn.textContent=formatRupiah(beforeTaxRaw);const sumPpn=document.getElementById('sumPpn');if(sumPpn)sumPpn.textContent=formatRupiah(ppn);document.getElementById('sumGrand').textContent=formatRupiah(grand);
- return {mp,mac,chem,cons,uniform,equipment,additional,basicSalaryTotal,rawTotal,sourceAdjustment,calculationBasis,annualSource,exactSource,total,fee,beforeTaxRaw,rounded,ppn,grand,feePct,autoFeePct,feeBasis,feeBase,feeMode,manualFeePct,selectedFeeComponents,selectedComponentsValid,ppnBasis,ppnBase,ppnMode,ppnPct,autoPpnPct,manualPpnPct,selectedPpnComponents,selectedPpnComponentsValid}
+ return {mp,mac,chem,cons,uniform,equipment,additional,basicSalaryTotal,rawTotal,sourceAdjustment,calculationBasis,annualSource,total,fee,beforeTaxRaw,rounded,ppn,grand,feePct,autoFeePct,feeBasis,feeBase,feeMode,manualFeePct,selectedFeeComponents,selectedComponentsValid,ppnBasis,ppnBase,ppnMode,ppnPct,autoPpnPct,manualPpnPct,selectedPpnComponents,selectedPpnComponentsValid}
 }
 function extractItems(id){
  return [...document.querySelectorAll('#'+id+' .item-row')].map(r=>({name:r.querySelector('.item-name')?.value||'',vol:n(r.querySelector('.item-vol')?.value),unit:r.querySelector('.item-unit')?.value||'',status:r.querySelector('.item-status')?.value||'-',depreciation_months:Math.max(1,n(r.querySelector('.item-depr')?.value)),price:n(r.querySelector('.item-price')?.value),total_monthly:n(r.querySelector('.item-vol')?.value)*n(r.querySelector('.item-price')?.value)/Math.max(1,n(r.querySelector('.item-depr')?.value))}))
