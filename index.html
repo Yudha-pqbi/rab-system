@@ -1090,6 +1090,27 @@ async function handleFormSubmit(e){
      status:'APPROVED'
    };
 
+   if(RAB_CANONICAL_CANDIDATE_V2){
+     const mode=document.querySelector('input[name="canonicalIdentityMode"]:checked')?.value||'existing';
+     const authority=renderClientAuthority();
+     const selectedCode=document.getElementById('canonicalProjectSelect')?.value||'';
+     const proposedName=(document.getElementById('canonicalNewProjectName')?.value||'').trim();
+     const summary=[
+       'CANDIDATE V2 — VALIDATION ONLY',
+       'RAB ID preview: '+payload.project_id,
+       'Source Client: '+(payload.client_name||'-'),
+       'Governed Client: '+(authority.status==='GOVERNED'?authority.governed_client_name:'CLIENT AUTHORITY REVIEW'),
+       'Identity Mode: '+(mode==='existing'?'EXISTING':'NEW'),
+       mode==='existing'
+         ? 'Canonical Project: '+(selectedCode||'belum dipilih')
+         : 'New Project Preview: '+canonicalNextCodePreview()+' · '+(proposedName||'-'),
+       '',
+       'Tidak ada data production yang disimpan dan Form OPC lama tidak dijalankan.'
+     ].join('\n');
+     alert(summary);
+     return;
+   }
+
    if(supabaseClient){
      const res=editing
        ? await supabaseClient.from('projects').update(payload).eq('project_id',editing)
@@ -1339,25 +1360,28 @@ function renderTable(data){
  renderProjectTotals(filtered);
  if(projectListPage>totalPages)projectListPage=totalPages;
  renderProjectPagination(total,totalPages);
- if(!total){body.innerHTML='<tr><td colspan="5" class="p-8 text-center text-slate-400">Belum ada project yang sesuai.</td></tr>';return}
+ if(!total){body.innerHTML='<tr><td colspan="6" class="p-8 text-center text-slate-400">Belum ada project yang sesuai.</td></tr>';return}
  const start=(projectListPage-1)*projectListPageSize;
  filtered.slice(start,start+projectListPageSize).forEach(p=>{
   const tr=document.createElement('tr');tr.className='border-b hover:bg-slate-50';
   const officialCode=p.official_project_code||'';
   const codeHtml=officialCode
     ? `<span class="inline-flex items-center px-2.5 py-1 rounded-md bg-blue-50 border border-blue-100 text-blue-800 font-mono font-semibold">${escapeHtml(officialCode)}</span>`
-    : '<span class="inline-flex items-center px-2.5 py-1 rounded-md bg-amber-50 border border-amber-200 text-amber-700 font-semibold">Belum dibuat</span>';
-  tr.innerHTML=`<td class="p-3 font-semibold text-left min-w-44">${escapeHtml(p.client_name||'-')}</td><td class="p-3 text-left min-w-36">${escapeHtml(p.project_area||'-')}</td><td class="p-3 text-left min-w-40">${escapeHtml(p.project_title||'-')}</td><td class="p-3 text-left min-w-56">${codeHtml}</td><td class="p-3 whitespace-nowrap text-center"><button onclick="viewProjectDetail('${p.project_id}')" class="px-2 py-1 border rounded text-blue-600 mr-1">Lihat</button><button onclick="loadProjectToForm('${p.project_id}')" class="px-2 py-1 border rounded text-amber-600 mr-1">Edit</button><button onclick="exportSingleProjectPDF('${p.project_id}')" class="px-2 py-1 border rounded text-rose-600 mr-1">PDF</button><button onclick="exportSingleProjectExcel('${p.project_id}')" class="px-2 py-1 border rounded text-emerald-600 mr-1">XLS</button><button onclick="deleteProject('${p.project_id}')" class="px-2 py-1 border rounded text-red-600">Hapus</button></td>`;body.appendChild(tr)
+    : '<span class="inline-flex items-center px-2.5 py-1 rounded-md bg-slate-50 border border-slate-200 text-slate-500 font-semibold">Legacy tidak tersedia</span>';
+  const canonicalHtml=p.canonical_project_code
+    ? `<span class="inline-flex items-center px-2.5 py-1 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 font-mono font-bold">${escapeHtml(p.canonical_project_code)}</span><div class="mt-1 text-[10px] font-semibold text-slate-600">${escapeHtml(p.canonical_project_name||'')}</div><div class="text-[9px] text-slate-500">${escapeHtml(p.governed_client_name||'CLIENT AUTHORITY REVIEW')}</div>`
+    : '<span class="inline-flex items-center px-2.5 py-1 rounded-md bg-slate-50 border border-slate-200 text-slate-500 font-semibold">Belum terhubung</span>';
+  tr.innerHTML=`<td class="p-3 font-semibold text-left min-w-44">${escapeHtml(p.client_name||'-')}</td><td class="p-3 text-left min-w-36">${escapeHtml(p.project_area||'-')}</td><td class="p-3 text-left min-w-40">${escapeHtml(p.project_title||'-')}</td><td class="p-3 text-left min-w-56">${codeHtml}</td><td class="p-3 text-left min-w-52">${canonicalHtml}</td><td class="p-3 whitespace-nowrap text-center"><button onclick="viewProjectDetail('${p.project_id}')" class="px-2 py-1 border rounded text-blue-600 mr-1">Lihat</button><button onclick="loadProjectToForm('${p.project_id}')" class="px-2 py-1 border rounded text-amber-600 mr-1">Edit</button><button onclick="exportSingleProjectPDF('${p.project_id}')" class="px-2 py-1 border rounded text-rose-600 mr-1">PDF</button><button onclick="exportSingleProjectExcel('${p.project_id}')" class="px-2 py-1 border rounded text-emerald-600 mr-1">XLS</button><button onclick="deleteProject('${p.project_id}')" class="px-2 py-1 border rounded text-red-600">Hapus</button></td>`;body.appendChild(tr)
  })
 }
 function resetForm(){
  editingProjectMeta={};
- document.getElementById('editingProjectId').value='';document.getElementById('formTitle').textContent='Form Analytical Costing & Detail Input Component';document.getElementById('editingBadge').textContent='Input Baru';document.getElementById('btnSaveText').textContent='Simpan Hasil Analisa Ke Supabase';document.getElementById('rabForm').reset();document.getElementById('managementFeeBasis').value='total_cost';document.querySelector('input[name="managementFeeMode"][value="auto"]').checked=true;document.getElementById('managementFeeManualValue').value=0;document.querySelectorAll('.mgmt-fee-component').forEach(x=>x.checked=false);updateManagementFeeControls();document.getElementById('ppnBasis').value='selected_components';document.querySelector('input[name="ppnMode"][value="auto"]').checked=true;document.getElementById('ppnManualValue').value=11;document.querySelectorAll('.ppn-component').forEach(x=>x.checked=false);updatePpnControls();
+ document.getElementById('editingProjectId').value='';document.getElementById('formTitle').textContent='Form Analytical Costing & Detail Input Component';document.getElementById('editingBadge').textContent='Input Baru';document.getElementById('btnSaveText').textContent='Simpan Hasil Analisa Ke Supabase';document.getElementById('rabForm').reset();setCanonicalIdentityMode('existing');document.getElementById('canonicalProjectSelect').value='';document.getElementById('canonicalNewProjectName').value='';document.getElementById('managementFeeBasis').value='total_cost';document.querySelector('input[name="managementFeeMode"][value="auto"]').checked=true;document.getElementById('managementFeeManualValue').value=0;document.querySelectorAll('.mgmt-fee-component').forEach(x=>x.checked=false);updateManagementFeeControls();document.getElementById('ppnBasis').value='selected_components';document.querySelector('input[name="ppnMode"][value="auto"]').checked=true;document.getElementById('ppnManualValue').value=11;document.querySelectorAll('.ppn-component').forEach(x=>x.checked=false);updatePpnControls();
  manpowerComponents=[normalizeManpowerItem({role:'HOUSEKEEPING',qty:2,basic_salary:5938885,tunjangan:0,uang_makan:330000,uniform:175000})];renderManpowerComponents(manpowerComponents);
  ['machineryTable','chemicalsTable','consumablesTable','uniformTable','equipmentTable','additionalCostTable'].forEach(id=>document.querySelector('#'+id+' tbody').innerHTML='');calculateDynamicRows()
 }
 function loadProjectToForm(id){
- const p=projectsData.find(x=>x.project_id===id);if(!p)return;document.getElementById('editingProjectId').value=p.project_id;document.getElementById('formTitle').textContent='Edit / Analisa RAB ('+p.project_id+')';document.getElementById('editingBadge').textContent='Editing: '+p.project_id;document.getElementById('btnSaveText').textContent='Simpan Perubahan RAB';
+ const p=projectsData.find(x=>x.project_id===id);if(!p)return;setCanonicalIdentityMode('existing');renderCanonicalProjectOptions(p.canonical_project_code||'');document.getElementById('editingProjectId').value=p.project_id;document.getElementById('formTitle').textContent='Edit / Analisa RAB ('+p.project_id+')';document.getElementById('editingBadge').textContent='Editing: '+p.project_id;document.getElementById('btnSaveText').textContent='Simpan Perubahan RAB';
  document.getElementById('clientName').value=p.client_name||'';document.getElementById('clientLocation').value=p.client_location||'';document.getElementById('projectArea').value=p.project_area||'';document.getElementById('projectTitle').value=p.project_title||'';document.getElementById('topDays').value=p.top_days||30;document.getElementById('managementFeePercent').value=p.management_fee_percent||7.5;
  const d=p.details_json||{},meta=d.project_meta||{};editingProjectMeta={...meta};document.getElementById('clientProvince').value=meta.province||'';document.getElementById('managementFeeBasis').value=meta.management_fee_basis||'total_cost';const feeMode=meta.management_fee_mode||'auto';const feeModeEl=document.querySelector('input[name="managementFeeMode"][value="'+feeMode+'"]');if(feeModeEl)feeModeEl.checked=true;document.getElementById('managementFeeManualValue').value=n(meta.management_fee_manual_percent??meta.management_fee_manual_value??p.management_fee_percent);const feeComponents=Array.isArray(meta.management_fee_components)?meta.management_fee_components:[];document.querySelectorAll('.mgmt-fee-component').forEach(x=>x.checked=feeComponents.includes(x.value));updateManagementFeeControls();document.getElementById('ppnBasis').value=meta.ppn_basis||'total_before_tax';const ppnMode=meta.ppn_mode||'auto';const ppnModeEl=document.querySelector('input[name="ppnMode"][value="'+ppnMode+'"]');if(ppnModeEl)ppnModeEl.checked=true;document.getElementById('ppnManualValue').value=n(meta.ppn_manual_percent??meta.ppn_rate??11);const ppnComponents=Array.isArray(meta.ppn_components)?meta.ppn_components:[];document.querySelectorAll('.ppn-component').forEach(x=>x.checked=ppnComponents.includes(x.value));updatePpnControls();const saved=Array.isArray(d.manpower)?d.manpower:(d.manpower?[d.manpower]:d.manpower_legacy?[d.manpower_legacy]:[]);renderManpowerComponents(saved.length?saved:[normalizeManpowerItem({})]);
  [['uniformTable',d.uniform],['machineryTable',d.machinery],['chemicalsTable',d.chemicals],['consumablesTable',d.consumables],['equipmentTable',d.equipment],['additionalCostTable',d.additional_cost]].forEach(([id,arr])=>{document.querySelector('#'+id+' tbody').innerHTML='';(arr||[]).forEach(x=>addRow(id,x))});calculateManpower();calculateDynamicRows();document.getElementById('formSection').scrollIntoView({behavior:'smooth'})
@@ -1412,7 +1436,9 @@ function viewProjectDetail(id){
        ${infoItem('Service',p.project_title||'-')}
        ${infoItem('TOP',(p.top_days??'-')+' Hari')}
        ${infoItem('Total Manpower',totalManpower+' person')}
-       ${infoItem('Official Project Code',officialCode,true)}
+       ${infoItem('Legacy Project Code',officialCode,true)}
+       ${infoItem('Canonical Project (Candidate)',p.canonical_project_code ? (p.canonical_project_code+' · '+(p.canonical_project_name||'')) : 'Belum terhubung',true)}
+       ${infoItem('Governed Client (Invoice Authority)',p.governed_client_name||'CLIENT AUTHORITY REVIEW')}
      </div>
    </div>
 
@@ -2006,6 +2032,8 @@ async function exportSingleProjectPDF(id) {
         }
 document.addEventListener('DOMContentLoaded',()=>{
  initSupabase();renderManpowerComponents(manpowerComponents);updateManagementFeeControls();updatePpnControls();
+ ['clientName','projectTitle'].forEach(id=>document.getElementById(id)?.addEventListener('input',updateCanonicalCandidatePreview));
+ renderCanonicalProjectOptions();renderClientAuthority();
  addRow('uniformTable');addRow('machineryTable');addRow('chemicalsTable');addRow('consumablesTable');addRow('equipmentTable');addRow('additionalCostTable');calculateDynamicRows();
 });
 </script>
