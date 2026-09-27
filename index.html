@@ -75,6 +75,67 @@ input:focus,select:focus{box-shadow:0 0 0 2px rgba(37,99,235,.18)}
 
   <form id="rabForm" novalidate onsubmit="handleFormSubmit(event)" class="p-6 space-y-6">
     <input type="hidden" id="editingProjectId">
+
+    <!-- CANONICAL PROJECT IDENTITY V2 — UAT / SHADOW ONLY -->
+    <section id="canonicalIdentityCandidate" class="rounded-xl border border-emerald-200 bg-emerald-50/60 p-5 space-y-4">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div class="text-[10px] uppercase tracking-[.16em] font-extrabold text-emerald-700">Candidate V2 · UAT / Shadow Only</div>
+          <h3 class="text-sm font-bold text-slate-900 mt-1">Client Authority & Project Identity</h3>
+          <p class="text-[11px] text-slate-600 mt-1">Nama client governed mengikuti authority Invoice/Finance. Project Code pendek diterbitkan hanya oleh RAB. Area tetap menjadi dimensi RAB dan tidak membentuk Project Code.</p>
+        </div>
+        <span class="text-[10px] px-2.5 py-1 rounded-full bg-white border border-emerald-200 text-emerald-800 font-bold">NO PRODUCTION WRITE</span>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="rounded-lg border border-slate-200 bg-white p-3">
+          <div class="text-[10px] uppercase tracking-wide font-extrabold text-slate-500">Invoice Client Authority</div>
+          <div id="clientAuthorityName" class="mt-1 text-sm font-bold text-slate-800">Menunggu Nama Client...</div>
+          <div id="clientAuthorityStatus" class="mt-1 text-[10px] text-slate-500">Isi Nama Client pada form untuk resolver.</div>
+        </div>
+        <div class="rounded-lg border border-slate-200 bg-white p-3">
+          <div class="text-[10px] uppercase tracking-wide font-extrabold text-slate-500">Project Code Governance</div>
+          <div class="mt-1 text-sm font-bold text-slate-800">RAB Authority</div>
+          <div class="mt-1 text-[10px] text-slate-500">User tidak mengisi Client Code / Area Code / Service Code. Legacy OPC tetap lineage.</div>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap gap-4 text-xs">
+        <label class="inline-flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="canonicalIdentityMode" value="existing" checked onchange="setCanonicalIdentityMode('existing')">
+          <span class="font-semibold">Gunakan Project Existing</span>
+        </label>
+        <label class="inline-flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="canonicalIdentityMode" value="new" onchange="setCanonicalIdentityMode('new')">
+          <span class="font-semibold">Simulasi Project Baru</span>
+        </label>
+      </div>
+
+      <div id="canonicalExistingPanel" class="grid grid-cols-1 lg:grid-cols-[minmax(280px,1fr)_2fr] gap-4 items-end">
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">Canonical Project Existing</label>
+          <select id="canonicalProjectSelect" onchange="updateCanonicalCandidatePreview()" class="w-full h-10 px-3 border border-emerald-200 rounded-lg text-xs bg-white focus:ring-2 focus:ring-emerald-500">
+            <option value="">Pilih project identity...</option>
+          </select>
+        </div>
+        <div id="canonicalExistingInfo" class="min-h-10 rounded-lg border border-emerald-100 bg-white px-3 py-2 text-xs text-slate-600">Belum ada Project Identity dipilih.</div>
+      </div>
+
+      <div id="canonicalNewPanel" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-4 items-end">
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">Preview Project Code Baru</label>
+          <input id="canonicalNextCode" type="text" readonly class="w-full h-10 px-3 border border-slate-200 rounded-lg text-sm font-mono font-extrabold bg-slate-100 text-slate-800" value="1002">
+        </div>
+        <div class="lg:col-span-2">
+          <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">Nama Business Project</label>
+          <input id="canonicalNewProjectName" type="text" oninput="updateCanonicalCandidatePreview()" placeholder="Contoh: Djarum Security" class="w-full h-10 px-3 border border-emerald-200 rounded-lg text-xs bg-white focus:ring-2 focus:ring-emerald-500">
+        </div>
+      </div>
+
+      <div id="canonicalCandidateStatus" class="rounded-lg border border-emerald-100 bg-white px-3 py-2 text-[11px] text-slate-600">
+        Candidate V2 hanya melakukan validasi/simulasi. Tombol Save tidak menulis ke production.
+      </div>
+    </section>
     <!-- GENERAL PROJECT INFORMATION — V5.1 BASELINE LAYOUT -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4 p-5 rounded-xl bg-slate-50 border border-slate-200">
       <div class="flex flex-col justify-end">
@@ -298,7 +359,7 @@ input:focus,select:focus{box-shadow:0 0 0 2px rgba(37,99,235,.18)}
       </div>
     </div>
 
-    <div class="flex justify-end gap-3"><button id="btnSaveProject" type="submit" class="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-lg text-xs font-bold"><span id="btnSaveText">Simpan Hasil Analisa Ke Supabase</span></button></div>
+    <div class="flex justify-end gap-3"><button id="btnSaveProject" type="submit" class="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-lg text-xs font-bold"><span id="btnSaveText">Validasi Candidate (Tanpa Simpan)</span></button></div>
   </form>
 </section>
 
@@ -318,13 +379,18 @@ input:focus,select:focus{box-shadow:0 0 0 2px rgba(37,99,235,.18)}
       <button onclick="fetchProjects()" class="text-xs text-blue-600 font-semibold">↻ Refresh Database</button>
     </div>
   </div>
+  <div class="px-6 py-3 bg-emerald-50 border-b border-emerald-100 text-[11px] text-emerald-900">
+    <b>CANONICAL PROJECT IDENTITY CANDIDATE V2</b>
+    <span class="ml-2">Berbasis RAB main terbaru. Read/UAT only; production save dan legacy OPC flow tidak dijalankan.</span>
+  </div>
   <div class="overflow-x-auto">
     <table class="w-full text-xs">
       <thead><tr class="bg-slate-100 text-slate-600">
         <th class="p-3 text-left">Nama Client</th>
         <th class="p-3 text-left">Area</th>
         <th class="p-3 text-left">Service</th>
-        <th class="p-3 text-left">Kode Project</th>
+        <th class="p-3 text-left">Kode Project Existing</th>
+        <th class="p-3 text-left">Canonical Project (Candidate)</th>
         <th class="p-3 text-center">Aksi</th>
       </tr></thead>
       <tbody id="projectTableBody"></tbody>
@@ -334,6 +400,7 @@ input:focus,select:focus{box-shadow:0 0 0 2px rgba(37,99,235,.18)}
           <td class="p-3 text-left">-</td>
           <td class="p-3 text-left">-</td>
           <td id="totalProjectCount" class="p-3 text-left">0 Project</td>
+          <td class="p-3 text-left">-</td>
           <td class="p-3 text-center">-</td>
         </tr>
       </tfoot>
@@ -433,7 +500,8 @@ input:focus,select:focus{box-shadow:0 0 0 2px rgba(37,99,235,.18)}
 <footer class="bg-white border-t py-4 mt-auto"><div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">© 2026 PT Nusantara Inti Solusindo — RAB V5.2.9.1</div></footer>
 
 <script>
-let supabaseClient=null, projectsData=[], editingProjectMeta={};
+const RAB_CANONICAL_CANDIDATE_V2=true;
+let supabaseClient=null, projectsData=[], editingProjectMeta={}, canonicalProjectsCandidate=[], clientAuthorityCandidate=[];
 let manpowerComponents=[{
  role:'HOUSEKEEPING',qty:2,basic_salary:5938885,tunjangan:0,uang_makan:330000,uniform:175000,
  salary_overrides:{thr:null,bpjsKes:null,bpjsJht:null,bpjsJkm:null,bpjsJkk:null,bpjsJp:null,pkwt:null},
@@ -474,6 +542,113 @@ function initSupabase(){
   try{supabaseClient=window.supabase.createClient(url,key);setDbStatus(true);fetchProjects();return}catch(e){console.error(e)}
  }
  supabaseClient=null;setDbStatus(false);renderDemoData();
+}
+function canonicalNorm(v){
+ return String(v??'').trim().toUpperCase().replace(/[^A-Z0-9]+/g,' ').replace(/\s+/g,' ').trim();
+}
+function getClientAuthority(sourceName){
+ const key=canonicalNorm(sourceName);
+ if(!key)return {status:'EMPTY',governed_client_name:null};
+ const row=clientAuthorityCandidate.find(x=>String(x.normalized_match_name||'')===key);
+ if(!row)return {status:'REVIEW',governed_client_name:null};
+ if(row.authority_status==='GOVERNED' && Number(row.governed_client_count)===1)return {status:'GOVERNED',...row};
+ if(row.authority_status==='NON_CLIENT')return {status:'NON_CLIENT',...row};
+ return {status:'REVIEW',...row};
+}
+function renderClientAuthority(){
+ const raw=(document.getElementById('clientName')?.value||'').trim();
+ const a=getClientAuthority(raw);
+ const name=document.getElementById('clientAuthorityName'),status=document.getElementById('clientAuthorityStatus');
+ if(!name||!status)return a;
+ if(a.status==='GOVERNED'){
+   name.textContent=a.governed_client_name;
+   name.className='mt-1 text-sm font-bold text-emerald-800';
+   status.textContent='GOVERNED · '+(a.authority_basis||'Invoice/Finance authority')+' · source RAB: '+(raw||'-');
+   status.className='mt-1 text-[10px] text-emerald-700';
+ }else if(a.status==='NON_CLIENT'){
+   name.textContent=a.governed_client_name||raw||'-';
+   name.className='mt-1 text-sm font-bold text-slate-700';
+   status.textContent='NON-CLIENT · tidak boleh menerbitkan Canonical Project Code.';
+   status.className='mt-1 text-[10px] text-slate-600';
+ }else if(a.status==='EMPTY'){
+   name.textContent='Menunggu Nama Client...';
+   name.className='mt-1 text-sm font-bold text-slate-800';
+   status.textContent='Isi Nama Client pada form untuk resolver.';
+   status.className='mt-1 text-[10px] text-slate-500';
+ }else{
+   name.textContent=raw||'Belum ada nama';
+   name.className='mt-1 text-sm font-bold text-amber-800';
+   status.textContent='CLIENT AUTHORITY REVIEW · belum ada governed name yang unik pada authority snapshot.';
+   status.className='mt-1 text-[10px] text-amber-700';
+ }
+ return a;
+}
+function canonicalNextCodePreview(){
+ const nums=canonicalProjectsCandidate.map(x=>Number(String(x.project_code||'').replace(/\D/g,''))).filter(Number.isFinite);
+ return String((nums.length?Math.max(...nums):1000)+1);
+}
+function renderCanonicalProjectOptions(selectedCode=''){
+ const sel=document.getElementById('canonicalProjectSelect');if(!sel)return;
+ const current=String(selectedCode||sel.value||'');
+ sel.innerHTML='<option value="">Pilih project identity...</option>'+
+   canonicalProjectsCandidate.slice().sort((a,b)=>String(a.project_code).localeCompare(String(b.project_code),'id',{numeric:true}))
+   .map(p=>'<option value="'+escapeHtml(p.project_code)+'">'+escapeHtml(p.project_code+' · '+p.project_name+' · '+p.client_name)+'</option>').join('');
+ if(current&&canonicalProjectsCandidate.some(x=>String(x.project_code)===current))sel.value=current;
+ const next=document.getElementById('canonicalNextCode');if(next)next.value=canonicalNextCodePreview();
+ updateCanonicalCandidatePreview();
+}
+function setCanonicalIdentityMode(mode){
+ const isNew=mode==='new';
+ document.getElementById('canonicalExistingPanel')?.classList.toggle('hidden',isNew);
+ document.getElementById('canonicalNewPanel')?.classList.toggle('hidden',!isNew);
+ const r=document.querySelector('input[name="canonicalIdentityMode"][value="'+(isNew?'new':'existing')+'"]');if(r)r.checked=true;
+ updateCanonicalCandidatePreview();
+}
+function updateCanonicalCandidatePreview(){
+ const authority=renderClientAuthority();
+ const mode=document.querySelector('input[name="canonicalIdentityMode"]:checked')?.value||'existing';
+ const rawClient=(document.getElementById('clientName')?.value||'').trim();
+ const governedClient=authority.status==='GOVERNED'?authority.governed_client_name:null;
+ const status=document.getElementById('canonicalCandidateStatus');
+ const info=document.getElementById('canonicalExistingInfo');
+
+ if(mode==='existing'){
+   const code=document.getElementById('canonicalProjectSelect')?.value||'';
+   const p=canonicalProjectsCandidate.find(x=>String(x.project_code)===String(code));
+   if(info)info.innerHTML=p
+     ? '<b class="font-mono text-emerald-800">'+escapeHtml(p.project_code)+'</b> · <b>'+escapeHtml(p.project_name)+'</b><br><span class="text-[10px]">Stored client: '+escapeHtml(p.client_name)+' · Service: '+escapeHtml(p.primary_service||'-')+' · '+Number(p.active_rab_count||0)+' RAB aktif</span>'
+     : 'Belum ada Project Identity dipilih.';
+   if(status){
+     if(!p){
+       status.className='rounded-lg border border-emerald-100 bg-white px-3 py-2 text-[11px] text-slate-600';
+       status.textContent='Pilih Project Existing. Candidate tidak melakukan write.';
+     }else if(authority.status==='NON_CLIENT'){
+       status.className='rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[11px] text-rose-800';
+       status.textContent='BLOCK — authority menandai source ini sebagai NON-CLIENT.';
+     }else{
+       status.className='rounded-lg border border-emerald-100 bg-white px-3 py-2 text-[11px] text-slate-600';
+       status.textContent='SIMULASI — RAB ini berada di bawah '+p.project_code+' · '+p.project_name+'. Area tetap pada RAB. Client authority: '+(governedClient||'REVIEW')+'.';
+     }
+   }
+   return;
+ }
+
+ const name=(document.getElementById('canonicalNewProjectName')?.value||'').trim();
+ const next=canonicalNextCodePreview();
+ const comparisonClient=governedClient||rawClient;
+ const dup=canonicalProjectsCandidate.find(p=>comparisonClient&&name&&canonicalNorm(p.client_name)===canonicalNorm(comparisonClient)&&canonicalNorm(p.project_name)===canonicalNorm(name));
+ if(status){
+   if(authority.status!=='GOVERNED'){
+     status.className='rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-[11px] text-amber-900';
+     status.innerHTML='<b>BLOCK NEW PROJECT:</b> Client belum mempunyai governed name dari authority Invoice/Finance. Status: CLIENT AUTHORITY REVIEW. Preview '+escapeHtml(next)+' tidak dapat diterbitkan.';
+   }else if(dup){
+     status.className='rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-[11px] text-amber-900';
+     status.innerHTML='<b>DUPLICATE CANDIDATE:</b> '+escapeHtml(dup.project_code+' · '+dup.project_name)+' sudah ada. Gunakan Project Existing.';
+   }else{
+     status.className='rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-[11px] text-sky-900';
+     status.innerHTML='<b>SIMULASI:</b> '+escapeHtml(next)+' dapat menjadi kode berikutnya untuk '+escapeHtml(governedClient)+' jika business project benar-benar baru. Belum disimpan.';
+   }
+ }
 }
 function setDbStatus(ok){
  const b=document.getElementById('dbStatusBadge');
