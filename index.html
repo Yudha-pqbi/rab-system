@@ -887,6 +887,10 @@ function setProjectCodeField(inputId,hintId,name,code,isMissing){
 }
 
 async function openProjectCodeSetup(rabProjectId){
+ if(RAB_CANONICAL_CANDIDATE_V2){
+  alert('Project Code Setup / Form OPC lama dinonaktifkan pada Candidate V2. Project Code baru dikelola melalui Canonical Project Identity.');
+  return;
+ }
  if(!supabaseClient){alert('Supabase belum terhubung.');return;}
  pendingProjectCodeSetupId=rabProjectId;
  const errBox=document.getElementById('pcsError');errBox.classList.add('hidden');errBox.textContent='';
@@ -1177,23 +1181,60 @@ async function fetchProjects(){
    .order('project_id',{ascending:false});
  if(error){console.error(error);alert('Gagal membaca tabel projects: '+error.message);renderDemoData();return}
 
- // Ambil Official Project Code untuk tampilan daftar. Jika lookup gagal,
- // daftar RAB tetap dapat dipakai dan kolom kode akan menampilkan "Belum dibuat".
- let codeMap={};
+ // Existing legacy OPC stays read-only lineage in Candidate V2.
+ let codeMap={},canonicalMap={};
  try{
-   const {data:masterRows,error:masterError}=await supabaseClient
-     .from('project_master')
-     .select('rab_project_id,project_code,status')
-     .eq('status','ACTIVE');
-   if(masterError) throw masterError;
-   (masterRows||[]).forEach(row=>{
-     if(row?.rab_project_id && row?.project_code) codeMap[row.rab_project_id]=row.project_code;
-   });
- }catch(codeErr){
-   console.warn('Official Project Code lookup:',codeErr);
+  const [
+   {data:masterRows,error:masterError},
+   {data:canonicalRows,error:canonicalError},
+   {data:canonicalSummary,error:canonicalSummaryError},
+   {data:authorityRows,error:authorityError}
+  ]=await Promise.all([
+   supabaseClient.from('project_master').select('rab_project_id,project_code,status').eq('status','ACTIVE'),
+   supabaseClient.from('v_canonical_project_rab_candidate_v1').select('rab_project_id,project_code,project_name,canonical_status,link_status').eq('link_status','ACTIVE'),
+   supabaseClient.from('v_canonical_project_summary_candidate_v1').select('project_code,project_name,client_name,primary_service,status,active_rab_count,approved_rab_count').eq('status','ACTIVE'),
+   supabaseClient.from('rab_client_authority_snapshot_candidate_v1').select('normalized_match_name,governed_client_name,governed_client_count,authority_status,authority_basis,finance_actions,source_engines')
+  ]);
+  if(masterError)throw masterError;
+  if(canonicalError)throw canonicalError;
+  if(canonicalSummaryError)throw canonicalSummaryError;
+  if(authorityError)throw authorityError;
+
+  (masterRows||[]).forEach(row=>{
+   if(row?.rab_project_id&&row?.project_code)codeMap[row.rab_project_id]=row.project_code;
+  });
+  (canonicalRows||[]).forEach(row=>{
+   if(row?.rab_project_id&&row?.project_code){
+    canonicalMap[row.rab_project_id]={
+     project_code:row.project_code,
+     project_name:row.project_name,
+     status:row.canonical_status
+    };
+   }
+  });
+  canonicalProjectsCandidate=canonicalSummary||[];
+  clientAuthorityCandidate=authorityRows||[];
+ }catch(candidateErr){
+  console.warn('Candidate identity lookup:',candidateErr);
+  canonicalProjectsCandidate=[];
+  clientAuthorityCandidate=[];
  }
 
- projectsData=(data||[]).map(p=>({...p,official_project_code:codeMap[p.project_id]||null}));
+ renderCanonicalProjectOptions();
+
+ projectsData=(data||[]).map(p=>{
+  const c=canonicalMap[p.project_id]||null;
+  const a=getClientAuthority(p.client_name);
+  return {
+   ...p,
+   official_project_code:codeMap[p.project_id]||null,
+   canonical_project_code:c?.project_code||null,
+   canonical_project_name:c?.project_name||null,
+   canonical_project_status:c?.status||null,
+   governed_client_name:a.status==='GOVERNED'?a.governed_client_name:null,
+   client_authority_status:a.status
+  };
+ });
  renderTable()
 }
 function renderDemoData(){projectsData=[];renderTable()}
