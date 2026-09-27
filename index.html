@@ -923,6 +923,10 @@ async function openProjectCodeSetup(rabProjectId){
 }
 
 async function submitProjectCodeSetup(){
+ if(RAB_CANONICAL_CANDIDATE_V2){
+  alert('Form OPC lama adalah read-only lineage pada Candidate V2 dan tidak dapat disimpan.');
+  return;
+ }
  const rabProjectId=document.getElementById('pcsRabProjectId').value||pendingProjectCodeSetupId;
  if(!rabProjectId)return;
 
@@ -1260,6 +1264,10 @@ async function fetchProjects(){
 }
 function renderDemoData(){projectsData=[];renderTable()}
 async function deleteProject(projectId){
+ if(RAB_CANONICAL_CANDIDATE_V2){
+  alert('Delete RAB dinonaktifkan pada Candidate V2 agar production tetap aman.');
+  return;
+ }
  const project=projectsData.find(p=>p.project_id===projectId);
  const label=project ? (project.client_name || projectId) : projectId;
  if(!confirm('Hapus RAB "'+label+'"?\n\nRAB akan dihapus dari daftar aktif. Official Project Code yang sudah pernah dibuat tetap disimpan sebagai histori dan tidak digunakan ulang.')) return;
@@ -1376,12 +1384,12 @@ function renderTable(data){
 }
 function resetForm(){
  editingProjectMeta={};
- document.getElementById('editingProjectId').value='';document.getElementById('formTitle').textContent='Form Analytical Costing & Detail Input Component';document.getElementById('editingBadge').textContent='Input Baru';document.getElementById('btnSaveText').textContent='Simpan Hasil Analisa Ke Supabase';document.getElementById('rabForm').reset();setCanonicalIdentityMode('existing');document.getElementById('canonicalProjectSelect').value='';document.getElementById('canonicalNewProjectName').value='';document.getElementById('managementFeeBasis').value='total_cost';document.querySelector('input[name="managementFeeMode"][value="auto"]').checked=true;document.getElementById('managementFeeManualValue').value=0;document.querySelectorAll('.mgmt-fee-component').forEach(x=>x.checked=false);updateManagementFeeControls();document.getElementById('ppnBasis').value='selected_components';document.querySelector('input[name="ppnMode"][value="auto"]').checked=true;document.getElementById('ppnManualValue').value=11;document.querySelectorAll('.ppn-component').forEach(x=>x.checked=false);updatePpnControls();
+ document.getElementById('editingProjectId').value='';document.getElementById('formTitle').textContent='Form Analytical Costing & Detail Input Component';document.getElementById('editingBadge').textContent='Input Baru';document.getElementById('btnSaveText').textContent=RAB_CANONICAL_CANDIDATE_V2?'Validasi Candidate (Tanpa Simpan)':'Simpan Hasil Analisa Ke Supabase';document.getElementById('rabForm').reset();setCanonicalIdentityMode('existing');document.getElementById('canonicalProjectSelect').value='';document.getElementById('canonicalNewProjectName').value='';document.getElementById('managementFeeBasis').value='total_cost';document.querySelector('input[name="managementFeeMode"][value="auto"]').checked=true;document.getElementById('managementFeeManualValue').value=0;document.querySelectorAll('.mgmt-fee-component').forEach(x=>x.checked=false);updateManagementFeeControls();document.getElementById('ppnBasis').value='selected_components';document.querySelector('input[name="ppnMode"][value="auto"]').checked=true;document.getElementById('ppnManualValue').value=11;document.querySelectorAll('.ppn-component').forEach(x=>x.checked=false);updatePpnControls();
  manpowerComponents=[normalizeManpowerItem({role:'HOUSEKEEPING',qty:2,basic_salary:5938885,tunjangan:0,uang_makan:330000,uniform:175000})];renderManpowerComponents(manpowerComponents);
  ['machineryTable','chemicalsTable','consumablesTable','uniformTable','equipmentTable','additionalCostTable'].forEach(id=>document.querySelector('#'+id+' tbody').innerHTML='');calculateDynamicRows()
 }
 function loadProjectToForm(id){
- const p=projectsData.find(x=>x.project_id===id);if(!p)return;setCanonicalIdentityMode('existing');renderCanonicalProjectOptions(p.canonical_project_code||'');document.getElementById('editingProjectId').value=p.project_id;document.getElementById('formTitle').textContent='Edit / Analisa RAB ('+p.project_id+')';document.getElementById('editingBadge').textContent='Editing: '+p.project_id;document.getElementById('btnSaveText').textContent='Simpan Perubahan RAB';
+ const p=projectsData.find(x=>x.project_id===id);if(!p)return;setCanonicalIdentityMode('existing');renderCanonicalProjectOptions(p.canonical_project_code||'');document.getElementById('editingProjectId').value=p.project_id;document.getElementById('formTitle').textContent='Edit / Analisa RAB ('+p.project_id+')';document.getElementById('editingBadge').textContent='Editing: '+p.project_id;document.getElementById('btnSaveText').textContent=RAB_CANONICAL_CANDIDATE_V2?'Validasi Perubahan Candidate':'Simpan Perubahan RAB';
  document.getElementById('clientName').value=p.client_name||'';document.getElementById('clientLocation').value=p.client_location||'';document.getElementById('projectArea').value=p.project_area||'';document.getElementById('projectTitle').value=p.project_title||'';document.getElementById('topDays').value=p.top_days||30;document.getElementById('managementFeePercent').value=p.management_fee_percent||7.5;
  const d=p.details_json||{},meta=d.project_meta||{};editingProjectMeta={...meta};document.getElementById('clientProvince').value=meta.province||'';document.getElementById('managementFeeBasis').value=meta.management_fee_basis||'total_cost';const feeMode=meta.management_fee_mode||'auto';const feeModeEl=document.querySelector('input[name="managementFeeMode"][value="'+feeMode+'"]');if(feeModeEl)feeModeEl.checked=true;document.getElementById('managementFeeManualValue').value=n(meta.management_fee_manual_percent??meta.management_fee_manual_value??p.management_fee_percent);const feeComponents=Array.isArray(meta.management_fee_components)?meta.management_fee_components:[];document.querySelectorAll('.mgmt-fee-component').forEach(x=>x.checked=feeComponents.includes(x.value));updateManagementFeeControls();document.getElementById('ppnBasis').value=meta.ppn_basis||'total_before_tax';const ppnMode=meta.ppn_mode||'auto';const ppnModeEl=document.querySelector('input[name="ppnMode"][value="'+ppnMode+'"]');if(ppnModeEl)ppnModeEl.checked=true;document.getElementById('ppnManualValue').value=n(meta.ppn_manual_percent??meta.ppn_rate??11);const ppnComponents=Array.isArray(meta.ppn_components)?meta.ppn_components:[];document.querySelectorAll('.ppn-component').forEach(x=>x.checked=ppnComponents.includes(x.value));updatePpnControls();const saved=Array.isArray(d.manpower)?d.manpower:(d.manpower?[d.manpower]:d.manpower_legacy?[d.manpower_legacy]:[]);renderManpowerComponents(saved.length?saved:[normalizeManpowerItem({})]);
  [['uniformTable',d.uniform],['machineryTable',d.machinery],['chemicalsTable',d.chemicals],['consumablesTable',d.consumables],['equipmentTable',d.equipment],['additionalCostTable',d.additional_cost]].forEach(([id,arr])=>{document.querySelector('#'+id+' tbody').innerHTML='';(arr||[]).forEach(x=>addRow(id,x))});calculateManpower();calculateDynamicRows();document.getElementById('formSection').scrollIntoView({behavior:'smooth'})
