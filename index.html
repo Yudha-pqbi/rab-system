@@ -76,69 +76,28 @@ input:focus,select:focus{box-shadow:0 0 0 2px rgba(37,99,235,.18)}
   <form id="rabForm" novalidate onsubmit="handleFormSubmit(event)" class="p-6 space-y-6">
     <input type="hidden" id="editingProjectId">
 
-    <!-- CANONICAL PROJECT IDENTITY V2 — UAT / SHADOW ONLY -->
-    <section id="canonicalIdentityCandidate" class="rounded-xl border border-emerald-200 bg-emerald-50/60 p-5 space-y-4">
-      <div class="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div class="text-[10px] uppercase tracking-[.16em] font-extrabold text-emerald-700">Candidate V2 · UAT / Shadow Only</div>
-          <h3 class="text-sm font-bold text-slate-900 mt-1">Project Identity</h3>
-          <p class="text-[11px] text-slate-600 mt-1">Project Code dikelola oleh sistem RAB. Area tetap menjadi bagian RAB dan tidak membentuk Project Code.</p>
-        </div>
-        <span class="text-[10px] px-2.5 py-1 rounded-full bg-white border border-emerald-200 text-emerald-800 font-bold">NO PRODUCTION WRITE</span>
+    <!-- CANONICAL PROJECT IDENTITY V2 — SYSTEM / HIDDEN -->
+    <div id="canonicalIdentityCandidate" class="hidden" aria-hidden="true">
+      <span id="clientAuthorityName"></span>
+      <span id="clientAuthorityStatus"></span>
+      <div id="existingRabIdentityPanel">
+        <span id="existingRabIdentityValue"></span>
+        <span id="existingRabIdentityMeta"></span>
       </div>
-
-      <!-- Authority tetap berjalan di backend, tidak menjadi workflow user -->
-      <div class="hidden" aria-hidden="true">
-        <span id="clientAuthorityName"></span>
-        <span id="clientAuthorityStatus"></span>
-      </div>
-
-      <!-- Existing RAB: identity otomatis dan readonly -->
-      <div id="existingRabIdentityPanel" class="hidden rounded-xl border border-emerald-200 bg-white p-4">
-        <div class="text-[10px] uppercase tracking-wide font-extrabold text-slate-500">Project Identity · Existing RAB</div>
-        <div id="existingRabIdentityValue" class="mt-1 text-lg font-extrabold text-emerald-800">Belum dipetakan</div>
-        <div id="existingRabIdentityMeta" class="mt-1 text-[11px] text-slate-600">Canonical Project akan ditampilkan otomatis.</div>
-      </div>
-
-      <!-- New RAB: user only decides existing business project or truly new project -->
-      <div id="newRabIdentityControls" class="space-y-4">
-        <div class="flex flex-wrap gap-4 text-xs">
-          <label class="inline-flex items-center gap-2 cursor-pointer">
-            <input type="radio" name="canonicalIdentityMode" value="existing" checked onchange="setCanonicalIdentityMode('existing')">
-            <span class="font-semibold">Gunakan Project Existing</span>
-          </label>
-          <label class="inline-flex items-center gap-2 cursor-pointer">
-            <input type="radio" name="canonicalIdentityMode" value="new" onchange="setCanonicalIdentityMode('new')">
-            <span class="font-semibold">Buat Project Baru</span>
-          </label>
+      <div id="newRabIdentityControls">
+        <label><input type="radio" name="canonicalIdentityMode" value="existing" checked></label>
+        <label><input type="radio" name="canonicalIdentityMode" value="new"></label>
+        <div id="canonicalExistingPanel">
+          <select id="canonicalProjectSelect"><option value=""></option></select>
+          <span id="canonicalExistingInfo"></span>
         </div>
-
-        <div id="canonicalExistingPanel" class="grid grid-cols-1 lg:grid-cols-[minmax(280px,1fr)_2fr] gap-4 items-end">
-          <div>
-            <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">Project Existing</label>
-            <select id="canonicalProjectSelect" onchange="updateCanonicalCandidatePreview()" class="w-full h-10 px-3 border border-emerald-200 rounded-lg text-xs bg-white focus:ring-2 focus:ring-emerald-500">
-              <option value="">Pilih project...</option>
-            </select>
-          </div>
-          <div id="canonicalExistingInfo" class="min-h-10 rounded-lg border border-emerald-100 bg-white px-3 py-2 text-xs text-slate-600">Belum ada Project Identity dipilih.</div>
-        </div>
-
-        <div id="canonicalNewPanel" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-4 items-end">
-          <div>
-            <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">Project Code Baru</label>
-            <input id="canonicalNextCode" type="text" readonly class="w-full h-10 px-3 border border-slate-200 rounded-lg text-sm font-mono font-extrabold bg-slate-100 text-slate-800" value="1002">
-          </div>
-          <div class="lg:col-span-2">
-            <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">Nama Project</label>
-            <input id="canonicalNewProjectName" type="text" oninput="updateCanonicalCandidatePreview()" placeholder="Contoh: KFD Security" class="w-full h-10 px-3 border border-emerald-200 rounded-lg text-xs bg-white focus:ring-2 focus:ring-emerald-500">
-          </div>
+        <div id="canonicalNewPanel">
+          <input id="canonicalNextCode" type="text" readonly value="1002">
+          <input id="canonicalNewProjectName" type="text">
         </div>
       </div>
-
-      <div id="canonicalCandidateStatus" class="rounded-lg border border-emerald-100 bg-white px-3 py-2 text-[11px] text-slate-600">
-        Untuk Input Baru, pilih Project Existing atau Buat Project Baru.
-      </div>
-    </section>
+      <span id="canonicalCandidateStatus"></span>
+    </div>
     <!-- GENERAL PROJECT INFORMATION — V5.1 BASELINE LAYOUT -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4 p-5 rounded-xl bg-slate-50 border border-slate-200">
       <div class="flex flex-col justify-end">
@@ -392,8 +351,7 @@ input:focus,select:focus{box-shadow:0 0 0 2px rgba(37,99,235,.18)}
         <th class="p-3 text-left">Nama Client</th>
         <th class="p-3 text-left">Area</th>
         <th class="p-3 text-left">Service</th>
-        <th class="p-3 text-left">Kode Project Existing</th>
-        <th class="p-3 text-left">Canonical Project (Candidate)</th>
+        <th class="p-3 text-left">Kode Project</th>
         <th class="p-3 text-center">Aksi</th>
       </tr></thead>
       <tbody id="projectTableBody"></tbody>
@@ -403,7 +361,6 @@ input:focus,select:focus{box-shadow:0 0 0 2px rgba(37,99,235,.18)}
           <td class="p-3 text-left">-</td>
           <td class="p-3 text-left">-</td>
           <td id="totalProjectCount" class="p-3 text-left">0 Project</td>
-          <td class="p-3 text-left">-</td>
           <td class="p-3 text-center">-</td>
         </tr>
       </tfoot>
@@ -798,6 +755,7 @@ function getManpowerComponentsFromUI(){
    salary_overrides:overrides,
    custom_components:[...card.querySelectorAll('.mp-custom-row')].map(r=>({name:r.querySelector('.mp-custom-name')?.value,amount:r.querySelector('.mp-custom-amount')?.value}))
   })
+  body.appendChild(tr)
  })
 }
 function salaryInput(key,val,mode,qty){
@@ -1454,18 +1412,14 @@ function renderTable(data){
  renderProjectTotals(filtered);
  if(projectListPage>totalPages)projectListPage=totalPages;
  renderProjectPagination(total,totalPages);
- if(!total){body.innerHTML='<tr><td colspan="6" class="p-8 text-center text-slate-400">Belum ada project yang sesuai.</td></tr>';return}
+ if(!total){body.innerHTML='<tr><td colspan="5" class="p-8 text-center text-slate-400">Belum ada project yang sesuai.</td></tr>';return}
  const start=(projectListPage-1)*projectListPageSize;
  filtered.slice(start,start+projectListPageSize).forEach(p=>{
   const tr=document.createElement('tr');tr.className='border-b hover:bg-slate-50';
-  const officialCode=p.official_project_code||'';
-  const codeHtml=officialCode
-    ? `<span class="inline-flex items-center px-2.5 py-1 rounded-md bg-blue-50 border border-blue-100 text-blue-800 font-mono font-semibold">${escapeHtml(officialCode)}</span>`
-    : '<span class="inline-flex items-center px-2.5 py-1 rounded-md bg-slate-50 border border-slate-200 text-slate-500 font-semibold">Legacy tidak tersedia</span>';
-  const canonicalHtml=p.canonical_project_code
-    ? `<span class="inline-flex items-center px-2.5 py-1 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 font-mono font-bold">${escapeHtml(p.canonical_project_code)}</span><div class="mt-1 text-[10px] font-semibold text-slate-600">${escapeHtml(p.canonical_project_name||'')}</div><div class="text-[9px] text-slate-500">${escapeHtml(p.governed_client_name||'CLIENT AUTHORITY REVIEW')}</div>`
-    : '<span class="inline-flex items-center px-2.5 py-1 rounded-md bg-slate-50 border border-slate-200 text-slate-500 font-semibold">Belum terhubung</span>';
-  tr.innerHTML=`<td class="p-3 font-semibold text-left min-w-44">${escapeHtml(p.client_name||'-')}</td><td class="p-3 text-left min-w-36">${escapeHtml(p.project_area||'-')}</td><td class="p-3 text-left min-w-40">${escapeHtml(p.project_title||'-')}</td><td class="p-3 text-left min-w-56">${codeHtml}</td><td class="p-3 text-left min-w-52">${canonicalHtml}</td><td class="p-3 whitespace-nowrap text-center"><button onclick="viewProjectDetail('${p.project_id}')" class="px-2 py-1 border rounded text-blue-600 mr-1">Lihat</button><button onclick="loadProjectToForm('${p.project_id}')" class="px-2 py-1 border rounded text-amber-600 mr-1">Edit</button><button onclick="exportSingleProjectPDF('${p.project_id}')" class="px-2 py-1 border rounded text-rose-600 mr-1">PDF</button><button onclick="exportSingleProjectExcel('${p.project_id}')" class="px-2 py-1 border rounded text-emerald-600 mr-1">XLS</button><button onclick="deleteProject('${p.project_id}')" class="px-2 py-1 border rounded text-red-600">Hapus</button></td>`;body.appendChild(tr)
+  const projectCodeHtml=p.canonical_project_code
+    ? `<span class="inline-flex items-center px-2.5 py-1 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 font-mono font-bold">${escapeHtml(p.canonical_project_code)}</span>`
+    : '<span class="inline-flex items-center px-2.5 py-1 rounded-md bg-slate-50 border border-slate-200 text-slate-500 font-semibold">Backfill Pending</span>';
+  tr.innerHTML=`<td class="p-3 font-semibold text-left min-w-44">${escapeHtml(p.client_name||'-')}</td><td class="p-3 text-left min-w-36">${escapeHtml(p.project_area||'-')}</td><td class="p-3 text-left min-w-40">${escapeHtml(p.project_title||'-')}</td><td class="p-3 text-left min-w-32">${projectCodeHtml}</td><td class="p-3 whitespace-nowrap text-center"><button onclick="viewProjectDetail('${p.project_id}')" class="px-2 py-1 border rounded text-blue-600 mr-1">Lihat</button><button onclick="loadProjectToForm('${p.project_id}')" class="px-2 py-1 border rounded text-amber-600 mr-1">Edit</button><button onclick="exportSingleProjectPDF('${p.project_id}')" class="px-2 py-1 border rounded text-rose-600 mr-1">PDF</button><button onclick="exportSingleProjectExcel('${p.project_id}')" class="px-2 py-1 border rounded text-emerald-600 mr-1">XLS</button><button onclick="deleteProject('${p.project_id}')" class="px-2 py-1 border rounded text-red-600">Hapus</button></td>`
  })
 }
 function resetForm(){
@@ -1542,9 +1496,7 @@ function viewProjectDetail(id){
        ${infoItem('Service',p.project_title||'-')}
        ${infoItem('TOP',(p.top_days??'-')+' Hari')}
        ${infoItem('Total Manpower',totalManpower+' person')}
-       ${infoItem('Legacy Project Code',officialCode,true)}
-       ${infoItem('Canonical Project (Candidate)',p.canonical_project_code ? (p.canonical_project_code+' · '+(p.canonical_project_name||'')) : 'Belum terhubung',true)}
-       ${infoItem('Governed Client (Invoice Authority)',p.governed_client_name||'CLIENT AUTHORITY REVIEW')}
+       ${infoItem('Kode Project',p.canonical_project_code||'Backfill Pending',true)}
      </div>
    </div>
 
