@@ -755,7 +755,6 @@ function getManpowerComponentsFromUI(){
    salary_overrides:overrides,
    custom_components:[...card.querySelectorAll('.mp-custom-row')].map(r=>({name:r.querySelector('.mp-custom-name')?.value,amount:r.querySelector('.mp-custom-amount')?.value}))
   })
-  body.appendChild(tr)
  })
 }
 function salaryInput(key,val,mode,qty){
@@ -1420,6 +1419,7 @@ function renderTable(data){
     ? `<span class="inline-flex items-center px-2.5 py-1 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 font-mono font-bold">${escapeHtml(p.canonical_project_code)}</span>`
     : '<span class="inline-flex items-center px-2.5 py-1 rounded-md bg-slate-50 border border-slate-200 text-slate-500 font-semibold">Backfill Pending</span>';
   tr.innerHTML=`<td class="p-3 font-semibold text-left min-w-44">${escapeHtml(p.client_name||'-')}</td><td class="p-3 text-left min-w-36">${escapeHtml(p.project_area||'-')}</td><td class="p-3 text-left min-w-40">${escapeHtml(p.project_title||'-')}</td><td class="p-3 text-left min-w-32">${projectCodeHtml}</td><td class="p-3 whitespace-nowrap text-center"><button onclick="viewProjectDetail('${p.project_id}')" class="px-2 py-1 border rounded text-blue-600 mr-1">Lihat</button><button onclick="loadProjectToForm('${p.project_id}')" class="px-2 py-1 border rounded text-amber-600 mr-1">Edit</button><button onclick="exportSingleProjectPDF('${p.project_id}')" class="px-2 py-1 border rounded text-rose-600 mr-1">PDF</button><button onclick="exportSingleProjectExcel('${p.project_id}')" class="px-2 py-1 border rounded text-emerald-600 mr-1">XLS</button><button onclick="deleteProject('${p.project_id}')" class="px-2 py-1 border rounded text-red-600">Hapus</button></td>`
+  body.appendChild(tr)
  })
 }
 function resetForm(){
