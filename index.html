@@ -556,43 +556,71 @@ function getClientAuthority(sourceName){
  return {status:'REVIEW',...row};
 }
 function renderClientAuthority(){
- const raw=(document.getElementById('clientName')?.value||'').trim();
- const a=getClientAuthority(raw);
+ const rawField=(document.getElementById('clientName')?.value||'').trim();
+ const selectedCode=document.getElementById('canonicalProjectSelect')?.value||'';
+ const selectedProject=canonicalProjectsCandidate.find(x=>String(x.project_code)===String(selectedCode))||null;
+ const contextClient=rawField||selectedProject?.client_name||'';
+ const a=getClientAuthority(contextClient);
  const name=document.getElementById('clientAuthorityName'),status=document.getElementById('clientAuthorityStatus');
  if(!name||!status)return a;
+
  if(a.status==='GOVERNED'){
    name.textContent=a.governed_client_name;
    name.className='mt-1 text-sm font-bold text-emerald-800';
-   status.textContent='GOVERNED · '+(a.authority_basis||'Invoice/Finance authority')+' · source RAB: '+(raw||'-');
+   status.textContent='GOVERNED · '+(a.authority_basis||'Invoice/Finance authority')+' · source/context: '+(contextClient||'-');
    status.className='mt-1 text-[10px] text-emerald-700';
- }else if(a.status==='NON_CLIENT'){
-   name.textContent=a.governed_client_name||raw||'-';
+   return a;
+ }
+
+ if(a.status==='NON_CLIENT'){
+   name.textContent=a.governed_client_name||contextClient||'-';
    name.className='mt-1 text-sm font-bold text-slate-700';
    status.textContent='NON-CLIENT · tidak boleh menerbitkan Canonical Project Code.';
    status.className='mt-1 text-[10px] text-slate-600';
- }else if(a.status==='EMPTY'){
+   return a;
+ }
+
+ if(a.status==='EMPTY'){
    name.textContent='Menunggu Nama Client...';
    name.className='mt-1 text-sm font-bold text-slate-800';
-   status.textContent='Isi Nama Client pada form untuk resolver.';
+   status.textContent='Isi Nama Client atau pilih Project Existing untuk resolver.';
    status.className='mt-1 text-[10px] text-slate-500';
- }else{
-   const editingId=document.getElementById('editingProjectId')?.value||'';
-   const existing=projectsData.find(x=>x.project_id===editingId)||null;
-   if(existing){
-     name.textContent=existing.governed_client_name||raw||existing.client_name||'-';
-     name.className='mt-1 text-sm font-bold text-amber-800';
-     status.textContent=(existing.canonical_project_code
-       ? 'LEGACY EXISTING · CLIENT AUTHORITY REVIEW · Canonical Project '+existing.canonical_project_code
-       : 'EXISTING RAB · CLIENT AUTHORITY REVIEW')
-       +' · source RAB: '+(raw||existing.client_name||'-')+'. Existing project tetap valid; review hanya untuk standardisasi nama.';
-     status.className='mt-1 text-[10px] text-amber-700';
-     return {status:'LEGACY_EXISTING_REVIEW',governed_client_name:existing.governed_client_name||null,existing_project:existing,...a};
-   }
-   name.textContent=raw||'Belum ada nama';
-   name.className='mt-1 text-sm font-bold text-amber-800';
-   status.textContent='CLIENT AUTHORITY REVIEW · belum ada governed name yang unik pada authority snapshot.';
-   status.className='mt-1 text-[10px] text-amber-700';
+   return a;
  }
+
+ const editingId=document.getElementById('editingProjectId')?.value||'';
+ const existingRab=projectsData.find(x=>x.project_id===editingId)||null;
+ const legacyProject=selectedProject||(
+   existingRab?.canonical_project_code
+     ? canonicalProjectsCandidate.find(x=>String(x.project_code)===String(existingRab.canonical_project_code))||null
+     : null
+ );
+
+ if(legacyProject||existingRab){
+   const projectCode=legacyProject?.project_code||existingRab?.canonical_project_code||'';
+   const projectName=legacyProject?.project_name||existingRab?.canonical_project_name||'Existing Project';
+   const sourceClient=contextClient||existingRab?.client_name||legacyProject?.client_name||'-';
+   name.textContent=existingRab?.governed_client_name||sourceClient;
+   name.className='mt-1 text-sm font-bold text-amber-800';
+   status.textContent='LEGACY EXISTING · CLIENT AUTHORITY REVIEW'
+     +(projectCode?' · Canonical Project '+projectCode:'')
+     +' · '+projectName
+     +' · source/context: '+sourceClient
+     +'. Existing project tetap valid; review hanya untuk standardisasi nama.';
+   status.className='mt-1 text-[10px] text-amber-700';
+   return {
+     status:'LEGACY_EXISTING_REVIEW',
+     governed_client_name:existingRab?.governed_client_name||null,
+     existing_project:existingRab,
+     canonical_project:legacyProject,
+     ...a
+   };
+ }
+
+ name.textContent=contextClient||'Belum ada nama';
+ name.className='mt-1 text-sm font-bold text-amber-800';
+ status.textContent='CLIENT AUTHORITY REVIEW · belum ada governed name yang unik pada authority snapshot.';
+ status.className='mt-1 text-[10px] text-amber-700';
  return a;
 }
 function canonicalNextCodePreview(){
