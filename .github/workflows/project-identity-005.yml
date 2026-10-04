@@ -1,0 +1,151 @@
+name: Project identity 005 RAB validation
+on:
+  push:
+    branches: [release/project-identity-005-20261004]
+    paths: [.github/workflows/project-identity-005.yml]
+permissions:
+  contents: write
+concurrency:
+  group: project-identity-005-rab
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Prepare audited numeric identity production patch
+        run: |
+          python3 - <<'PY'
+          import base64,hashlib,json,os,pathlib,re,subprocess,urllib.request
+          repo='Yudha-pqbi/rab-system';base='bc8605051c53b45162001435ab9c5c771438e140';head=os.environ['GITHUB_SHA']
+          assert os.environ['GITHUB_REPOSITORY']==repo
+          def api(path):
+              q=urllib.request.Request('https://api.github.com/repos/'+repo+path,headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json'})
+              with urllib.request.urlopen(q,timeout=30) as r:return json.load(r)
+          def read(path,ref=head):return base64.b64decode(api('/contents/'+path+'?ref='+ref)['content']).decode()
+          assert api('/git/ref/heads/main')['object']['sha']==base,'Main advanced; reconcile'
+          h=read('index.html');original=h;module=read('project-identity.js');main=read('index.html',base)
+          def once(old,new):
+              global h
+              assert h.count(old)==1,(old[:70],h.count(old));h=h.replace(old,new,1)
+          once('const RAB_CANONICAL_CANDIDATE_V2=true;','const RAB_CANONICAL_CANDIDATE_V2=false; // PROJECT-IDENTITY-005 production save enabled')
+          once("project_id:editing||'PRJ-'+Date.now().toString().slice(-8)","project_id:editing||crypto.randomUUID()")
+          start=h.index('   if(RAB_CANONICAL_CANDIDATE_V2){',h.index('const payload={'))
+          end=h.index('   if(supabaseClient){',start)
+          h=h[:start]+h[end:]
+          start=h.index('   if(supabaseClient){',h.index('const payload={'))
+          end=h.index('\n }catch(err){',start)
+          h=h[:start]+'''   if(!supabaseClient)throw new Error('Supabase belum terhubung. RAB tidak disimpan tanpa Project ID resmi.');
+             const saved=await supabaseClient.rpc('rab_save_with_project_identity_v1',{p_payload:payload,p_existing_id:editing||null});
+             if(saved.error)throw new Error(saved.error.message);
+             if(saved.data?.status!=='SAVED'||!/^\\d+$/.test(String(saved.data.project_id||'')))throw new Error('Hasil simpan atau Project ID belum terverifikasi. Muat ulang sebelum mencoba lagi.');
+             resetForm();
+             try{await fetchProjects();}catch(e){console.error('RAB saved; list refresh failed',e);}
+             alert('RAB berhasil disimpan. Project ID: '+saved.data.project_id);
+          '''+h[end:]
+          start=h.index('async function fetchProjects(){');end=h.index('\nfunction renderDemoData()',start)
+          h=h[:start]+'''async function fetchProjects(){
+           if(!supabaseClient){renderDemoData();return;}
+           const [source,dictionary,authority]=await Promise.all([
+            supabaseClient.from('projects').select('*').neq('status','DELETED').order('project_id',{ascending:false}),
+            supabaseClient.rpc('project_identity_dictionary_v1',{}),
+            supabaseClient.from('rab_client_authority_snapshot_candidate_v1').select('normalized_match_name,governed_client_name,governed_client_count,authority_status,authority_basis,finance_actions,source_engines')
+           ]);
+           if(source.error)throw source.error;if(dictionary.error)throw dictionary.error;
+           const d=dictionary.data;if(!d||d.version!=='PROJECT-IDENTITY-005')throw new Error('Kamus Project ID tidak sesuai.');
+           if(window.ProjectIdentity)ProjectIdentity.install(d);
+           const ref=d.references||{};
+           canonicalProjectsCandidate=(d.projects||[]).map(p=>({...p,project_code:p.project_id,status:'ACTIVE'}));
+           clientAuthorityCandidate=authority.error?[]:(authority.data||[]);
+           projectsData=(source.data||[]).map(p=>{const code=ref[p.project_id]||null,c=canonicalProjectsCandidate.find(x=>x.project_code===code),a=getClientAuthority(p.client_name);return {...p,official_project_code:code,canonical_project_code:code,canonical_project_name:c?.project_name||null,canonical_project_status:c?'ACTIVE':null,governed_client_name:a.status==='GOVERNED'?a.governed_client_name:null,client_authority_status:a.status};});
+           renderCanonicalProjectOptions();renderTable();
+          }'''+h[end:]
+          for name in ['openProjectCodeSetup','submitProjectCodeSetup']:
+              pattern=r'async function '+name+r'\([^)]*\)\{[\s\S]*?(?=\n(?:async )?function )'
+              h,n=re.subn(pattern,"async function "+name+"(){alert('Project ID numerik diterbitkan otomatis saat RAB disimpan. Form kode lama tidak digunakan.');}\n",h,count=1)
+              assert n==1,name
+          h=h.replace('Validasi Candidate (Tanpa Simpan)','Simpan Hasil Analisa Ke Supabase')
+          h=h.replace('CANONICAL PROJECT IDENTITY CANDIDATE V2','PROJECT ID NUMERIK')
+          h=h.replace('Berbasis RAB main terbaru. Read/UAT only; production save dan legacy OPC flow tidak dijalankan.','Satu identitas project untuk seluruh periode dan engine. Referensi dokumen internal tidak menjadi kode operasional.')
+          h=h.replace("'Edit / Analisa RAB ('+p.project_id+')'","'Edit / Analisa RAB ('+(p.canonical_project_code||'Belum terhubung')+')'")
+          h=h.replace("'Editing: '+p.project_id","'Project ID: '+(p.canonical_project_code||'Belum terhubung')")
+          once('</body>','<script src="project-identity.js?v=20261004-005"></script>\n</body>')
+          installer="function install(data){if(!data||data.version!==VERSION||!data.references)throw new Error('Kamus identitas tidak valid');for(const [k,v] of Object.entries(data.references))if(/^\\d+$/.test(String(v)))refs.set(k.toUpperCase(),String(v));for(const p of data.projects||[])refs.set(String(p.project_id),String(p.project_id));state='ready';refresh();wrapExports();}"
+          assert module.count('function refresh(){')==1
+          module=module.replace('function refresh(){',installer+'\n function refresh(){')
+          module=module.replace('codeFor,ready:load,refresh','codeFor,install,ready:load,refresh')
+          module=module.replace("return s.replace(token,id=>", "return s.replace(/\\b[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\\b/gi,id=>refs.get(id.toUpperCase())||id).replace(token,id=>")
+          pathlib.Path('index.html').write_text(h);pathlib.Path('project-identity.js').write_text(module)
+          calc_names=['calculateManpower','calculateDynamicRows','normalizeManpowerItem']
+          checks={}
+          for name in calc_names:
+              pattern=r'function '+name+r'\([^)]*\)\{[\s\S]*?(?=\n(?:async )?function )'
+              a=re.search(pattern,main);b=re.search(pattern,h);assert a and b and a.group()==b.group(),name+' numerical source changed'
+              checks[name]=hashlib.sha256(a.group().encode()).hexdigest()
+          for name in ['index.html','project-identity.js']:
+              data=pathlib.Path(name).read_text();scripts=re.findall(r'<script(?:\s[^>]*)?>([\s\S]*?)</script>',data,re.I) if name.endswith('html') else [data]
+              for i,script in enumerate(scripts):
+                  if script.strip():p=pathlib.Path('/tmp/check-'+name+'-'+str(i)+'.js');p.write_text(script);subprocess.run(['node','--check',str(p)],check=True)
+          assert 'sync_project_master_from_rab' not in h[h.index('const payload={'):h.index('async function fetchProjects(){')]
+          assert "'PRJ-'+Date.now()" not in h
+          meta={'tracking':'PROJECT-IDENTITY-005','base':base,'input_head':head,'numerical_functions_unchanged':checks,'files':{p:hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest() for p in ['index.html','project-identity.js']},'status':'SOURCE_VALIDATED','scope':'128 existing RAB identities already linked; production save is atomic, reuses parent; new source document UUID is internal. Existing financial calculation source untouched.'}
+          pathlib.Path('release.json').write_text(json.dumps(meta,indent=2));print(json.dumps(meta,indent=2))
+          PY
+      - name: Browser identity and export regression
+        run: |
+          python3 -m pip install -q playwright==1.57.0
+          python3 - <<'PY'
+          import asyncio,base64,json,pathlib
+          from playwright.async_api import async_playwright
+          def enc(x):return base64.urlsafe_b64encode(json.dumps(x).encode()).decode().rstrip('=')
+          key=enc({'alg':'none'})+'.'+enc({'role':'anon','ref':'identitytest'})+'.test'
+          async def main():
+            async with async_playwright() as p:
+              browser=await p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--no-sandbox'])
+              page=await browser.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
+              async def route(r):
+                await r.fulfill(json={'version':'PROJECT-IDENTITY-005','projects':[{'project_id':'1050'},{'project_id':'1002'}],'references':{'PRJ-26092802':'1050','PRJ-PDW-AKMG-CS-001':'1050','PRJ-01322001':'1002','PRJ-BPR-JKT-SEC-001':'1002'}})
+              await page.route('https://identitytest.supabase.co/**',route)
+              await page.set_content('<body><script>const URL="https://identitytest.supabase.co",KEY="'+key+'";window.exports=[];window.XLSX={utils:{aoa_to_sheet:x=>x,json_to_sheet:x=>x},writeFile:(w,n)=>window.exports.push({w,n})};window.jspdf={jsPDF:function(){this.text=x=>window.exports.push({pdf:x});this.autoTable=x=>window.exports.push({table:x});this.save=x=>window.exports.push({pdfname:x});}};</script><p id="code">PRJ-PDW-AKMG-CS-001</p><input type="hidden" id="raw" value="PRJ-26092802"><button id="b" onclick="void(\'PRJ-26092802\')">Detail</button></body>')
+              await page.add_script_tag(content=pathlib.Path('project-identity.js').read_text())
+              await page.wait_for_function('ProjectIdentity.status==="ready"')
+              tests={}
+              tests['display_numeric']=await page.locator('#code').inner_text()=='1050'
+              tests['internal_key_preserved']=await page.locator('#raw').input_value()=='PRJ-26092802'
+              tests['handler_key_preserved']='PRJ-26092802' in await page.locator('#b').get_attribute('onclick')
+              data=await page.evaluate('''()=>{const a=XLSX.utils.aoa_to_sheet([['Project ID','Amount'],['PRJ-01322001',123.45]]);const d=new jspdf.jsPDF();d.text('PRJ-26092802',1,2);d.autoTable({body:[['PRJ-BPR-JKT-SEC-001',123.45]]});d.save('RAB_PRJ-26092802.pdf');const wb={SheetNames:['Data'],Sheets:{Data:{A1:{t:'s',v:'PRJ-01322001'},B1:{t:'n',v:123.45},C1:{t:'n',f:'B1+1'}}}};XLSX.writeFile(wb,'RAB_PRJ-01322001.xlsx');return {a,exports:window.exports,source:wb,unknown:ProjectIdentity.text('PRJ-UNKNOWN-001')};}''')
+              tests['xlsx_numeric']=data['a'][1]==['1002',123.45]
+              tests['pdf_numeric']=data['exports'][0]['pdf']=='1050'
+              tests['pdf_table_numeric']=data['exports'][1]['table']['body'][0]==['1002',123.45]
+              tests['pdf_filename_numeric']=data['exports'][2]['pdfname']=='RAB_1050.pdf'
+              w=data['exports'][3];tests['xlsx_filename_numeric']=w['n']=='RAB_1002.xlsx'
+              tests['workbook_numeric']=w['w']['Sheets']['Data']['A1']['v']=='1002'
+              tests['formula_preserved']=w['w']['Sheets']['Data']['C1']['f']=='B1+1'
+              tests['source_workbook_not_mutated']=data['source']['Sheets']['Data']['A1']['v']=='PRJ-01322001'
+              tests['unknown_not_invented']=data['unknown']=='Project ID belum terhubung'
+              await page.evaluate("document.body.insertAdjacentHTML('beforeend','<span id=late>PRJ-BPR-JKT-SEC-001</span>')")
+              await page.wait_for_function('document.getElementById("late").textContent==="1002"')
+              tests['dynamic_render_numeric']=True
+              tests['no_runtime_error']=not errors
+              out={'checks':tests,'errors':errors,'passed':sum(tests.values()),'scope':'Actual shared adapter with synthetic dictionary/export libraries; not production login or a real financial save'}
+              pathlib.Path('browser-results.json').write_text(json.dumps(out,indent=2));print(json.dumps(out,indent=2));assert all(tests.values())
+              await browser.close()
+          asyncio.run(main())
+          PY
+      - name: Commit verified release to release branch only
+        run: |
+          python3 - <<'PY'
+          import json,os,pathlib,urllib.request
+          repo='Yudha-pqbi/rab-system';branch='release/project-identity-005-20261004';head=os.environ['GITHUB_SHA'];root='https://api.github.com/repos/'+repo
+          def api(path,body=None,method=None):
+            req=urllib.request.Request(root+path,data=None if body is None else json.dumps(body).encode(),headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','Content-Type':'application/json'},method=method or ('GET' if body is None else 'POST'))
+            with urllib.request.urlopen(req,timeout=30) as r:return json.load(r)
+          meta=json.loads(pathlib.Path('release.json').read_text());assert api('/git/ref/heads/main')['object']['sha']==meta['base'];assert api('/git/ref/heads/'+branch)['object']['sha']==head
+          tree=[]
+          for path,local in [('index.html','index.html'),('project-identity.js','project-identity.js'),('releases/PROJECT-IDENTITY-005/release.json','release.json'),('releases/PROJECT-IDENTITY-005/browser-results.json','browser-results.json')]:
+            blob=api('/git/blobs',{'content':pathlib.Path(local).read_text(),'encoding':'utf-8'});tree.append({'path':path,'mode':'100644','type':'blob','sha':blob['sha']})
+          base_tree=api('/git/commits/'+head)['tree']['sha'];t=api('/git/trees',{'base_tree':base_tree,'tree':tree});c=api('/git/commits',{'message':'PROJECT-IDENTITY-005: validated numeric RAB save, display and exports','tree':t['sha'],'parents':[head]})
+          api('/git/refs/heads/'+branch,{'sha':c['sha'],'force':False},'PATCH');print(json.dumps({'status':'VALIDATED_BRANCH','head':c['sha'],'files':tree},indent=2))
+          PY

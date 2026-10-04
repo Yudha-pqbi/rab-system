@@ -1,0 +1,64 @@
+{
+  "legacy_adapter": {
+    "checks": {
+      "display_numeric": true,
+      "internal_key_preserved": true,
+      "handler_key_preserved": true,
+      "xlsx_numeric": true,
+      "pdf_numeric": true,
+      "pdf_table_numeric": true,
+      "pdf_filename_numeric": true,
+      "xlsx_filename_numeric": true,
+      "workbook_numeric": true,
+      "formula_preserved": true,
+      "source_workbook_not_mutated": true,
+      "unknown_not_invented": true,
+      "dynamic_render_numeric": true,
+      "no_runtime_error": true
+    },
+    "errors": [],
+    "passed": 14,
+    "scope": "Actual shared adapter with synthetic dictionary/export libraries; not production login or a real financial save"
+  },
+  "publishable_adapter": {
+    "checks": {
+      "display_numeric": true,
+      "internal_key_preserved": true,
+      "handler_key_preserved": true,
+      "xlsx_numeric": true,
+      "pdf_numeric": true,
+      "pdf_table_numeric": true,
+      "pdf_filename_numeric": true,
+      "xlsx_filename_numeric": true,
+      "workbook_numeric": true,
+      "formula_preserved": true,
+      "source_workbook_not_mutated": true,
+      "unknown_not_invented": true,
+      "dynamic_render_numeric": true,
+      "no_runtime_error": true
+    },
+    "errors": [],
+    "passed": 14,
+    "scope": "Actual shared adapter with synthetic dictionary/export libraries; not production login or a real financial save"
+  },
+  "real_rab_readonly_page": {
+    "active_rab": 128,
+    "numeric_rows": 128,
+    "has_1050": true,
+    "has_1002": true,
+    "production_save": true,
+    "save_rpc_in_handler": true,
+    "old_setup_not_called": true,
+    "edit_header_numeric": true,
+    "hidden_source_key_preserved": true,
+    "no_visible_legacy_project_tokens": true,
+    "blocked_mutations": [],
+    "runtime_errors": []
+  },
+  "real_dictionary_read": {
+    "http": 200,
+    "projects": 44,
+    "ambiguous_references": 0
+  },
+  "scope": "Actual RAB HTML and real backend public read paths; writes network-blocked. Backend atomic save separately verified by rolled-back SQL fixture."
+}

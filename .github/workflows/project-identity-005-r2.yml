@@ -1,0 +1,33 @@
+name: Project identity 005 RAB filename regression
+on:
+  push:
+    branches: [release/project-identity-005-20261004]
+    paths: [.github/workflows/project-identity-005-r2.yml]
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Repeat original validation with export filename token fix
+        run: |
+          python3 -m pip install -q PyYAML==6.0.2
+          python3 - <<'PY'
+          import base64,json,os,subprocess,urllib.request,yaml
+          repo='Yudha-pqbi/rab-system';assert os.environ['GITHUB_REPOSITORY']==repo
+          url='https://api.github.com/repos/'+repo+'/contents/.github/workflows/project-identity-005.yml?ref=0861f8106b43c89d468bb1b6e92680c8d85cdccd'
+          q=urllib.request.Request(url,headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json'})
+          with urllib.request.urlopen(q,timeout=30) as r:source=base64.b64decode(json.load(r)['content']).decode()
+          config=yaml.safe_load(source);steps=config['jobs']['validate']['steps']
+          assert len(steps)==3
+          marker="pathlib.Path('index.html').write_text(h);pathlib.Path('project-identity.js').write_text(module)"
+          fix="module=module.replace(r'\\bPRJ-',r'(?<![A-Z0-9])PRJ-').replace(r'(?:-[A-Z0-9]+)*\\b/gi',r'(?:-[A-Z0-9]+)*(?![A-Z0-9-])/gi')\n"+marker
+          assert steps[0]['run'].count(marker)==1
+          steps[0]['run']=steps[0]['run'].replace(marker,fix)
+          for step in steps:
+              print('RUN:',step['name'],flush=True)
+              subprocess.run(['bash','-euo','pipefail','-c',step['run']],check=True)
+          PY
