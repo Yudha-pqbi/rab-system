@@ -1,7 +1,7 @@
 {
   "tracking": "PROJECT-IDENTITY-005",
   "base": "bc8605051c53b45162001435ab9c5c771438e140",
-  "input_head": "51d38ca49bc5626bfea914a74f1fcb653fa34e19",
+  "input_head": "b11f5dbfe90ec930bd14c7e709570b314ec2302a",
   "numerical_functions_unchanged": {
     "calculateManpower": "e7f61f5fd10259163be81547d0e2c699cf484d78c9e6435c34b061dc5b806a7d",
     "calculateDynamicRows": "bea4b88819b0daa2423b295bf11529eb6908adeb719e3f4f322863d01e6ca8b1",
@@ -9,8 +9,13 @@
   },
   "files": {
     "index.html": "c26f450fe4679a1eff1a9cc053172be078306efe95e075185b7cc8f977f76c57",
-    "project-identity.js": "154f84abb9fa90445a97d423823955eb5913b6bb6ee940cfb2d9a6a58ac60ff0"
+    "project-identity.js": "bd59ddf91083cd26651fe0ae87bf0705dcdc9b7b514798d0ade17c93275f2dbf"
   },
-  "status": "SOURCE_VALIDATED",
-  "scope": "128 existing RAB identities already linked; production save is atomic, reuses parent; new source document UUID is internal. Existing financial calculation source untouched."
+  "status": "SOURCE_AND_READONLY_BROWSER_VALIDATED",
+  "scope": "128 existing RAB identities already linked; production save is atomic, reuses parent; new source document UUID is internal. Existing financial calculation source untouched.",
+  "public_metadata_projects": 44,
+  "public_key_modes": [
+    "publishable",
+    "legacy_anon"
+  ]
 }
