@@ -321,7 +321,7 @@ input:focus,select:focus{box-shadow:0 0 0 2px rgba(37,99,235,.18)}
       </div>
     </div>
 
-    <div class="flex justify-end gap-3"><button id="btnSaveProject" type="submit" class="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-lg text-xs font-bold"><span id="btnSaveText">Validasi Candidate (Tanpa Simpan)</span></button></div>
+    <div class="flex justify-end gap-3"><button id="btnSaveProject" type="submit" class="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-lg text-xs font-bold"><span id="btnSaveText">Simpan Hasil Analisa Ke Supabase</span></button></div>
   </form>
 </section>
 
@@ -342,8 +342,8 @@ input:focus,select:focus{box-shadow:0 0 0 2px rgba(37,99,235,.18)}
     </div>
   </div>
   <div class="px-6 py-3 bg-emerald-50 border-b border-emerald-100 text-[11px] text-emerald-900">
-    <b>CANONICAL PROJECT IDENTITY CANDIDATE V2</b>
-    <span class="ml-2">Berbasis RAB main terbaru. Read/UAT only; production save dan legacy OPC flow tidak dijalankan.</span>
+    <b>PROJECT ID NUMERIK</b>
+    <span class="ml-2">Satu identitas project untuk seluruh periode dan engine. Referensi dokumen internal tidak menjadi kode operasional.</span>
   </div>
   <div class="overflow-x-auto">
     <table class="w-full text-xs">
@@ -460,7 +460,7 @@ input:focus,select:focus{box-shadow:0 0 0 2px rgba(37,99,235,.18)}
 <footer class="bg-white border-t py-4 mt-auto"><div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">© 2026 PT Nusantara Inti Solusindo — RAB V5.2.9.1</div></footer>
 
 <script>
-const RAB_CANONICAL_CANDIDATE_V2=true;
+const RAB_CANONICAL_CANDIDATE_V2=false; // PROJECT-IDENTITY-005 production save enabled
 let supabaseClient=null, projectsData=[], editingProjectMeta={}, canonicalProjectsCandidate=[], clientAuthorityCandidate=[];
 let manpowerComponents=[{
  role:'HOUSEKEEPING',qty:2,basic_salary:5938885,tunjangan:0,uang_makan:330000,uniform:175000,
@@ -929,110 +929,9 @@ function setProjectCodeField(inputId,hintId,name,code,isMissing){
  }
 }
 
-async function openProjectCodeSetup(rabProjectId){
- if(RAB_CANONICAL_CANDIDATE_V2){
-  alert('Project Code Setup / Form OPC lama dinonaktifkan pada Candidate V2. Project Code baru dikelola melalui Canonical Project Identity.');
-  return;
- }
- if(!supabaseClient){alert('Supabase belum terhubung.');return;}
- pendingProjectCodeSetupId=rabProjectId;
- const errBox=document.getElementById('pcsError');errBox.classList.add('hidden');errBox.textContent='';
- try{
-  const res=await supabaseClient.rpc('get_project_code_setup',{p_rab_project_id:rabProjectId});
-  if(res.error)throw res.error;
-  const row=Array.isArray(res.data)?res.data[0]:res.data;
-  if(!row)throw new Error('Data setup Project Code tidak ditemukan.');
+async function openProjectCodeSetup(){alert('Project ID numerik diterbitkan otomatis saat RAB disimpan. Form kode lama tidak digunakan.');}
 
-  document.getElementById('pcsRabProjectId').value=rabProjectId;
-  document.getElementById('pcsRabProjectLabel').textContent=rabProjectId;
-  document.getElementById('pcsClientName').textContent=row.client_name||'-';
-  document.getElementById('pcsAreaName').textContent=row.area_name||'-';
-  document.getElementById('pcsServiceName').textContent=row.service_name||'-';
-
-  setProjectCodeField('pcsClientCode','pcsClientHint',row.client_name,row.client_code,row.client_code_missing);
-  setProjectCodeField('pcsAreaCode','pcsAreaHint',row.area_name,row.area_code,row.area_code_missing);
-  setProjectCodeField('pcsServiceCode','pcsServiceHint',row.service_name,row.service_code,row.service_code_missing);
-
-  ['pcsClientCode','pcsAreaCode','pcsServiceCode'].forEach(id=>{
-   const el=document.getElementById(id);
-   el.oninput=()=>{el.value=sanitizeProjectCodeInput(el.value)};
-  });
-
-  document.getElementById('projectCodeSetupModal').classList.remove('hidden');
- }catch(err){
-  console.error('Project Code Setup Preview Error:',err);
-  alert('Gagal membuka Project Code Setup: '+err.message);
- }
-}
-
-async function submitProjectCodeSetup(){
- if(RAB_CANONICAL_CANDIDATE_V2){
-  alert('Form OPC lama adalah read-only lineage pada Candidate V2 dan tidak dapat disimpan.');
-  return;
- }
- const rabProjectId=document.getElementById('pcsRabProjectId').value||pendingProjectCodeSetupId;
- if(!rabProjectId)return;
-
- const clientInput=document.getElementById('pcsClientCode');
- const areaInput=document.getElementById('pcsAreaCode');
- const serviceInput=document.getElementById('pcsServiceCode');
- const errBox=document.getElementById('pcsError');
- const btn=document.getElementById('pcsSaveButton');
-
- const clientCode=clientInput.disabled?null:sanitizeProjectCodeInput(clientInput.value);
- const areaCode=areaInput.disabled?null:sanitizeProjectCodeInput(areaInput.value);
- const serviceCode=serviceInput.disabled?null:sanitizeProjectCodeInput(serviceInput.value);
-
- if(!clientInput.disabled && clientCode.length<2){errBox.textContent='Client Code minimal 2 karakter.';errBox.classList.remove('hidden');return;}
- if(!areaInput.disabled && areaCode.length<2){errBox.textContent='Area Code minimal 2 karakter.';errBox.classList.remove('hidden');return;}
- if(!serviceInput.disabled && serviceCode.length<2){errBox.textContent='Service Code minimal 2 karakter.';errBox.classList.remove('hidden');return;}
-
- errBox.classList.add('hidden');errBox.textContent='';
- btn.disabled=true;btn.textContent='Memproses...';
-
- try{
-  const res=await supabaseClient.rpc('register_project_code_setup',{
-   p_rab_project_id:rabProjectId,
-   p_client_code:clientCode,
-   p_area_code:areaCode,
-   p_service_code:serviceCode
-  });
-  if(res.error)throw res.error;
-  const row=Array.isArray(res.data)?res.data[0]:res.data;
-  if(!row)throw new Error('Respons Project Code Setup kosong.');
-
-  if(row.setup_status==='SUCCESS'){
-   // Refresh status kode di modal sebelum notifikasi ditampilkan.
-   // Dengan demikian kode yang baru didaftarkan langsung terlihat hijau/terkunci.
-   if(!clientInput.disabled){
-    setProjectCodeField('pcsClientCode','pcsClientHint','',clientCode,false);
-   }
-   if(!areaInput.disabled){
-    setProjectCodeField('pcsAreaCode','pcsAreaHint','',areaCode,false);
-   }
-   if(!serviceInput.disabled){
-    setProjectCodeField('pcsServiceCode','pcsServiceHint','',serviceCode,false);
-   }
-
-   btn.disabled=false;
-   btn.textContent='Simpan & Generate Project Code';
-   await fetchProjects();
-
-   // Gunakan escape newline JavaScript yang benar, bukan literal \n pada layar.
-   alert('Project Code berhasil dibuat / disinkronkan.\n\nOfficial Project Code: '+(row.official_project_code||'-'));
-   closeProjectCodeSetupModal();
-  }else{
-   errBox.textContent=row.message||('Project Code Setup gagal: '+row.setup_status);
-   errBox.classList.remove('hidden');
-  }
- }catch(err){
-  console.error('Project Code Setup Error:',err);
-  errBox.textContent='Gagal menyimpan Project Code Setup: '+err.message;
-  errBox.classList.remove('hidden');
- }finally{
-  btn.disabled=false;btn.textContent='Simpan & Generate Project Code';
- }
-}
+async function submitProjectCodeSetup(){alert('Project ID numerik diterbitkan otomatis saat RAB disimpan. Form kode lama tidak digunakan.');}
 
 async function handleFormSubmit(e){
  e.preventDefault();
@@ -1094,7 +993,7 @@ async function handleFormSubmit(e){
    }
 
    const payload={
-     project_id:editing||'PRJ-'+Date.now().toString().slice(-8),
+     project_id:editing||crypto.randomUUID(),
      client_name:document.getElementById('clientName').value.trim(),
      client_location:document.getElementById('clientLocation').value.trim(),
      project_area:document.getElementById('projectArea').value.trim(),
@@ -1137,95 +1036,14 @@ async function handleFormSubmit(e){
      status:'APPROVED'
    };
 
-   if(RAB_CANONICAL_CANDIDATE_V2){
-     const mode=document.querySelector('input[name="canonicalIdentityMode"]:checked')?.value||'existing';
-     const authority=renderClientAuthority();
-     const selectedCode=document.getElementById('canonicalProjectSelect')?.value||'';
-     const proposedName=(document.getElementById('canonicalNewProjectName')?.value||'').trim();
-     const summary=[
-       'CANDIDATE V2 — VALIDATION ONLY',
-       'RAB ID preview: '+payload.project_id,
-       'Source Client: '+(payload.client_name||'-'),
-       'Governed Client: '+(authority.status==='GOVERNED'?authority.governed_client_name:'CLIENT AUTHORITY REVIEW'),
-       'Identity Mode: '+(mode==='existing'?'EXISTING':'NEW'),
-       mode==='existing'
-         ? 'Canonical Project: '+(selectedCode||'belum dipilih')
-         : 'New Project Preview: '+canonicalNextCodePreview()+' · '+(proposedName||'-'),
-       '',
-       'Tidak ada data production yang disimpan dan Form OPC lama tidak dijalankan.'
-     ].join('\n');
-     alert(summary);
-     return;
-   }
+   if(!supabaseClient)throw new Error('Supabase belum terhubung. RAB tidak disimpan tanpa Project ID resmi.');
+   const saved=await supabaseClient.rpc('rab_save_with_project_identity_v1',{p_payload:payload,p_existing_id:editing||null});
+   if(saved.error)throw new Error(saved.error.message);
+   if(saved.data?.status!=='SAVED'||!/^\d+$/.test(String(saved.data.project_id||'')))throw new Error('Hasil simpan atau Project ID belum terverifikasi. Muat ulang sebelum mencoba lagi.');
+   resetForm();
+   try{await fetchProjects();}catch(e){console.error('RAB saved; list refresh failed',e);}
+   alert('RAB berhasil disimpan. Project ID: '+saved.data.project_id);
 
-   if(supabaseClient){
-     const res=editing
-       ? await supabaseClient.from('projects').update(payload).eq('project_id',editing)
-       : await supabaseClient.from('projects').insert([payload]);
-
-     if(res.error)throw new Error('Supabase projects: '+res.error.message);
-
-     // At this point RAB is already safely stored.
-     let syncMessage=editing
-       ? 'Pembaruan RAB berhasil disimpan.'
-       : 'Project RAB berhasil disimpan ke Supabase.';
-
-     try{
-       if(saveText)saveText.textContent='Sinkronisasi Official Project Code...';
-
-       const syncRes=await supabaseClient.rpc(
-         'sync_project_master_from_rab',
-         {p_rab_project_id:payload.project_id}
-       );
-       if(syncRes.error)throw syncRes.error;
-
-       const syncRow=Array.isArray(syncRes.data)?syncRes.data[0]:syncRes.data;
-       if(syncRow){
-         if(syncRow.sync_status==='CREATED'){
-           syncMessage+='\n\nOfficial Project Code: '+(syncRow.official_project_code||'-');
-         }else if(syncRow.sync_status==='UPDATED'){
-           syncMessage+='\n\nOfficial Project Code tetap: '+(syncRow.official_project_code||'-');
-         }else if(syncRow.sync_status==='NEED_CODE_SETUP'){
-           syncMessage+='\n\nProject Code belum dibuat.\n'
-             +(syncRow.message||'Client / Area / Service memerlukan setup kode.');
-           pendingProjectCodeSetupId=payload.project_id;
-         }else if(syncRow.message){
-           syncMessage+='\n\n'+syncRow.message;
-         }
-       }
-     }catch(syncErr){
-       console.error('Project Master Sync Error:',syncErr);
-       syncMessage+='\n\nCATATAN: RAB SUDAH TERSIMPAN, tetapi sinkronisasi Official Project Code perlu diperiksa.\n'
-         +(syncErr?.message||String(syncErr));
-     }
-
-     alert(syncMessage);
-
-     const projectCodeSetupId=pendingProjectCodeSetupId;
-     resetForm();
-
-     try{
-       await fetchProjects();
-     }catch(refreshErr){
-       console.error('Refresh project list error:',refreshErr);
-       alert('RAB sudah tersimpan, tetapi daftar project gagal diperbarui otomatis. Silakan klik Refresh Database.');
-     }
-
-     if(projectCodeSetupId){
-       try{
-         await openProjectCodeSetup(projectCodeSetupId);
-       }catch(setupErr){
-         console.error('Project Code Setup Error:',setupErr);
-         alert('RAB sudah tersimpan. Project Code Setup belum dapat dibuka: '+(setupErr?.message||String(setupErr)));
-       }
-     }
-   }else{
-     const i=projectsData.findIndex(x=>x.project_id===payload.project_id);
-     if(i>=0)projectsData[i]=payload;else projectsData.unshift(payload);
-     renderTable();
-     resetForm();
-     alert('Project berhasil disimpan (Mode Lokal).');
-   }
  }catch(err){
    console.error('RAB Save Error:',err);
    alert(
@@ -1241,69 +1059,20 @@ async function handleFormSubmit(e){
  }
 }
 async function fetchProjects(){
- if(!supabaseClient){renderDemoData();return}
- const {data,error}=await supabaseClient
-   .from('projects')
-   .select('*')
-   .neq('status','DELETED')
-   .order('project_id',{ascending:false});
- if(error){console.error(error);alert('Gagal membaca tabel projects: '+error.message);renderDemoData();return}
-
- // Existing legacy OPC stays read-only lineage in Candidate V2.
- let codeMap={},canonicalMap={};
- try{
-  const [
-   {data:masterRows,error:masterError},
-   {data:canonicalRows,error:canonicalError},
-   {data:canonicalSummary,error:canonicalSummaryError},
-   {data:authorityRows,error:authorityError}
-  ]=await Promise.all([
-   supabaseClient.from('project_master').select('rab_project_id,project_code,status').eq('status','ACTIVE'),
-   supabaseClient.from('v_canonical_project_rab_candidate_v1').select('rab_project_id,project_code,project_name,canonical_status,link_status').eq('link_status','ACTIVE'),
-   supabaseClient.from('v_canonical_project_summary_candidate_v1').select('project_code,project_name,client_name,primary_service,status,active_rab_count,approved_rab_count').eq('status','ACTIVE'),
-   supabaseClient.from('rab_client_authority_snapshot_candidate_v1').select('normalized_match_name,governed_client_name,governed_client_count,authority_status,authority_basis,finance_actions,source_engines')
-  ]);
-  if(masterError)throw masterError;
-  if(canonicalError)throw canonicalError;
-  if(canonicalSummaryError)throw canonicalSummaryError;
-  if(authorityError)throw authorityError;
-
-  (masterRows||[]).forEach(row=>{
-   if(row?.rab_project_id&&row?.project_code)codeMap[row.rab_project_id]=row.project_code;
-  });
-  (canonicalRows||[]).forEach(row=>{
-   if(row?.rab_project_id&&row?.project_code){
-    canonicalMap[row.rab_project_id]={
-     project_code:row.project_code,
-     project_name:row.project_name,
-     status:row.canonical_status
-    };
-   }
-  });
-  canonicalProjectsCandidate=canonicalSummary||[];
-  clientAuthorityCandidate=authorityRows||[];
- }catch(candidateErr){
-  console.warn('Candidate identity lookup:',candidateErr);
-  canonicalProjectsCandidate=[];
-  clientAuthorityCandidate=[];
- }
-
- renderCanonicalProjectOptions();
-
- projectsData=(data||[]).map(p=>{
-  const c=canonicalMap[p.project_id]||null;
-  const a=getClientAuthority(p.client_name);
-  return {
-   ...p,
-   official_project_code:codeMap[p.project_id]||null,
-   canonical_project_code:c?.project_code||null,
-   canonical_project_name:c?.project_name||null,
-   canonical_project_status:c?.status||null,
-   governed_client_name:a.status==='GOVERNED'?a.governed_client_name:null,
-   client_authority_status:a.status
-  };
- });
- renderTable()
+ if(!supabaseClient){renderDemoData();return;}
+ const [source,dictionary,authority]=await Promise.all([
+  supabaseClient.from('projects').select('*').neq('status','DELETED').order('project_id',{ascending:false}),
+  supabaseClient.rpc('project_identity_dictionary_v1',{}),
+  supabaseClient.from('rab_client_authority_snapshot_candidate_v1').select('normalized_match_name,governed_client_name,governed_client_count,authority_status,authority_basis,finance_actions,source_engines')
+ ]);
+ if(source.error)throw source.error;if(dictionary.error)throw dictionary.error;
+ const d=dictionary.data;if(!d||d.version!=='PROJECT-IDENTITY-005')throw new Error('Kamus Project ID tidak sesuai.');
+ if(window.ProjectIdentity)ProjectIdentity.install(d);
+ const ref=d.references||{};
+ canonicalProjectsCandidate=(d.projects||[]).map(p=>({...p,project_code:p.project_id,status:'ACTIVE'}));
+ clientAuthorityCandidate=authority.error?[]:(authority.data||[]);
+ projectsData=(source.data||[]).map(p=>{const code=ref[p.project_id]||null,c=canonicalProjectsCandidate.find(x=>x.project_code===code),a=getClientAuthority(p.client_name);return {...p,official_project_code:code,canonical_project_code:code,canonical_project_name:c?.project_name||null,canonical_project_status:c?'ACTIVE':null,governed_client_name:a.status==='GOVERNED'?a.governed_client_name:null,client_authority_status:a.status};});
+ renderCanonicalProjectOptions();renderTable();
 }
 function renderDemoData(){projectsData=[];renderTable()}
 async function deleteProject(projectId){
@@ -1424,7 +1193,7 @@ function renderTable(data){
 }
 function resetForm(){
  editingProjectMeta={};
- document.getElementById('editingProjectId').value='';document.getElementById('formTitle').textContent='Form Analytical Costing & Detail Input Component';document.getElementById('editingBadge').textContent='Input Baru';document.getElementById('btnSaveText').textContent=RAB_CANONICAL_CANDIDATE_V2?'Validasi Candidate (Tanpa Simpan)':'Simpan Hasil Analisa Ke Supabase';document.getElementById('rabForm').reset();renderProjectIdentityFormState(null);setCanonicalIdentityMode('existing');document.getElementById('canonicalProjectSelect').value='';document.getElementById('canonicalNewProjectName').value='';document.getElementById('managementFeeBasis').value='total_cost';document.querySelector('input[name="managementFeeMode"][value="auto"]').checked=true;document.getElementById('managementFeeManualValue').value=0;document.querySelectorAll('.mgmt-fee-component').forEach(x=>x.checked=false);updateManagementFeeControls();document.getElementById('ppnBasis').value='selected_components';document.querySelector('input[name="ppnMode"][value="auto"]').checked=true;document.getElementById('ppnManualValue').value=11;document.querySelectorAll('.ppn-component').forEach(x=>x.checked=false);updatePpnControls();
+ document.getElementById('editingProjectId').value='';document.getElementById('formTitle').textContent='Form Analytical Costing & Detail Input Component';document.getElementById('editingBadge').textContent='Input Baru';document.getElementById('btnSaveText').textContent=RAB_CANONICAL_CANDIDATE_V2?'Simpan Hasil Analisa Ke Supabase':'Simpan Hasil Analisa Ke Supabase';document.getElementById('rabForm').reset();renderProjectIdentityFormState(null);setCanonicalIdentityMode('existing');document.getElementById('canonicalProjectSelect').value='';document.getElementById('canonicalNewProjectName').value='';document.getElementById('managementFeeBasis').value='total_cost';document.querySelector('input[name="managementFeeMode"][value="auto"]').checked=true;document.getElementById('managementFeeManualValue').value=0;document.querySelectorAll('.mgmt-fee-component').forEach(x=>x.checked=false);updateManagementFeeControls();document.getElementById('ppnBasis').value='selected_components';document.querySelector('input[name="ppnMode"][value="auto"]').checked=true;document.getElementById('ppnManualValue').value=11;document.querySelectorAll('.ppn-component').forEach(x=>x.checked=false);updatePpnControls();
  manpowerComponents=[normalizeManpowerItem({role:'HOUSEKEEPING',qty:2,basic_salary:5938885,tunjangan:0,uang_makan:330000,uniform:175000})];renderManpowerComponents(manpowerComponents);
  ['machineryTable','chemicalsTable','consumablesTable','uniformTable','equipmentTable','additionalCostTable'].forEach(id=>document.querySelector('#'+id+' tbody').innerHTML='');calculateDynamicRows()
 }
@@ -1432,8 +1201,8 @@ function loadProjectToForm(id){
  const p=projectsData.find(x=>x.project_id===id);if(!p)return;
  document.getElementById('editingProjectId').value=p.project_id;
  renderProjectIdentityFormState(p);
- document.getElementById('formTitle').textContent='Edit / Analisa RAB ('+p.project_id+')';
- document.getElementById('editingBadge').textContent='Editing: '+p.project_id;
+ document.getElementById('formTitle').textContent='Edit / Analisa RAB ('+(p.canonical_project_code||'Belum terhubung')+')';
+ document.getElementById('editingBadge').textContent='Project ID: '+(p.canonical_project_code||'Belum terhubung');
  document.getElementById('btnSaveText').textContent=RAB_CANONICAL_CANDIDATE_V2?'Validasi Perubahan Candidate':'Simpan Perubahan RAB';
  document.getElementById('clientName').value=p.client_name||'';
  document.getElementById('clientLocation').value=p.client_location||'';
@@ -2095,5 +1864,6 @@ document.addEventListener('DOMContentLoaded',()=>{
  addRow('uniformTable');addRow('machineryTable');addRow('chemicalsTable');addRow('consumablesTable');addRow('equipmentTable');addRow('additionalCostTable');calculateDynamicRows();
 });
 </script>
+<script src="project-identity.js?v=20261004-005"></script>
 </body>
 </html>

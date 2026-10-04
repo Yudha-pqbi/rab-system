@@ -1,0 +1,21 @@
+{
+  "checks": {
+    "display_numeric": true,
+    "internal_key_preserved": true,
+    "handler_key_preserved": true,
+    "xlsx_numeric": true,
+    "pdf_numeric": true,
+    "pdf_table_numeric": true,
+    "pdf_filename_numeric": true,
+    "xlsx_filename_numeric": true,
+    "workbook_numeric": true,
+    "formula_preserved": true,
+    "source_workbook_not_mutated": true,
+    "unknown_not_invented": true,
+    "dynamic_render_numeric": true,
+    "no_runtime_error": true
+  },
+  "errors": [],
+  "passed": 14,
+  "scope": "Actual shared adapter with synthetic dictionary/export libraries; not production login or a real financial save"
+}
