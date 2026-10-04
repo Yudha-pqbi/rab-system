@@ -1,0 +1,79 @@
+name: Project identity 005 final RAB verification
+on:
+  push:
+    branches: [release/project-identity-005-20261004]
+    paths: [.github/workflows/project-identity-005-final.yml]
+permissions:
+  contents: write
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Test exact release with public metadata and actual read-only RAB page
+        run: |
+          python3 -m pip install -q PyYAML==6.0.2 playwright==1.57.0
+          python3 - <<'PY'
+          import asyncio,base64,functools,hashlib,http.server,json,os,pathlib,re,subprocess,threading,urllib.request,yaml
+          from playwright.async_api import async_playwright
+          repo='Yudha-pqbi/rab-system';head=os.environ['GITHUB_SHA'];base='bc8605051c53b45162001435ab9c5c771438e140';branch='release/project-identity-005-20261004';root='https://api.github.com/repos/'+repo
+          assert os.environ['GITHUB_REPOSITORY']==repo
+          def api(path,body=None,method=None):
+            q=urllib.request.Request(root+path,data=None if body is None else json.dumps(body).encode(),headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','Content-Type':'application/json'},method=method or ('GET' if body is None else 'POST'))
+            with urllib.request.urlopen(q,timeout=30) as r:return json.load(r)
+          def read(path,ref=head):return base64.b64decode(api('/contents/'+path+'?ref='+ref)['content']).decode()
+          assert api('/git/ref/heads/main')['object']['sha']==base
+          html=read('index.html');module=read('project-identity.js');previous=json.loads(read('releases/PROJECT-IDENTITY-005/release.json'))
+          assert hashlib.sha256(html.encode()).hexdigest()==previous['files']['index.html'],'RAB source moved outside approved patch'
+          pathlib.Path('index.html').write_text(html);pathlib.Path('project-identity.js').write_text(module)
+          subprocess.run(['node','--check','project-identity.js'],check=True)
+          spec=yaml.safe_load(read('.github/workflows/project-identity-005.yml','0861f8106b43c89d468bb1b6e92680c8d85cdccd'))
+          test=spec['jobs']['validate']['steps'][1]['run'];subprocess.run(['bash','-euo','pipefail','-c',test],check=True)
+          legacy=json.loads(pathlib.Path('browser-results.json').read_text())
+          keyline="key=enc({'alg':'none'})+'.'+enc({'role':'anon','ref':'identitytest'})+'.test'"
+          assert keyline in test
+          pubtest=test.replace(keyline,"key='sb_publishable_fixture'",1)
+          subprocess.run(['bash','-euo','pipefail','-c',pubtest],check=True)
+          public=json.loads(pathlib.Path('browser-results.json').read_text())
+          key=re.search(r'sb_publishable_[A-Za-z0-9_-]+',html).group();url='https://rljqyaycshwpoteoxgem.supabase.co'
+          req=urllib.request.Request(url+'/rest/v1/rpc/project_identity_dictionary_v1',data=b'{}',headers={'apikey':key,'Content-Type':'application/json'},method='POST')
+          with urllib.request.urlopen(req,timeout=20) as response:dictionary=json.load(response)
+          assert dictionary['references']['PRJ-26092802']=='1050' and dictionary['references']['PRJ-01322001']=='1002'
+          assert dictionary['ambiguous_reference_count']==0
+          class Quiet(http.server.SimpleHTTPRequestHandler):
+            def log_message(self,*args):pass
+          server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Quiet);threading.Thread(target=server.serve_forever,daemon=True).start()
+          async def page_test():
+            async with async_playwright() as p:
+              browser=await p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--no-sandbox']);page=await browser.new_page();errors=[];blocked=[]
+              page.on('pageerror',lambda e:errors.append(str(e)))
+              async def guard(route):
+                req=route.request
+                if req.method in ['GET','HEAD','OPTIONS'] or req.url.endswith('/rpc/project_identity_dictionary_v1'):
+                  await route.continue_()
+                else:blocked.append({'method':req.method,'path':req.url.split('.co')[-1]});await route.abort()
+              await page.route('https://*.supabase.co/**',guard)
+              await page.goto('http://127.0.0.1:'+str(server.server_port)+'/index.html',wait_until='networkidle',timeout=60000)
+              await page.wait_for_function('window.ProjectIdentity?.status==="ready" && typeof projectsData!=="undefined" && projectsData.length>=128',timeout=30000)
+              out=await page.evaluate('''()=>({active_rab:projectsData.length,numeric_rows:projectsData.filter(x=>/^\\d+$/.test(x.canonical_project_code||'')).length,has_1050:projectsData.some(x=>x.canonical_project_code==='1050'),has_1002:projectsData.some(x=>x.canonical_project_code==='1002'),production_save:!RAB_CANONICAL_CANDIDATE_V2,save_rpc_in_handler:handleFormSubmit.toString().includes('rab_save_with_project_identity_v1'),old_setup_not_called:!handleFormSubmit.toString().includes('sync_project_master_from_rab')})''')
+              await page.evaluate("loadProjectToForm('PRJ-26092802')")
+              out['edit_header_numeric']='1050' in await page.locator('#formTitle').inner_text()
+              out['hidden_source_key_preserved']=await page.locator('#editingProjectId').input_value()=='PRJ-26092802'
+              await page.evaluate("viewProjectDetail('PRJ-01322001')")
+              await page.wait_for_timeout(250)
+              out['no_visible_legacy_project_tokens']=not bool(re.search(r'PRJ-[A-Z0-9]+(?:-[A-Z0-9]+)*',await page.locator('body').inner_text(),re.I))
+              out['blocked_mutations']=blocked;out['runtime_errors']=errors
+              assert out['numeric_rows']==out['active_rab'] and out['has_1050'] and out['has_1002'] and out['production_save'] and out['save_rpc_in_handler'] and out['old_setup_not_called'] and out['edit_header_numeric'] and out['hidden_source_key_preserved'] and out['no_visible_legacy_project_tokens'] and not blocked and not errors,out
+              await browser.close();return out
+          real=asyncio.run(page_test());server.shutdown()
+          previous['input_head']=head;previous['files']['project-identity.js']=hashlib.sha256(module.encode()).hexdigest();previous['status']='SOURCE_AND_READONLY_BROWSER_VALIDATED';previous['public_metadata_projects']=len(dictionary['projects']);previous['public_key_modes']=['publishable','legacy_anon']
+          results={'legacy_adapter':legacy,'publishable_adapter':public,'real_rab_readonly_page':real,'real_dictionary_read':{'http':200,'projects':len(dictionary['projects']),'ambiguous_references':0},'scope':'Actual RAB HTML and real backend public read paths; writes network-blocked. Backend atomic save separately verified by rolled-back SQL fixture.'}
+          pathlib.Path('release.json').write_text(json.dumps(previous,indent=2));pathlib.Path('browser-results.json').write_text(json.dumps(results,indent=2));print(json.dumps({'manifest':previous,'verification':results},indent=2))
+          assert api('/git/ref/heads/main')['object']['sha']==base and api('/git/ref/heads/'+branch)['object']['sha']==head
+          entries=[]
+          for path,local in [('releases/PROJECT-IDENTITY-005/release.json','release.json'),('releases/PROJECT-IDENTITY-005/browser-results.json','browser-results.json')]:
+            b=api('/git/blobs',{'content':pathlib.Path(local).read_text(),'encoding':'utf-8'});entries.append({'path':path,'mode':'100644','type':'blob','sha':b['sha']})
+          t=api('/git/trees',{'base_tree':api('/git/commits/'+head)['tree']['sha'],'tree':entries});c=api('/git/commits',{'message':'PROJECT-IDENTITY-005: verified publishable-key metadata and actual RAB read/edit presentation','tree':t['sha'],'parents':[head]});api('/git/refs/heads/'+branch,{'sha':c['sha'],'force':False},'PATCH');print(json.dumps({'status':'VALIDATED_BRANCH_ONLY','head':c['sha']},indent=2))
+          PY
