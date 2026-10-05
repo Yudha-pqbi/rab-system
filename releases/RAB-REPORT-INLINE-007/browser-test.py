@@ -17,7 +17,7 @@ async def main():
         page=await browser.new_page()
         page.on("pageerror",lambda e: errors.append(str(e)))
         await page.goto("http://127.0.0.1:8000/report.html",wait_until="domcontentloaded")
-        await page.wait_for_function("document.getElementById('dbStatus').textContent.includes('Connected')",{ "timeout":20000 })
+        await page.wait_for_function("document.getElementById('dbStatus').textContent.includes('Connected')",timeout=20000)
         status=await page.locator("#dbStatus").inner_text()
         ok("all active RAB loaded","129 RAB" in status,status)
         ok("all active RAB have numeric Project ID","129 Project ID" in status,status)
