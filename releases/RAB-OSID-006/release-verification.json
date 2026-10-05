@@ -1,0 +1,55 @@
+{
+  "release": "RAB-OSID-006",
+  "date": "2026-10-05",
+  "source_file": "RAB - OSID Sept - Okt (rev.osave).xlsx",
+  "source_sha256": "6737402a1c6de8d9c134874bb97c3cd19c6771085a3d101d45c1714532e43503",
+  "source_record_id": "e6a72274-57b5-4807-8fed-038d8fa39816",
+  "canonical_project_id": "1052",
+  "canonical_project_name": "PT Osid Management Corp · Cleaning Service",
+  "period": {
+    "from": "2026-09-01",
+    "to": "2026-10-31",
+    "status": "CURRENT_EFFECTIVE",
+    "confidence": "MEDIUM"
+  },
+  "monthly": {
+    "manpower": "8013693.129866666",
+    "machinery": "160417",
+    "chemicals": "364290",
+    "consumables": "876871.3333333334",
+    "equipment": "221886.33333333334",
+    "cost_project": "9737157.796533335",
+    "management_fee_percent": "8",
+    "management_fee": "778972.6237226668",
+    "revenue_before_tax": "10516130.420256002",
+    "ppn": "170012.25527616002",
+    "total_after_tax": "10686142.675532162"
+  },
+  "component_counts": {
+    "manpower": 1,
+    "uniform": 2,
+    "machinery": 1,
+    "chemicals": 8,
+    "consumables": 12,
+    "equipment": 15,
+    "additional": 1
+  },
+  "source_overlap_preserved": true,
+  "migration": {
+    "version": "20261005164631",
+    "name": "rab_osid_osave_sep_oct_2026_20261005",
+    "sql_sha256": "a4f1b42165f995b5aacbe57d3ff5adc550331470d6a36bdbba23a9325b89c736"
+  },
+  "pre_rab": {
+    "rows": 136,
+    "md5": "a227fa159a04a1f96b02b4883cdf5ce4"
+  },
+  "post_rab": {
+    "rows": 137,
+    "md5": "7341d7075dce0ab917a3759738fa990f"
+  },
+  "gl_md5": "aaa8811053b6580a9370732074a15a3a",
+  "finance_md5": "8a623f60f7d680cdcce5f2d6d671ec1e",
+  "source_revision": 452,
+  "september_gl_batches": 0
+}
