@@ -315,6 +315,7 @@ table thead {
 
 <script>
 let supabaseClient=null, projectsData=[], currentFiltered=[], currentReport=null, activeDetail='machinery';
+let projectPlanByRab=new Map(),projectIdReferences={};
 
 const SB_URL='https://rljqyaycshwpoteoxgem.supabase.co';
 const SB_KEY='sb_publishable_-MIacd79BlgIgfiDIDU9Fw_o9ivtipK';
@@ -384,6 +385,39 @@ function cardActiveInMonth(m,year,month){
  const monthEnd=`${year}-${String(month).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
  return start<=monthEnd && end>=monthStart;
 }
+function validIsoDate(v){return /^\d{4}-\d{2}-\d{2}$/.test(String(v||''))?String(v):null}
+function manpowerPeriodBounds(p){
+ const starts=[],ends=[];
+ manpowerItems(p).forEach(m=>{const s=validIsoDate(m?.contract_start),e=validIsoDate(m?.contract_end);if(s)starts.push(s);if(e)ends.push(e)});
+ starts.sort();ends.sort();
+ return {start:starts[0]||null,end:ends.length?ends[ends.length-1]:null};
+}
+function projectPlan(p){return p?._rab_plan||projectPlanByRab.get(String(p?.project_id||''))||null}
+function projectReportBounds(p){
+ const plan=projectPlan(p),meta=projectMeta(p),mp=manpowerPeriodBounds(p),status=String(plan?.plan_status||'CURRENT_OR_BASELINE');
+ if(['HISTORICAL_REFERENCE','SUPERSEDED'].includes(status)){
+  return {start:validIsoDate(plan?.effective_from),end:validIsoDate(plan?.effective_to),status,source:'PLAN_VERSION'};
+ }
+ const starts=[validIsoDate(plan?.effective_from),validIsoDate(meta?.source_period_start),mp.start].filter(Boolean).sort();
+ const ends=[validIsoDate(plan?.effective_to),validIsoDate(meta?.source_period_end),mp.end].filter(Boolean).sort();
+ return {start:starts[0]||null,end:ends.length?ends[ends.length-1]:null,status,source:plan?'PLAN+RAB':'RAB'};
+}
+function projectIncludedInCurrentDesign(p){
+ return !['HISTORICAL_REFERENCE','SUPERSEDED'].includes(String(projectPlan(p)?.plan_status||''));
+}
+function projectActiveInMonth(p,year,month){
+ if(!projectIncludedInCurrentDesign(p))return false;
+ const b=projectReportBounds(p);
+ if(!b.start&&!b.end)return true;
+ const monthStart=`${year}-${String(month).padStart(2,'0')}-01`;
+ const lastDay=new Date(year,month,0).getDate();
+ const monthEnd=`${year}-${String(month).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+ return (!b.start||b.start<=monthEnd)&&(!b.end||b.end>=monthStart);
+}
+function projectHasPeriodControl(p){
+ const b=projectReportBounds(p);
+ return !!(b.start||b.end||['HISTORICAL_REFERENCE','SUPERSEDED'].includes(b.status));
+}
 
 const SALARY_LABELS={
  basic:'BASIC SALARY',
@@ -409,12 +443,19 @@ async function init(){
  initPnlPeriodControls();
  try{
   supabaseClient=window.supabase.createClient(SB_URL,SB_KEY);
-  // GOVERNANCE: samakan active population RAB Report dengan RAB utama.
-  // Record projects berstatus DELETED tetap disimpan untuk audit/historical, tetapi tidak boleh masuk report aktif.
-  const {data,error}=await supabaseClient.from('projects').select('*').neq('status','DELETED').order('client_name',{ascending:true});
-  if(error)throw error;
-  projectsData=data||[];
-  document.getElementById('dbStatus').textContent='● Supabase Connected';
+  const [source,dictionary,plans]=await Promise.all([
+   supabaseClient.from('projects').select('*').neq('status','DELETED').order('client_name',{ascending:true}),
+   supabaseClient.rpc('project_identity_dictionary_v1',{}),
+   supabaseClient.from('canonical_rab_plan_versions_candidate_v1')
+     .select('rab_project_id,canonical_project_no,plan_status,effective_from,effective_to,evidence_basis,confidence,updated_at')
+  ]);
+  if(source.error)throw source.error;if(dictionary.error)throw dictionary.error;if(plans.error)throw plans.error;
+  const d=dictionary.data;if(!d||d.version!=='PROJECT-IDENTITY-005')throw new Error('Kamus Project ID tidak sesuai.');
+  projectIdReferences=d.references||{};
+  projectPlanByRab=new Map((plans.data||[]).map(x=>[String(x.rab_project_id),x]));
+  projectsData=(source.data||[]).map(p=>({...p,canonical_project_code:projectIdReferences[p.project_id]||null,_rab_plan:projectPlanByRab.get(String(p.project_id))||null}));
+  const mapped=projectsData.filter(p=>/^\d+$/.test(String(p.canonical_project_code||''))).length;
+  document.getElementById('dbStatus').textContent=`● Connected · ${projectsData.length} RAB · ${mapped} Project ID`;
   document.getElementById('dbStatus').className='text-xs font-medium px-3 py-1.5 rounded-full bg-emerald-400/15 border border-emerald-300/30 whitespace-nowrap';
   populateClients();
  }catch(err){
