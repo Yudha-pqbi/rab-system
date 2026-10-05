@@ -769,7 +769,7 @@ function renderProfitLoss(){
  const selectedClient=document.getElementById('clientFilter').value;
  const scopeNote=selectedClient==='__ALL__'?'Gross Margin Perusahaan dihitung dari total Gross Profit seluruh client ÷ total Pendapatan seluruh client, bukan rata-rata margin per client. ':'';
  const annualNote=t.hasAnnualSource?' Project annual-source menggunakan nilai control tahunan source RAB; nilai bulanan adalah annual ÷ 12 dan source adjustment ditampilkan terpisah.':'';
- const scheduleNote=t.hasCardContracts?' Project dengan tanggal kontrak pada manpower card dihitung berdasarkan Start/End Contract; card tanpa periode tetap mengikuti baseline bulanan.':'';
+ const scheduleNote=t.hasMonthlySchedule?' Project/RAB dengan periode efektif atau tanggal kontrak hanya dihitung pada bulan yang overlap dengan periode tersebut; RAB tanpa periode eksplisit tetap mengikuti baseline bulanan.':'';
  document.getElementById('pnlNote').textContent=`${scopeNote}Design P&L ${period.label}.${annualNote}${scheduleNote} Pendapatan menggunakan Total Exc. PPN. Belum termasuk OPEX korporat dan pajak penghasilan.`;
 }
 
@@ -790,7 +790,8 @@ function renderReport(){
  const client=document.getElementById('clientFilter').value,areas=selectedValues('area-check'),services=selectedValues('service-check');
  const clientLabel=client==='__ALL__'?'SEMUA CLIENT / PERUSAHAAN':client;
  document.getElementById('reportClient').textContent=clientLabel;
- document.getElementById('reportScope').textContent=`Area: ${areas.join(', ')} · Service: ${services.join(', ')}`;
+ const historicalCount=rows.length-r.financialProjects.length;
+ document.getElementById('reportScope').textContent=`Area: ${areas.join(', ')} · Service: ${services.join(', ')}`+(historicalCount?` · ${historicalCount} RAB historical/superseded tetap tercatat, tidak didouble-count pada current design`:'');
  document.getElementById('projectCount').textContent=rows.length;
  document.getElementById('kpiManpower').textContent=t.manpowerQty;
  document.getElementById('kpiCostMp').textContent=money(t.manpower);
@@ -900,14 +901,10 @@ function renderDetail(key){
 
 async function getOfficialProjectCodeMap(projects=[]){
  const map={};
- if(!supabaseClient||!projects.length)return map;
- const ids=unique(projects.map(p=>p?.project_id).filter(Boolean));
- if(!ids.length)return map;
- try{
-  const {data,error}=await supabaseClient.from('project_master').select('rab_project_id,project_code,status').in('rab_project_id',ids).eq('status','ACTIVE');
-  if(error)throw error;
-  (data||[]).forEach(x=>{if(x?.rab_project_id&&x?.project_code)map[x.rab_project_id]=x.project_code});
- }catch(err){console.warn('Official Project Code lookup saat export:',err)}
+ (projects||[]).forEach(p=>{
+  const code=p?.canonical_project_code||projectIdReferences[p?.project_id]||null;
+  if(p?.project_id&&/^\d+$/.test(String(code||'')))map[p.project_id]=String(code);
+ });
  return map;
 }
 
@@ -927,8 +924,8 @@ async function exportExcel(){
   ['Total Cost Project',t.totalCost],['Management Fee',t.managementFee],['Total Exc. PPN',t.totalExc],['Total Inc. PPN',t.totalInc]
  ];
  const wsSummary=XLSX.utils.aoa_to_sheet(meta);wsSummary['!cols']=[{wch:28},{wch:55}];XLSX.utils.book_append_sheet(wb,wsSummary,'Summary');
- const projectList=[['Official Project Code','Client','Area','Service'],...r.projects.map(p=>[codeMap[p.project_id]||'Belum dibuat',p.client_name||'-',p.project_area||'-',p.project_title||'-'])];
- const wsProjects=XLSX.utils.aoa_to_sheet(projectList);wsProjects['!cols']=[{wch:28},{wch:32},{wch:24},{wch:30}];XLSX.utils.book_append_sheet(wb,wsProjects,'Project List');
+ const projectList=[['Project ID','Client','Area','Service','RAB Plan Status','Effective From','Effective To'],...r.projects.map(p=>{const plan=projectPlan(p),b=projectReportBounds(p);return [codeMap[p.project_id]||'Belum terhubung',p.client_name||'-',p.project_area||'-',p.project_title||'-',plan?.plan_status||'BASELINE',b.start||'-',b.end||'-']})];
+ const wsProjects=XLSX.utils.aoa_to_sheet(projectList);wsProjects['!cols']=[{wch:14},{wch:32},{wch:24},{wch:30},{wch:22},{wch:16},{wch:16}];XLSX.utils.book_append_sheet(wb,wsProjects,'Project List');
 
  const mp=[['Area','Service','Role','Komponen Salary & Benefit','Qty','Acuan','Amount / Person','Total / Month'],
  ...(r.salaryRows||[]).map(x=>[x.area,x.service,x.role,x.component,x.qty,x.acuan,x.amount,x.total]),
