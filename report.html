@@ -315,6 +315,7 @@ table thead {
 
 <script>
 let supabaseClient=null, projectsData=[], currentFiltered=[], currentReport=null, activeDetail='machinery';
+let projectPlanByRab=new Map(),projectIdReferences={};
 
 const SB_URL='https://rljqyaycshwpoteoxgem.supabase.co';
 const SB_KEY='sb_publishable_-MIacd79BlgIgfiDIDU9Fw_o9ivtipK';
@@ -384,6 +385,39 @@ function cardActiveInMonth(m,year,month){
  const monthEnd=`${year}-${String(month).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
  return start<=monthEnd && end>=monthStart;
 }
+function validIsoDate(v){return /^\d{4}-\d{2}-\d{2}$/.test(String(v||''))?String(v):null}
+function manpowerPeriodBounds(p){
+ const starts=[],ends=[];
+ manpowerItems(p).forEach(m=>{const s=validIsoDate(m?.contract_start),e=validIsoDate(m?.contract_end);if(s)starts.push(s);if(e)ends.push(e)});
+ starts.sort();ends.sort();
+ return {start:starts[0]||null,end:ends.length?ends[ends.length-1]:null};
+}
+function projectPlan(p){return p?._rab_plan||projectPlanByRab.get(String(p?.project_id||''))||null}
+function projectReportBounds(p){
+ const plan=projectPlan(p),meta=projectMeta(p),mp=manpowerPeriodBounds(p),status=String(plan?.plan_status||'CURRENT_OR_BASELINE');
+ if(['HISTORICAL_REFERENCE','SUPERSEDED'].includes(status)){
+  return {start:validIsoDate(plan?.effective_from),end:validIsoDate(plan?.effective_to),status,source:'PLAN_VERSION'};
+ }
+ const starts=[validIsoDate(plan?.effective_from),validIsoDate(meta?.source_period_start),mp.start].filter(Boolean).sort();
+ const ends=[validIsoDate(plan?.effective_to),validIsoDate(meta?.source_period_end),mp.end].filter(Boolean).sort();
+ return {start:starts[0]||null,end:ends.length?ends[ends.length-1]:null,status,source:plan?'PLAN+RAB':'RAB'};
+}
+function projectIncludedInCurrentDesign(p){
+ return !['HISTORICAL_REFERENCE','SUPERSEDED'].includes(String(projectPlan(p)?.plan_status||''));
+}
+function projectActiveInMonth(p,year,month){
+ if(!projectIncludedInCurrentDesign(p))return false;
+ const b=projectReportBounds(p);
+ if(!b.start&&!b.end)return true;
+ const monthStart=`${year}-${String(month).padStart(2,'0')}-01`;
+ const lastDay=new Date(year,month,0).getDate();
+ const monthEnd=`${year}-${String(month).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+ return (!b.start||b.start<=monthEnd)&&(!b.end||b.end>=monthStart);
+}
+function projectHasPeriodControl(p){
+ const b=projectReportBounds(p);
+ return !!(b.start||b.end||['HISTORICAL_REFERENCE','SUPERSEDED'].includes(b.status));
+}
 
 const SALARY_LABELS={
  basic:'BASIC SALARY',
@@ -409,12 +443,19 @@ async function init(){
  initPnlPeriodControls();
  try{
   supabaseClient=window.supabase.createClient(SB_URL,SB_KEY);
-  // GOVERNANCE: samakan active population RAB Report dengan RAB utama.
-  // Record projects berstatus DELETED tetap disimpan untuk audit/historical, tetapi tidak boleh masuk report aktif.
-  const {data,error}=await supabaseClient.from('projects').select('*').neq('status','DELETED').order('client_name',{ascending:true});
-  if(error)throw error;
-  projectsData=data||[];
-  document.getElementById('dbStatus').textContent='● Supabase Connected';
+  const [source,dictionary,plans]=await Promise.all([
+   supabaseClient.from('projects').select('*').neq('status','DELETED').order('client_name',{ascending:true}),
+   supabaseClient.rpc('project_identity_dictionary_v1',{}),
+   supabaseClient.from('canonical_rab_plan_versions_candidate_v1')
+     .select('rab_project_id,canonical_project_no,plan_status,effective_from,effective_to,evidence_basis,confidence,updated_at')
+  ]);
+  if(source.error)throw source.error;if(dictionary.error)throw dictionary.error;if(plans.error)throw plans.error;
+  const d=dictionary.data;if(!d||d.version!=='PROJECT-IDENTITY-005')throw new Error('Kamus Project ID tidak sesuai.');
+  projectIdReferences=d.references||{};
+  projectPlanByRab=new Map((plans.data||[]).map(x=>[String(x.rab_project_id),x]));
+  projectsData=(source.data||[]).map(p=>({...p,canonical_project_code:projectIdReferences[p.project_id]||null,_rab_plan:projectPlanByRab.get(String(p.project_id))||null}));
+  const mapped=projectsData.filter(p=>/^\d+$/.test(String(p.canonical_project_code||''))).length;
+  document.getElementById('dbStatus').textContent=`● Connected · ${projectsData.length} RAB · ${mapped} Project ID`;
   document.getElementById('dbStatus').className='text-xs font-medium px-3 py-1.5 rounded-full bg-emerald-400/15 border border-emerald-300/30 whitespace-nowrap';
   populateClients();
  }catch(err){
@@ -480,9 +521,10 @@ function aggregateItems(projects,key){
 }
 
 function buildReport(projects){
- const sum=(field)=>projects.reduce((s,p)=>s+n(p?.[field]),0);
+ const financialProjects=projects.filter(projectIncludedInCurrentDesign);
+ const sum=(field)=>financialProjects.reduce((s,p)=>s+n(p?.[field]),0);
  const manpowerByRole=new Map(),salaryRows=[];
- projects.forEach(p=>manpowerItems(p).forEach(m=>{
+ financialProjects.forEach(p=>manpowerItems(p).forEach(m=>{
   const role=String(m?.role||'STAFF').trim()||'STAFF',k=role.toLowerCase(),c=manpowerCalc(m),qty=c.qty;
   if(!manpowerByRole.has(k))manpowerByRole.set(k,{role,qty:0,total:0});
   const r=manpowerByRole.get(k);r.qty+=qty;r.total+=c.total;
@@ -498,12 +540,12 @@ function buildReport(projects){
  }));
  const mpRows=[...manpowerByRole.values()].sort((a,b)=>a.role.localeCompare(b.role,'id'));
  const detail={
-  uniform:aggregateItems(projects,'uniform'),
-  machinery:aggregateItems(projects,'machinery'),
-  chemicals:aggregateItems(projects,'chemicals'),
-  consumables:aggregateItems(projects,'consumables'),
-  equipment:aggregateItems(projects,'equipment'),
-  additional_cost:aggregateItems(projects,'additional_cost')
+  uniform:aggregateItems(financialProjects,'uniform'),
+  machinery:aggregateItems(financialProjects,'machinery'),
+  chemicals:aggregateItems(financialProjects,'chemicals'),
+  consumables:aggregateItems(financialProjects,'consumables'),
+  equipment:aggregateItems(financialProjects,'equipment'),
+  additional_cost:aggregateItems(financialProjects,'additional_cost')
  };
  const totals={
   manpowerQty:mpRows.reduce((s,x)=>s+x.qty,0),
@@ -511,46 +553,47 @@ function buildReport(projects){
   machinery:sum('cost_machinery'),
   chemicals:sum('cost_chemical'),
   consumables:sum('cost_consumable'),
-  uniform:projects.reduce((s,p)=>s+sumDetails(p?.details_json?.uniform||[]),0),
-  equipment:projects.reduce((s,p)=>s+sumDetails(p?.details_json?.equipment||[]),0),
-  additional:projects.reduce((s,p)=>s+sumDetails(p?.details_json?.additional_cost||[]),0),
-  sourceAdjustment:projects.reduce((s,p)=>s+signed(projectMeta(p)?.source_adjustment_monthly),0),
+  uniform:financialProjects.reduce((s,p)=>s+sumDetails(p?.details_json?.uniform||[]),0),
+  equipment:financialProjects.reduce((s,p)=>s+sumDetails(p?.details_json?.equipment||[]),0),
+  additional:financialProjects.reduce((s,p)=>s+sumDetails(p?.details_json?.additional_cost||[]),0),
+  sourceAdjustment:financialProjects.reduce((s,p)=>s+signed(projectMeta(p)?.source_adjustment_monthly),0),
   managementFee:sum('management_fee_value'),
   totalCost:sum('cost_project'),
   totalExc:sum('rounded_before_tax'),
   totalInc:sum('total_after_tax')
  };
  totals.annual={
-  manpower:projects.reduce((s,p)=>{
+  manpower:financialProjects.reduce((s,p)=>{
    const items=manpowerItems(p),has=items.some(hasCardContract);
    if(!has)return s+annualSourceValue(p,'source_manpower_annual',p?.cost_manpower);
    let total=0;for(let month=1;month<=12;month++)items.forEach(m=>{if(cardActiveInMonth(m,Number(document.getElementById('pnlYear')?.value)||new Date().getFullYear(),month))total+=manpowerCalc(m).total});
    return s+total;
   },0),
-  uniform:projects.reduce((s,p)=>s+annualSourceValue(p,'source_uniform_annual',sumDetails(p?.details_json?.uniform||[])),0),
-  machinery:projects.reduce((s,p)=>s+annualSourceValue(p,'source_machinery_annual',p?.cost_machinery),0),
-  chemicals:projects.reduce((s,p)=>s+annualSourceValue(p,'source_chemicals_annual',p?.cost_chemical),0),
-  consumables:projects.reduce((s,p)=>s+annualSourceValue(p,'source_consumables_annual',p?.cost_consumable),0),
-  equipment:projects.reduce((s,p)=>s+annualSourceValue(p,'source_equipment_annual',sumDetails(p?.details_json?.equipment||[])),0),
-  additional:projects.reduce((s,p)=>s+annualSourceValue(p,'source_additional_annual',sumDetails(p?.details_json?.additional_cost||[])),0),
-  sourceAdjustment:projects.reduce((s,p)=>{
+  uniform:financialProjects.reduce((s,p)=>s+annualSourceValue(p,'source_uniform_annual',sumDetails(p?.details_json?.uniform||[])),0),
+  machinery:financialProjects.reduce((s,p)=>s+annualSourceValue(p,'source_machinery_annual',p?.cost_machinery),0),
+  chemicals:financialProjects.reduce((s,p)=>s+annualSourceValue(p,'source_chemicals_annual',p?.cost_chemical),0),
+  consumables:financialProjects.reduce((s,p)=>s+annualSourceValue(p,'source_consumables_annual',p?.cost_consumable),0),
+  equipment:financialProjects.reduce((s,p)=>s+annualSourceValue(p,'source_equipment_annual',sumDetails(p?.details_json?.equipment||[])),0),
+  additional:financialProjects.reduce((s,p)=>s+annualSourceValue(p,'source_additional_annual',sumDetails(p?.details_json?.additional_cost||[])),0),
+  sourceAdjustment:financialProjects.reduce((s,p)=>{
    const meta=projectMeta(p),raw=Number(meta?.source_adjustment_annual);
    return s+(Number.isFinite(raw)?raw:signed(meta?.source_adjustment_monthly)*12);
   },0),
-  managementFee:projects.reduce((s,p)=>s+annualSourceValue(p,'source_management_fee_annual',p?.management_fee_value),0),
-  totalCost:projects.reduce((s,p)=>s+annualSourceValue(p,'source_total_cost_annual',p?.cost_project),0),
-  totalExc:projects.reduce((s,p)=>s+annualSourceValue(p,'source_total_exc_ppn_annual',p?.rounded_before_tax),0),
-  totalInc:projects.reduce((s,p)=>s+annualSourceValue(p,'source_total_inc_ppn_annual',p?.total_after_tax),0)
+  managementFee:financialProjects.reduce((s,p)=>s+annualSourceValue(p,'source_management_fee_annual',p?.management_fee_value),0),
+  totalCost:financialProjects.reduce((s,p)=>s+annualSourceValue(p,'source_total_cost_annual',p?.cost_project),0),
+  totalExc:financialProjects.reduce((s,p)=>s+annualSourceValue(p,'source_total_exc_ppn_annual',p?.rounded_before_tax),0),
+  totalInc:financialProjects.reduce((s,p)=>s+annualSourceValue(p,'source_total_inc_ppn_annual',p?.total_after_tax),0)
  };
  const scheduleKeys=['manpower','uniform','machinery','chemicals','consumables','equipment','additional','sourceAdjustment','managementFee','totalCost','totalExc','totalInc'];
  const schedule={};
  for(let month=1;month<=12;month++){
   schedule[month]={};scheduleKeys.forEach(k=>schedule[month][k]=0);
  }
- let hasCardContracts=false;
- projects.forEach(p=>{
-  const meta=projectMeta(p),items=manpowerItems(p),hasContracts=items.some(hasCardContract);
+ let hasCardContracts=false,hasProjectPeriods=false;
+ financialProjects.forEach(p=>{
+  const meta=projectMeta(p),items=manpowerItems(p),hasContracts=items.some(hasCardContract),hasPeriod=projectHasPeriodControl(p);
   hasCardContracts=hasCardContracts||hasContracts;
+  hasProjectPeriods=hasProjectPeriods||hasPeriod;
   const nonMp={
    uniform:sumDetails(p?.details_json?.uniform||[]),
    machinery:n(p?.cost_machinery),
@@ -561,6 +604,7 @@ function buildReport(projects){
    sourceAdjustment:signed(meta?.source_adjustment_monthly)
   };
   for(let month=1;month<=12;month++){
+   if(!projectActiveInMonth(p,Number(document.getElementById('pnlYear')?.value)||new Date().getFullYear(),month))continue;
    let mp=n(p?.cost_manpower),fee=n(p?.management_fee_value),totalCost=n(p?.cost_project),totalExc=n(p?.rounded_before_tax),totalInc=n(p?.total_after_tax);
    if(hasContracts){
      mp=0;
@@ -619,8 +663,9 @@ function buildReport(projects){
  });
  totals.schedule=schedule;
  totals.hasCardContracts=hasCardContracts;
- totals.hasMonthlySchedule=hasCardContracts;
- if(hasCardContracts){
+ totals.hasProjectPeriods=hasProjectPeriods;
+ totals.hasMonthlySchedule=hasCardContracts||hasProjectPeriods;
+ if(totals.hasMonthlySchedule){
    totals.annual.manpower=Object.values(schedule).reduce((s,row)=>s+n(row.manpower),0);
    totals.annual.uniform=Object.values(schedule).reduce((s,row)=>s+n(row.uniform),0);
    totals.annual.machinery=Object.values(schedule).reduce((s,row)=>s+n(row.machinery),0);
@@ -634,8 +679,8 @@ function buildReport(projects){
    totals.annual.totalExc=Object.values(schedule).reduce((s,row)=>s+n(row.totalExc),0);
    totals.annual.totalInc=Object.values(schedule).reduce((s,row)=>s+n(row.totalInc),0);
  }
- totals.hasAnnualSource=projects.some(p=>String(projectMeta(p)?.calculation_basis||'').toLowerCase()==='annual_source');
- return {projects,mpRows,salaryRows,detail,totals}
+ totals.hasAnnualSource=financialProjects.some(p=>String(projectMeta(p)?.calculation_basis||'').toLowerCase()==='annual_source');
+ return {projects,financialProjects,mpRows,salaryRows,detail,totals}
 }
 
 function initPnlPeriodControls(){
@@ -724,7 +769,7 @@ function renderProfitLoss(){
  const selectedClient=document.getElementById('clientFilter').value;
  const scopeNote=selectedClient==='__ALL__'?'Gross Margin Perusahaan dihitung dari total Gross Profit seluruh client ÷ total Pendapatan seluruh client, bukan rata-rata margin per client. ':'';
  const annualNote=t.hasAnnualSource?' Project annual-source menggunakan nilai control tahunan source RAB; nilai bulanan adalah annual ÷ 12 dan source adjustment ditampilkan terpisah.':'';
- const scheduleNote=t.hasCardContracts?' Project dengan tanggal kontrak pada manpower card dihitung berdasarkan Start/End Contract; card tanpa periode tetap mengikuti baseline bulanan.':'';
+ const scheduleNote=t.hasMonthlySchedule?' Project/RAB dengan periode efektif atau tanggal kontrak hanya dihitung pada bulan yang overlap dengan periode tersebut; RAB tanpa periode eksplisit tetap mengikuti baseline bulanan.':'';
  document.getElementById('pnlNote').textContent=`${scopeNote}Design P&L ${period.label}.${annualNote}${scheduleNote} Pendapatan menggunakan Total Exc. PPN. Belum termasuk OPEX korporat dan pajak penghasilan.`;
 }
 
@@ -745,7 +790,8 @@ function renderReport(){
  const client=document.getElementById('clientFilter').value,areas=selectedValues('area-check'),services=selectedValues('service-check');
  const clientLabel=client==='__ALL__'?'SEMUA CLIENT / PERUSAHAAN':client;
  document.getElementById('reportClient').textContent=clientLabel;
- document.getElementById('reportScope').textContent=`Area: ${areas.join(', ')} · Service: ${services.join(', ')}`;
+ const historicalCount=rows.length-r.financialProjects.length;
+ document.getElementById('reportScope').textContent=`Area: ${areas.join(', ')} · Service: ${services.join(', ')}`+(historicalCount?` · ${historicalCount} RAB historical/superseded tetap tercatat, tidak didouble-count pada current design`:'');
  document.getElementById('projectCount').textContent=rows.length;
  document.getElementById('kpiManpower').textContent=t.manpowerQty;
  document.getElementById('kpiCostMp').textContent=money(t.manpower);
@@ -855,14 +901,10 @@ function renderDetail(key){
 
 async function getOfficialProjectCodeMap(projects=[]){
  const map={};
- if(!supabaseClient||!projects.length)return map;
- const ids=unique(projects.map(p=>p?.project_id).filter(Boolean));
- if(!ids.length)return map;
- try{
-  const {data,error}=await supabaseClient.from('project_master').select('rab_project_id,project_code,status').in('rab_project_id',ids).eq('status','ACTIVE');
-  if(error)throw error;
-  (data||[]).forEach(x=>{if(x?.rab_project_id&&x?.project_code)map[x.rab_project_id]=x.project_code});
- }catch(err){console.warn('Official Project Code lookup saat export:',err)}
+ (projects||[]).forEach(p=>{
+  const code=p?.canonical_project_code||projectIdReferences[p?.project_id]||null;
+  if(p?.project_id&&/^\d+$/.test(String(code||'')))map[p.project_id]=String(code);
+ });
  return map;
 }
 
@@ -882,8 +924,8 @@ async function exportExcel(){
   ['Total Cost Project',t.totalCost],['Management Fee',t.managementFee],['Total Exc. PPN',t.totalExc],['Total Inc. PPN',t.totalInc]
  ];
  const wsSummary=XLSX.utils.aoa_to_sheet(meta);wsSummary['!cols']=[{wch:28},{wch:55}];XLSX.utils.book_append_sheet(wb,wsSummary,'Summary');
- const projectList=[['Official Project Code','Client','Area','Service'],...r.projects.map(p=>[codeMap[p.project_id]||'Belum dibuat',p.client_name||'-',p.project_area||'-',p.project_title||'-'])];
- const wsProjects=XLSX.utils.aoa_to_sheet(projectList);wsProjects['!cols']=[{wch:28},{wch:32},{wch:24},{wch:30}];XLSX.utils.book_append_sheet(wb,wsProjects,'Project List');
+ const projectList=[['Project ID','Client','Area','Service','RAB Plan Status','Effective From','Effective To'],...r.projects.map(p=>{const plan=projectPlan(p),b=projectReportBounds(p);return [codeMap[p.project_id]||'Belum terhubung',p.client_name||'-',p.project_area||'-',p.project_title||'-',plan?.plan_status||'BASELINE',b.start||'-',b.end||'-']})];
+ const wsProjects=XLSX.utils.aoa_to_sheet(projectList);wsProjects['!cols']=[{wch:14},{wch:32},{wch:24},{wch:30},{wch:22},{wch:16},{wch:16}];XLSX.utils.book_append_sheet(wb,wsProjects,'Project List');
 
  const mp=[['Area','Service','Role','Komponen Salary & Benefit','Qty','Acuan','Amount / Person','Total / Month'],
  ...(r.salaryRows||[]).map(x=>[x.area,x.service,x.role,x.component,x.qty,x.acuan,x.amount,x.total]),

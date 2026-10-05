@@ -1,0 +1,52 @@
+name: RAB Report inline 007 validation
+on:
+  push:
+    branches: [release/rab-report-inline-007-20261005]
+    paths:
+      - report.html
+      - index.html
+      - releases/RAB-REPORT-INLINE-007/**
+      - .github/workflows/rab-report-inline-007.yml
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Static syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import re,subprocess,pathlib
+          h=pathlib.Path('report.html').read_text()
+          scripts=re.findall(r'<script(?:\s[^>]*)?>([\s\S]*?)</script>',h,re.I)
+          for i,s in enumerate(x for x in scripts if x.strip()):
+            p=pathlib.Path('/tmp/report-'+str(i)+'.js');p.write_text(s)
+            subprocess.run(['node','--check',str(p)],check=True)
+          assert "canonical_rab_plan_versions_candidate_v1" in h
+          assert "projectActiveInMonth" in h
+          assert "financialProjects" in h
+          assert "Project ID" in h
+          assert "report.html?v=20261005-007" in pathlib.Path('index.html').read_text()
+          print('static PASS')
+          PY
+      - name: Browser live read-only validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install -q playwright==1.57.0
+          python3 -m http.server 8000 >/tmp/rab-report-http.log 2>&1 &
+          server=$!
+          trap 'kill $server || true' EXIT
+          sleep 2
+          RAB_REPORT_TEST_OUTPUT="$PWD/rab-report-inline-test" CHROMIUM_EXECUTABLE=/usr/bin/google-chrome python3 releases/RAB-REPORT-INLINE-007/browser-test.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rab-report-inline-007-validation
+          path: rab-report-inline-test/
+          retention-days: 30
+          if-no-files-found: warn

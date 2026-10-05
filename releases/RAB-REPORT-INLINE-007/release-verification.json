@@ -1,0 +1,37 @@
+{
+  "release": "RAB-REPORT-INLINE-007",
+  "date": "2026-10-05",
+  "active_rab": 129,
+  "numeric_project_id_mapped": 129,
+  "osid": {
+    "project_id": "1052",
+    "effective_from": "2026-09-01",
+    "effective_to": "2026-12-31",
+    "august": {
+      "revenue": 0,
+      "cogs": 0
+    },
+    "september": {
+      "revenue": 10516130,
+      "cogs": 9737158
+    },
+    "december": {
+      "revenue": 10516130,
+      "cogs": 9737158
+    }
+  },
+  "historical_control": {
+    "adm_stored": 10,
+    "current_design": 9,
+    "historical": 1
+  },
+  "browser_run": 37347354127,
+  "browser_checks_passed": 11,
+  "runtime_errors": 0,
+  "migration": "rab_osid_extend_to_dec_2026_20261005",
+  "report_authorities": [
+    "projects",
+    "project_identity_dictionary_v1",
+    "canonical_rab_plan_versions_candidate_v1"
+  ]
+}
