@@ -521,9 +521,10 @@ function aggregateItems(projects,key){
 }
 
 function buildReport(projects){
- const sum=(field)=>projects.reduce((s,p)=>s+n(p?.[field]),0);
+ const financialProjects=projects.filter(projectIncludedInCurrentDesign);
+ const sum=(field)=>financialProjects.reduce((s,p)=>s+n(p?.[field]),0);
  const manpowerByRole=new Map(),salaryRows=[];
- projects.forEach(p=>manpowerItems(p).forEach(m=>{
+ financialProjects.forEach(p=>manpowerItems(p).forEach(m=>{
   const role=String(m?.role||'STAFF').trim()||'STAFF',k=role.toLowerCase(),c=manpowerCalc(m),qty=c.qty;
   if(!manpowerByRole.has(k))manpowerByRole.set(k,{role,qty:0,total:0});
   const r=manpowerByRole.get(k);r.qty+=qty;r.total+=c.total;
@@ -539,12 +540,12 @@ function buildReport(projects){
  }));
  const mpRows=[...manpowerByRole.values()].sort((a,b)=>a.role.localeCompare(b.role,'id'));
  const detail={
-  uniform:aggregateItems(projects,'uniform'),
-  machinery:aggregateItems(projects,'machinery'),
-  chemicals:aggregateItems(projects,'chemicals'),
-  consumables:aggregateItems(projects,'consumables'),
-  equipment:aggregateItems(projects,'equipment'),
-  additional_cost:aggregateItems(projects,'additional_cost')
+  uniform:aggregateItems(financialProjects,'uniform'),
+  machinery:aggregateItems(financialProjects,'machinery'),
+  chemicals:aggregateItems(financialProjects,'chemicals'),
+  consumables:aggregateItems(financialProjects,'consumables'),
+  equipment:aggregateItems(financialProjects,'equipment'),
+  additional_cost:aggregateItems(financialProjects,'additional_cost')
  };
  const totals={
   manpowerQty:mpRows.reduce((s,x)=>s+x.qty,0),
@@ -552,46 +553,47 @@ function buildReport(projects){
   machinery:sum('cost_machinery'),
   chemicals:sum('cost_chemical'),
   consumables:sum('cost_consumable'),
-  uniform:projects.reduce((s,p)=>s+sumDetails(p?.details_json?.uniform||[]),0),
-  equipment:projects.reduce((s,p)=>s+sumDetails(p?.details_json?.equipment||[]),0),
-  additional:projects.reduce((s,p)=>s+sumDetails(p?.details_json?.additional_cost||[]),0),
-  sourceAdjustment:projects.reduce((s,p)=>s+signed(projectMeta(p)?.source_adjustment_monthly),0),
+  uniform:financialProjects.reduce((s,p)=>s+sumDetails(p?.details_json?.uniform||[]),0),
+  equipment:financialProjects.reduce((s,p)=>s+sumDetails(p?.details_json?.equipment||[]),0),
+  additional:financialProjects.reduce((s,p)=>s+sumDetails(p?.details_json?.additional_cost||[]),0),
+  sourceAdjustment:financialProjects.reduce((s,p)=>s+signed(projectMeta(p)?.source_adjustment_monthly),0),
   managementFee:sum('management_fee_value'),
   totalCost:sum('cost_project'),
   totalExc:sum('rounded_before_tax'),
   totalInc:sum('total_after_tax')
  };
  totals.annual={
-  manpower:projects.reduce((s,p)=>{
+  manpower:financialProjects.reduce((s,p)=>{
    const items=manpowerItems(p),has=items.some(hasCardContract);
    if(!has)return s+annualSourceValue(p,'source_manpower_annual',p?.cost_manpower);
    let total=0;for(let month=1;month<=12;month++)items.forEach(m=>{if(cardActiveInMonth(m,Number(document.getElementById('pnlYear')?.value)||new Date().getFullYear(),month))total+=manpowerCalc(m).total});
    return s+total;
   },0),
-  uniform:projects.reduce((s,p)=>s+annualSourceValue(p,'source_uniform_annual',sumDetails(p?.details_json?.uniform||[])),0),
-  machinery:projects.reduce((s,p)=>s+annualSourceValue(p,'source_machinery_annual',p?.cost_machinery),0),
-  chemicals:projects.reduce((s,p)=>s+annualSourceValue(p,'source_chemicals_annual',p?.cost_chemical),0),
-  consumables:projects.reduce((s,p)=>s+annualSourceValue(p,'source_consumables_annual',p?.cost_consumable),0),
-  equipment:projects.reduce((s,p)=>s+annualSourceValue(p,'source_equipment_annual',sumDetails(p?.details_json?.equipment||[])),0),
-  additional:projects.reduce((s,p)=>s+annualSourceValue(p,'source_additional_annual',sumDetails(p?.details_json?.additional_cost||[])),0),
-  sourceAdjustment:projects.reduce((s,p)=>{
+  uniform:financialProjects.reduce((s,p)=>s+annualSourceValue(p,'source_uniform_annual',sumDetails(p?.details_json?.uniform||[])),0),
+  machinery:financialProjects.reduce((s,p)=>s+annualSourceValue(p,'source_machinery_annual',p?.cost_machinery),0),
+  chemicals:financialProjects.reduce((s,p)=>s+annualSourceValue(p,'source_chemicals_annual',p?.cost_chemical),0),
+  consumables:financialProjects.reduce((s,p)=>s+annualSourceValue(p,'source_consumables_annual',p?.cost_consumable),0),
+  equipment:financialProjects.reduce((s,p)=>s+annualSourceValue(p,'source_equipment_annual',sumDetails(p?.details_json?.equipment||[])),0),
+  additional:financialProjects.reduce((s,p)=>s+annualSourceValue(p,'source_additional_annual',sumDetails(p?.details_json?.additional_cost||[])),0),
+  sourceAdjustment:financialProjects.reduce((s,p)=>{
    const meta=projectMeta(p),raw=Number(meta?.source_adjustment_annual);
    return s+(Number.isFinite(raw)?raw:signed(meta?.source_adjustment_monthly)*12);
   },0),
-  managementFee:projects.reduce((s,p)=>s+annualSourceValue(p,'source_management_fee_annual',p?.management_fee_value),0),
-  totalCost:projects.reduce((s,p)=>s+annualSourceValue(p,'source_total_cost_annual',p?.cost_project),0),
-  totalExc:projects.reduce((s,p)=>s+annualSourceValue(p,'source_total_exc_ppn_annual',p?.rounded_before_tax),0),
-  totalInc:projects.reduce((s,p)=>s+annualSourceValue(p,'source_total_inc_ppn_annual',p?.total_after_tax),0)
+  managementFee:financialProjects.reduce((s,p)=>s+annualSourceValue(p,'source_management_fee_annual',p?.management_fee_value),0),
+  totalCost:financialProjects.reduce((s,p)=>s+annualSourceValue(p,'source_total_cost_annual',p?.cost_project),0),
+  totalExc:financialProjects.reduce((s,p)=>s+annualSourceValue(p,'source_total_exc_ppn_annual',p?.rounded_before_tax),0),
+  totalInc:financialProjects.reduce((s,p)=>s+annualSourceValue(p,'source_total_inc_ppn_annual',p?.total_after_tax),0)
  };
  const scheduleKeys=['manpower','uniform','machinery','chemicals','consumables','equipment','additional','sourceAdjustment','managementFee','totalCost','totalExc','totalInc'];
  const schedule={};
  for(let month=1;month<=12;month++){
   schedule[month]={};scheduleKeys.forEach(k=>schedule[month][k]=0);
  }
- let hasCardContracts=false;
- projects.forEach(p=>{
-  const meta=projectMeta(p),items=manpowerItems(p),hasContracts=items.some(hasCardContract);
+ let hasCardContracts=false,hasProjectPeriods=false;
+ financialProjects.forEach(p=>{
+  const meta=projectMeta(p),items=manpowerItems(p),hasContracts=items.some(hasCardContract),hasPeriod=projectHasPeriodControl(p);
   hasCardContracts=hasCardContracts||hasContracts;
+  hasProjectPeriods=hasProjectPeriods||hasPeriod;
   const nonMp={
    uniform:sumDetails(p?.details_json?.uniform||[]),
    machinery:n(p?.cost_machinery),
@@ -602,6 +604,7 @@ function buildReport(projects){
    sourceAdjustment:signed(meta?.source_adjustment_monthly)
   };
   for(let month=1;month<=12;month++){
+   if(!projectActiveInMonth(p,Number(document.getElementById('pnlYear')?.value)||new Date().getFullYear(),month))continue;
    let mp=n(p?.cost_manpower),fee=n(p?.management_fee_value),totalCost=n(p?.cost_project),totalExc=n(p?.rounded_before_tax),totalInc=n(p?.total_after_tax);
    if(hasContracts){
      mp=0;
@@ -660,8 +663,9 @@ function buildReport(projects){
  });
  totals.schedule=schedule;
  totals.hasCardContracts=hasCardContracts;
- totals.hasMonthlySchedule=hasCardContracts;
- if(hasCardContracts){
+ totals.hasProjectPeriods=hasProjectPeriods;
+ totals.hasMonthlySchedule=hasCardContracts||hasProjectPeriods;
+ if(totals.hasMonthlySchedule){
    totals.annual.manpower=Object.values(schedule).reduce((s,row)=>s+n(row.manpower),0);
    totals.annual.uniform=Object.values(schedule).reduce((s,row)=>s+n(row.uniform),0);
    totals.annual.machinery=Object.values(schedule).reduce((s,row)=>s+n(row.machinery),0);
@@ -675,8 +679,8 @@ function buildReport(projects){
    totals.annual.totalExc=Object.values(schedule).reduce((s,row)=>s+n(row.totalExc),0);
    totals.annual.totalInc=Object.values(schedule).reduce((s,row)=>s+n(row.totalInc),0);
  }
- totals.hasAnnualSource=projects.some(p=>String(projectMeta(p)?.calculation_basis||'').toLowerCase()==='annual_source');
- return {projects,mpRows,salaryRows,detail,totals}
+ totals.hasAnnualSource=financialProjects.some(p=>String(projectMeta(p)?.calculation_basis||'').toLowerCase()==='annual_source');
+ return {projects,financialProjects,mpRows,salaryRows,detail,totals}
 }
 
 function initPnlPeriodControls(){
