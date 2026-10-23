@@ -1,0 +1,200 @@
+{
+  "tracking": "RAB-SAVE-020",
+  "date": "2026-10-23",
+  "status": "PRODUCTION_PASS",
+  "repository_baseline": "d2a6147e2d3a552eabb8ae1d241f84787a116354",
+  "migration": {
+    "version": "20261023120553",
+    "name": "rab_save_020_reuse_canonical_identity_and_verified_djarum_aliases"
+  },
+  "root_cause": "Assignment required a client authority snapshot row before consulting an existing canonical project. Djarum had an explicit Security project 1001 but no snapshot row. Save RPC discarded the assignment reason and emitted generic REVIEW.",
+  "reproduction": {
+    "reproduction": {
+      "role": "anon",
+      "test": "Djarum / Security / SKT Wonogiri",
+      "outcome": {
+        "status": "ERROR",
+        "message": "Identitas project perlu dipastikan: REVIEW. Tidak ada data baru yang disimpan.",
+        "sqlstate": "P0001"
+      },
+      "test_rows_remaining": 0
+    }
+  },
+  "candidate": {
+    "candidate_validation": {
+      "failed": [],
+      "passed": 309,
+      "test_count": 309,
+      "duration_ms": 694,
+      "guard_results": [
+        {
+          "case": "unknown",
+          "pass": true,
+          "message": "RAB belum disimpan: klien \"RAB-SAVE-020-UNKNOWN-333f5374-b2d4-4770-a4b0-0d4faba71a44\", layanan \"Security\", area \"SKT WONOGIRI\" [CLIENT_AUTHORITY_REVIEW]. Nama klien belum terverifikasi; lengkapi pemetaan nama klien. Tidak ada data baru yang disimpan.",
+          "expected_action": "CLIENT_AUTHORITY_REVIEW"
+        },
+        {
+          "case": "non_client",
+          "pass": true,
+          "message": "RAB belum disimpan: klien \"HEAD OFFICE\", layanan \"Security\", area \"SKT WONOGIRI\" [CLIENT_NOT_ELIGIBLE]. Nama ini tercatat sebagai non-klien; gunakan klien yang sesuai. Tidak ada data baru yang disimpan.",
+          "expected_action": "CLIENT_NOT_ELIGIBLE"
+        },
+        {
+          "case": "ambiguous_authority",
+          "pass": true,
+          "message": "RAB belum disimpan: klien \"Djarum\", layanan \"Security\", area \"SKT WONOGIRI\" [CLIENT_AUTHORITY_AMBIGUOUS]. Nama klien cocok dengan lebih dari satu klien; periksa pemetaan klien. Tidak ada data baru yang disimpan.",
+          "expected_action": "CLIENT_AUTHORITY_AMBIGUOUS"
+        },
+        {
+          "case": "ambiguous_project",
+          "pass": true,
+          "message": "RAB belum disimpan: klien \"Djarum\", layanan \"Security\", area \"SKT WONOGIRI\" [REVIEW_MULTI_PROJECT]. Lebih dari satu Project ID cocok; pastikan pemetaan area dan layanan. Tidak ada data baru yang disimpan.",
+          "expected_action": "REVIEW_MULTI_PROJECT"
+        }
+      ],
+      "baseline_after": {
+        "links": "061e30fba842888ec846eadd5a9d5613",
+        "projects": "2444642d833be56d82606e4fd1da5c60",
+        "revision": 700,
+        "canonical": "f6517b3dca76cc158e053403b2442226"
+      },
+      "baseline_before": {
+        "links": "061e30fba842888ec846eadd5a9d5613",
+        "projects": "2444642d833be56d82606e4fd1da5c60",
+        "revision": 700,
+        "canonical": "f6517b3dca76cc158e053403b2442226"
+      }
+    }
+  },
+  "production": {
+    "regression_validation": {
+      "failed": [],
+      "passed": 309,
+      "test_count": 309,
+      "duration_ms": 661,
+      "guard_results": [
+        {
+          "case": "unknown",
+          "pass": true,
+          "message": "RAB belum disimpan: klien \"RAB-SAVE-020-UNKNOWN-8dd8c75d-019a-4d12-a32b-619bdbc28809\", layanan \"Security\", area \"SKT WONOGIRI\" [CLIENT_AUTHORITY_REVIEW]. Nama klien belum terverifikasi; lengkapi pemetaan nama klien. Tidak ada data baru yang disimpan.",
+          "expected_action": "CLIENT_AUTHORITY_REVIEW"
+        },
+        {
+          "case": "non_client",
+          "pass": true,
+          "message": "RAB belum disimpan: klien \"HEAD OFFICE\", layanan \"Security\", area \"SKT WONOGIRI\" [CLIENT_NOT_ELIGIBLE]. Nama ini tercatat sebagai non-klien; gunakan klien yang sesuai. Tidak ada data baru yang disimpan.",
+          "expected_action": "CLIENT_NOT_ELIGIBLE"
+        },
+        {
+          "case": "ambiguous_authority",
+          "pass": true,
+          "message": "RAB belum disimpan: klien \"Djarum\", layanan \"Security\", area \"SKT WONOGIRI\" [CLIENT_AUTHORITY_AMBIGUOUS]. Nama klien cocok dengan lebih dari satu klien; periksa pemetaan klien. Tidak ada data baru yang disimpan.",
+          "expected_action": "CLIENT_AUTHORITY_AMBIGUOUS"
+        },
+        {
+          "case": "ambiguous_project",
+          "pass": true,
+          "message": "RAB belum disimpan: klien \"Djarum\", layanan \"Security\", area \"SKT WONOGIRI\" [REVIEW_MULTI_PROJECT]. Lebih dari satu Project ID cocok; pastikan pemetaan area dan layanan. Tidak ada data baru yang disimpan.",
+          "expected_action": "REVIEW_MULTI_PROJECT"
+        }
+      ],
+      "baseline_after": {
+        "links": "061e30fba842888ec846eadd5a9d5613",
+        "projects": "2444642d833be56d82606e4fd1da5c60",
+        "revision": 700,
+        "canonical": "f6517b3dca76cc158e053403b2442226"
+      },
+      "baseline_before": {
+        "links": "061e30fba842888ec846eadd5a9d5613",
+        "projects": "2444642d833be56d82606e4fd1da5c60",
+        "revision": 700,
+        "canonical": "f6517b3dca76cc158e053403b2442226"
+      }
+    }
+  },
+  "production_state": {
+    "production_state": {
+      "preview": {
+        "action": "USE_EXISTING",
+        "reason": "Matched explicit business-scope decision DJARUM-SECURITY-V1",
+        "project_code": "1001",
+        "client_authority_status": "GOVERNED"
+      },
+      "client_aliases": [
+        {
+          "name": "DJARUM",
+          "client": "Djarum",
+          "status": "GOVERNED"
+        },
+        {
+          "name": "DJARUM SKT WONOGIRI",
+          "client": "Djarum",
+          "status": "GOVERNED"
+        },
+        {
+          "name": "PT DJARUM",
+          "client": "Djarum",
+          "status": "GOVERNED"
+        }
+      ],
+      "function_access": [
+        {
+          "acl": [
+            "postgres=X/postgres",
+            "service_role=X/postgres"
+          ],
+          "name": "rab_canonical_preview_assignment_candidate_v1",
+          "anon_execute": false,
+          "security_definer": false
+        },
+        {
+          "acl": [
+            "postgres=X/postgres",
+            "service_role=X/postgres"
+          ],
+          "name": "rab_canonical_assign_parent_identity_candidate_v2",
+          "anon_execute": false,
+          "security_definer": false
+        },
+        {
+          "acl": [
+            "postgres=X/postgres",
+            "anon=X/postgres",
+            "authenticated=X/postgres",
+            "service_role=X/postgres"
+          ],
+          "name": "rab_save_with_project_identity_v1",
+          "anon_execute": true,
+          "security_definer": false
+        },
+        {
+          "acl": [
+            "postgres=X/postgres"
+          ],
+          "name": "rab_numeric_parent_after_insert_v1",
+          "anon_execute": false,
+          "security_definer": true
+        }
+      ],
+      "active_rab_count": 147,
+      "wonogiri_rab_count": 0
+    }
+  },
+  "http_smoke": {
+    "http_status": 400,
+    "code": "P0001",
+    "diagnostic_specific": true,
+    "duration_ms": 9382,
+    "pass": true
+  },
+  "advisors": {
+    "new_findings": 0,
+    "rab_specific_findings": 0,
+    "baseline_findings_unchanged": true
+  },
+  "frontend_changes": false,
+  "financial_source_changes": false,
+  "test_data_retained": false,
+  "user_wonogiri_rab_imported": false,
+  "validation_limit": "SQL save RPC validated under anon and authenticated roles with savepoints and forced rollback. Real HTTP rejection path verified. No real Wonogiri budget was submitted or approved."
+}
