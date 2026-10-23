@@ -1,0 +1,25 @@
+name: RAB cross-engine identity refresh regression
+on:
+  push:
+    branches: [main]
+    paths:
+      - project-identity.js
+      - releases/RAB-FLOW-021/test-identity-refresh.cjs
+      - .github/workflows/rab-flow-021.yml
+  pull_request:
+    paths:
+      - project-identity.js
+      - releases/RAB-FLOW-021/test-identity-refresh.cjs
+      - .github/workflows/rab-flow-021.yml
+permissions:
+  contents: read
+jobs:
+  identity-refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Verify automatic identity refresh and source preservation
+        run: |
+          node --check project-identity.js
+          node releases/RAB-FLOW-021/test-identity-refresh.cjs project-identity.js
