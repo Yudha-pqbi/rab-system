@@ -7,6 +7,7 @@
 <title>RAB V5.2.9.1 — Custom PPN Basis</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./engine-admin-auth.js?v=20261028-029"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -1076,64 +1077,35 @@ async function fetchProjects(){
  renderCanonicalProjectOptions();renderTable();
 }
 function renderDemoData(){projectsData=[];renderTable()}
+const rabDeletePending=new Set();
 async function deleteProject(projectId){
- if(RAB_CANONICAL_CANDIDATE_V2){
-  alert('Delete RAB dinonaktifkan pada Candidate V2 agar production tetap aman.');
-  return;
- }
+ if(RAB_CANONICAL_CANDIDATE_V2){alert('Hapus RAB dinonaktifkan pada mode candidate.');return;}
+ if(rabDeletePending.has(projectId))return;
  const project=projectsData.find(p=>p.project_id===projectId);
- const label=project ? (project.client_name || projectId) : projectId;
- if(!confirm('Hapus RAB "'+label+'"?\n\nRAB akan dihapus dari daftar aktif. Official Project Code yang sudah pernah dibuat tetap disimpan sebagai histori dan tidak digunakan ulang.')) return;
+ if(!project){alert('RAB tidak ditemukan. Muat ulang daftar.');return;}
+ if(!supabaseClient){alert('Supabase belum terhubung. RAB belum dihapus.');return;}
+ let adminSession;
+ rabDeletePending.add(projectId);
  try{
-   if(supabaseClient){
-     /*
-       DELETE LIFECYCLE V5.2.8
-       1) Official Project Code tidak dihapus; hanya dinonaktifkan agar histori & sequence tetap aman.
-       2) RAB memakai soft-delete (status=DELETED), sehingga tidak tampil di aplikasi tetapi jejak data tetap ada.
-       3) Jika langkah 1 gagal, proses berhenti sebelum RAB dihapus agar tidak membuat orphan.
-     */
-     const {data:masterRows,error:masterReadError}=await supabaseClient
-       .from('project_master')
-       .select('id,project_code,status')
-       .eq('rab_project_id',projectId);
-     if(masterReadError) throw new Error('Gagal memeriksa Official Project Code: '+masterReadError.message);
-
-     if(Array.isArray(masterRows) && masterRows.length){
-       const {error:masterUpdateError}=await supabaseClient
-         .from('project_master')
-         .update({status:'INACTIVE',updated_at:new Date().toISOString()})
-         .eq('rab_project_id',projectId);
-       if(masterUpdateError) throw new Error('Gagal menonaktifkan Official Project Code: '+masterUpdateError.message);
-     }
-
-     const {error:projectUpdateError}=await supabaseClient
-       .from('projects')
-       .update({status:'DELETED',updated_at:new Date().toISOString()})
-       .eq('project_id',projectId);
-     if(projectUpdateError){
-       /* Jika RAB gagal di-soft-delete, kembalikan Project Master ke ACTIVE agar state tetap konsisten. */
-       if(Array.isArray(masterRows) && masterRows.length){
-         const {error:rollbackError}=await supabaseClient
-           .from('project_master')
-           .update({status:'ACTIVE',updated_at:new Date().toISOString()})
-           .eq('rab_project_id',projectId);
-         if(rollbackError) console.error('Rollback Project Master gagal:',rollbackError);
-       }
-       throw new Error('Gagal menghapus RAB: '+projectUpdateError.message);
-     }
-
-     projectsData=projectsData.filter(p=>p.project_id!==projectId);
-     renderTable();
-     alert('RAB berhasil dihapus dari daftar aktif.\n\nOfficial Project Code tetap tersimpan sebagai histori.');
-     await fetchProjects();
-   }else{
-     projectsData=projectsData.filter(p=>p.project_id!==projectId);
-     renderTable();
-     alert('Project berhasil dihapus dari data lokal.');
-   }
+  adminSession=await EngineAdminAuth.open({url:supabaseClient.supabaseUrl,key:supabaseClient.supabaseKey,action:'RAB_DELETE'});
+  if(!adminSession)return;
+  const label=[project.client_name,project.project_area,project.project_title].filter(Boolean).join(' / ');
+  if(!confirm('Hapus RAB "'+label+'" dari daftar aktif?\n\nProject ID: '+(project.canonical_project_code||project.official_project_code||'-')+'\nHistori RAB dan Project ID tetap disimpan.'))return;
+  const {data,error}=await adminSession.client.rpc('rab_delete_with_owner_v1',{
+   p_project_id:projectId,p_expected_updated_at:project.updated_at||null
+  });
+  if(error)throw error;
+  if(!['DELETED','ALREADY_DELETED'].includes(data?.status)||data?.source_record_id!==projectId){
+   throw new Error('Hasil penghapusan belum terverifikasi. Muat ulang daftar sebelum mencoba lagi.');
+  }
+  projectsData=projectsData.filter(p=>p.project_id!==projectId);renderTable();
+  try{await fetchProjects();}catch(refreshError){console.error('RAB dihapus; daftar belum berhasil dimuat ulang',refreshError);}
+  alert('RAB sudah dihapus dari daftar aktif. Histori RAB dan Project ID tetap tersimpan.');
  }catch(err){
-   console.error(err);
-   alert(err.message||('Gagal menghapus project: '+String(err)));
+  console.error('RAB Delete Error:',err);
+  alert('RAB belum dapat dihapus: '+String(err?.message||err));
+ }finally{
+  try{if(adminSession)await adminSession.close();}finally{rabDeletePending.delete(projectId);}
  }
 }
 
@@ -1868,3 +1840,4 @@ document.addEventListener('DOMContentLoaded',()=>{
 <script src="project-identity.js?v=20261004-005"></script>
 </body>
 </html>
+

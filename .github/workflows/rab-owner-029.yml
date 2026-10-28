@@ -1,0 +1,16 @@
+name: RAB owner delete and edit preservation
+on:
+  push:
+    paths: ['index.html', 'engine-admin-auth.js', 'tests/rab-owner.test.cjs', '.github/workflows/rab-owner-029.yml']
+  pull_request:
+    paths: ['index.html', 'engine-admin-auth.js', 'tests/rab-owner.test.cjs', '.github/workflows/rab-owner-029.yml']
+permissions:
+  contents: read
+jobs:
+  owner-delete-edit-preservation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - run: node --check engine-admin-auth.js
+      - run: node --test tests/rab-owner.test.cjs
